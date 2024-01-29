@@ -1,0 +1,12 @@
+build
+build/*
+test/
+test/*
+toolchain
+toolchain/*
+.vscode
+.vscode/*
+bochs_config
+*.ini
+.scon*
+build_helpers/__pycache__
