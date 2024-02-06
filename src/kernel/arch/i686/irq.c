@@ -9,6 +9,8 @@
 irq_handler g_irq_handlers[16];
 static const PICDRIVER *g_driver = NULL;
 
+const PICDRIVER *i8259_get_driver();
+
 void i686_irq_handler(REGISTERS *regs) {
     int irq = regs->interrupt - PIC_REMAP_OFFSET;
 
