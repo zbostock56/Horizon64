@@ -10,3 +10,4 @@ bochs_config
 *.ini
 .scon*
 build_helpers/__pycache__
+*.txt

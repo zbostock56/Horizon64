@@ -12,15 +12,15 @@ enum {
     PIC_ICW1_SINGLE         = 0x02,     /* If set, means there is only one 8259 PIC */
     PIC_ICW1_INTERVAL4      = 0x04,     /* Address interval */
     PIC_ICW1_LEVEL          = 0x08,     /* Edge or level triggered mode */
-    PIC_ICW1_INITIALIZE     = 0x10,     /* Tell PIC we are initializing */
+    PIC_ICW1_INITIALIZE     = 0x10,     /* Tell PIC we are initializing (required!) */
 } PIC_ICW1;
 
 enum {
-    PIC_ICW4_8086           = 0x1,      /* Set for 8086 platform */
-    PIC_ICW4_AUTO_EOI       = 0x2,      /* Automatically set the end of interrupt flag */
-    PIC_ICW4_BUFFER_MASTER  = 0x4,      /* Do we buffer the master PIC? */
-    PIC_ICW4_BUFFER_SLAVE   = 0x0,      /* Do we buffer the slave PIC? */
-    PIC_ICW4_BUFFERRED      = 0x8,      /* Do we buffer interrupts as they come in? */
+    PIC_ICW4_8086           = 0x01,      /* Set for 8086 platform */
+    PIC_ICW4_AUTO_EOI       = 0x02,      /* Automatically set the end of interrupt flag */
+    PIC_ICW4_BUFFER_MASTER  = 0x04,      /* Do we buffer the master PIC? */
+    PIC_ICW4_BUFFER_SLAVE   = 0x00,      /* Do we buffer the slave PIC? */
+    PIC_ICW4_BUFFERRED      = 0x08,      /* Do we buffer interrupts as they come in? */
     PIC_ICW4_SFNM           = 0x10,     /* Specially fully nested mode */
 } PIC_ICW4;
 
@@ -37,7 +37,7 @@ void i8259_set_mask(uint16_t mask) {
     g_pic_mask = mask;
     i686_outb(PIC1_DATA_PORT, g_pic_mask & 0xFF);
     i686_io_wait();
-    i686_outb(PIC1_DATA_PORT, g_pic_mask & 0xFF);
+    i686_outb(PIC2_DATA_PORT, g_pic_mask >> 8);
     i686_io_wait();
 }
 
@@ -71,8 +71,8 @@ uint16_t i8259_read_in_service_register() {
 
 int i8259_probe() {
     i8259_disable();
-    i8259_set_mask(0xF00D);
-    return (i8259_get_mask() == 0xF00D);
+    i8259_set_mask(0x0);
+    return (i8259_get_mask() == 0x0);
 }
 
 void i8259_send_end_of_interrupt(int irq) {

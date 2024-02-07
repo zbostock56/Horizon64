@@ -11,10 +11,10 @@ void start(BOOT_PARAMS *params) {
     /* crti/crtn startup (handled by GCC) */
     _init();
 
+    clear_screen();
+
     /* Sets vital system settings */
     system_init();
-
-    clear_screen();
 
     /* Calculate available memory */
     uint64_t bytes = 0;

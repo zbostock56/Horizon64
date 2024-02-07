@@ -41,7 +41,7 @@ void i686_irq_init() {
         return;
     }
 
-    printf("Found %s PIC\n", g_driver->name);
+    printf("Found %s\n", g_driver->name);
     g_driver->initialize(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8);
 
     /* Register ISR handlers for each of the 16 IRQ lines */
