@@ -10,4 +10,6 @@ typedef struct {
     void (*send_end_of_interrupt)(int);
     void (*mask)(int);
     void (*unmask)(int);
-} PICDRIVER;
+} PIC_DRIVER;
+
+const PIC_DRIVER *i8259_get_driver();

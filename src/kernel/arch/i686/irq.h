@@ -1,7 +1,7 @@
 #pragma once
 #include "isr.h"
 
-typedef void (*irq_handler)(REGISTERS *);
+typedef void (* IRQ_HANDLER)(REGISTERS *);
 
 void i686_irq_init();
-void i686_irq_register_handler(int, irq_handler);
+void i686_irq_register_handler(int, IRQ_HANDLER);

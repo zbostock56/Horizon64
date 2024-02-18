@@ -93,6 +93,8 @@ void i8259_PIC_configure(uint8_t offset_pic_1, uint8_t offset_pic_2) {
     i686_io_wait();
 
     /* Initialize control word 2 - the offsets */
+    /* Offsets denote what interrupt number offset */
+    /* the PIC will report when an interrupt occurs */
     i686_outb(PIC1_DATA_PORT, offset_pic_1);
     i686_io_wait();
     i686_outb(PIC2_DATA_PORT, offset_pic_2);
@@ -116,7 +118,7 @@ void i8259_PIC_configure(uint8_t offset_pic_1, uint8_t offset_pic_2) {
     i8259_set_mask(0xFFFF);
 }
 
-static const PICDRIVER g_pic_driver = {
+static const PIC_DRIVER g_pic_driver = {
     .name = "8259 PIC",
     .probe = &i8259_probe,
     .initialize = &i8259_PIC_configure,
@@ -126,6 +128,6 @@ static const PICDRIVER g_pic_driver = {
     .unmask = &i8259_unmask,
 };
 
-const PICDRIVER *i8259_get_driver() {
+const PIC_DRIVER *i8259_get_driver() {
     return &g_pic_driver;
 }

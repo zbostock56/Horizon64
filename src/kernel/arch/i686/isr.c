@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stddef.h>
 
-isr_handler g_isr_handlers[i686_IDT_ENTRIES];
+ISR_HANDLER g_isr_handlers[i686_IDT_ENTRIES];
 
 static const char *const g_Exceptions[] = {
     "Divide by Zero Error",
@@ -70,7 +70,13 @@ void __attribute__((cdecl)) i686_isr_handler(REGISTERS *regs) {
     }
 }
 
-void i686_isr_register_handler(int interrupt, isr_handler handler) {
+/*
+    int interrupt: interrupt to which this registered
+                   will service
+    ISR_HANDLER: pointer to REGISTERS structure which holds
+                 information for the function when it is to be executed
+*/
+void i686_isr_register_handler(int interrupt, ISR_HANDLER handler) {
     g_isr_handlers[interrupt] = handler;
     i686_idt_enable_gate(interrupt);
 }
