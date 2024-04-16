@@ -11,3 +11,5 @@ bochs_config
 .scon*
 build_helpers/__pycache__
 *.txt
+limine/
+limine/*

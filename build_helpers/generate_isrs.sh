@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # exit on error
 set -e
@@ -24,8 +24,12 @@ echo "#include \"idt.h\"" >> $ISRS_GEN_C
 echo "#include \"gdt.h\"" >> $ISRS_GEN_C
 echo "" >> $ISRS_GEN_C
 
+# for i in $(seq 0 255); do
+#     echo "void __attribute__((cdecl)) i686_ISR${i}();" >> $ISRS_GEN_C
+# done
+
 for i in $(seq 0 255); do
-    echo "void __attribute__((cdecl)) i686_ISR${i}();" >> $ISRS_GEN_C
+    echo "void i686_ISR${i}();" >> $ISRS_GEN_C
 done
 
 echo "" >> $ISRS_GEN_C
