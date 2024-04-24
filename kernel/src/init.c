@@ -1,5 +1,4 @@
-#include "init.h"
-#include "kernel.h"
+#include <init.h>
 
 /*
     Main function of the "HAL" (hardware abstraction layer).
@@ -8,14 +7,8 @@
     variables.
 */
 
-uint32_t system_time;
-uint8_t preempt_quantum;
-
 void system_init() {
     
-    /* Initialize global system variables */
-    system_time = 0;
-    preempt_quantum = QUANTUM;
-
     /* Set up hardware functionality */
+    // TODO: IDT, PIT, PIC
 }

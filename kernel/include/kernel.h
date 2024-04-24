@@ -1,19 +1,13 @@
 #pragma once
 
-/*
+#include <globals.h>
 
-    KERNEL.H
+#include <limine.h>
+#include <init.h>
 
-    Houses globals that are used throughout the kernel and operating system
-    for various operations.
+static volatile LIMINE_BASE_REVISION(1);
 
-*/
-
-#include <stdint.h>
-
-/* Default for scheduling quantum time */
-#define QUANTUM (5)
-
-/* System time and system timer information */
-extern uint32_t system_time;
-extern uint8_t preempt_quantum;
+static volatile struct limine_framebuffer_request framebuffer_req = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0
+};

@@ -63,8 +63,8 @@ override NASMFLAGS += \
     -Wall \
     -f elf64
 
-override CFILES := $(shell find -L src/* -type f -name '*.c' && find -L arch/x86_64/* -type f -name '*.c' && find -L hal/* -type f -name '*.c')
-override NASMFILES := $(shell find -L src/* -type f -name '*.asm' && find -L arch/x86_64/* -type f -name '*.asm')
+override CFILES := $(shell find -L src/* -type f -name '*.c')
+override NASMFILES := $(shell find -L src/* -type f -name '*.asm')
 override OBJ := $(addprefix obj/,$(CFILES:.c=.c.o) $(NASMFILES:.asm=.asm.o))
 override HEADER_DEPS := $(addprefix obj/,$(CFILES:.c=.c.d))
 SRC_OBJS = $(CFILES:%=obj/%.o)
@@ -74,12 +74,12 @@ ALL_OBJS += $(ASM_OBJS)
 
 # Default target.
 .PHONY: all
-all: bin/$(KERNEL)
+all: dir bin/$(KERNEL)
 
 ./include/limine.h:
 	curl -Lo $@ https://github.com/limine-bootloader/limine/raw/trunk/limine.h
 
-bin/$(KERNEL): dir linker.ld $(ALL_OBJS)
+bin/$(KERNEL): linker.ld $(ALL_OBJS)
 	@$(LD) $(ALL_OBJS) $(LDFLAGS) -o $@
 	@echo "Finished linking"
 
@@ -95,8 +95,6 @@ obj/%.asm.o: %.asm
 
 dir:
 	@mkdir -p obj/src
-	@mkdir -p obj/arch/x86_64
-	@mkdir -p obj/hal
 	@mkdir -p bin
 	@echo "Created obj and bin directories"
 
