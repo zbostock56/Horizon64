@@ -94,7 +94,9 @@ obj/%.asm.o: %.asm
 	@echo "Assembled --> " $<
 
 dir:
-	@mkdir -p obj/src
+	@mkdir -p obj/src/gdt
+	@mkdir -p obj/src/interrupts
+	@mkdir -p obj/src/graphics
 	@mkdir -p bin
 	@echo "Created obj and bin directories"
 

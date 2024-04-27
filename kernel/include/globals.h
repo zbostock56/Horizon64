@@ -35,5 +35,8 @@ extern size_t num_gdt;
 /* Interrupt service routines */
 extern ISR_HANDLER g_isr_handlers[X86_64_IDT_ENTRIES];
 
+/* PSF1 FONT */
+extern PSF1_FONT font;
+
 /* Global use functions */
 void kprintf(const char *format, ...);

@@ -34,14 +34,17 @@
 #define PSF2_MAXVERSION        (0x00)
 
 /* Header checks */
-#define PSF1_MAGIC_CHECK(x) ((((x) & (0xFF)) == PSF1_MAGIC0) && \
-                            (((x) & (0xFF00)) == PSF1_MAGIC1))
+#define PSF1_MAGIC_CHECK(x) ((((x) & (0xFF)) == PSF1_MAGIC1) && \
+                            (((x) & (0xFF00)) == PSF1_MAGIC0))
 
-#define PSF2_MAGIC_CHECK(x) { \
-    (((x) & (0xFF)) == PSF2_MAGIC0) && (((x) & (0xFF00)) == PSF2_MAGIC1) &&        \
-    (((x) & (0xFF0000)) == PSF2_MAGIC2) && (((x) & (0xFF000000)) == PSF2_MAGIC3)   \
-}
+#define PSF2_MAGIC_CHECK(x) (((x) & (0xFF)) == PSF2_MAGIC0) &&     \
+                            (((x) & (0xFF00)) == PSF2_MAGIC1) &&   \
+                            (((x) & (0xFF0000)) == PSF2_MAGIC2) && \
+                            (((x) & (0xFF000000)) == PSF2_MAGIC3)  \
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
+int psf1_get_glyphs(LIMINE_FILE *file);
+void psf1_font_init(struct limine_module_request req, const char *path);
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
+void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
+                  LIMINE_FILE **file);

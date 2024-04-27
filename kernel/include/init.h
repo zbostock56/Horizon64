@@ -17,9 +17,10 @@ static volatile struct limine_framebuffer_request framebuffer_req = {
 void system_init();
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
-void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
-                  LIMINE_FILE **file);
-int psf1_get_glyphs(LIMINE_FILE *file, PSF1_FONT **font);
 void gdt_init(/* CPU *cpu_info */);
 void isr_init();
 void idt_init();
+void psf1_font_init(struct limine_module_request req, const char *path);
+void fb_init(struct limine_framebuffer_request req);
+void fb_putch(FRAMEBUFFER *fb, uint32_t x, uint32_t y, 
+              uint32_t fgcolor, uint32_t bgcolor, uint8_t ch);

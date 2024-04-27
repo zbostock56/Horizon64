@@ -20,3 +20,6 @@ size_t num_gdt = 0;
 
 /* Interrupt service routines */
 ISR_HANDLER g_isr_handlers[X86_64_IDT_ENTRIES] = {0};
+
+/* PSF1 Font */
+PSF1_FONT font;

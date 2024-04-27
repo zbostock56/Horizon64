@@ -45,7 +45,6 @@ void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
         LIMINE_FILE *f = module_response->modules[i];
         if (check_string_ending(f->path, name)) {
             *file = f;
-            kprintf("file: %x *file: %x\n", file, *file);
             return;
         }
     }
