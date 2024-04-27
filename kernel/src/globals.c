@@ -7,6 +7,9 @@ uint8_t preempt_quantum = QUANTUM;
 /* Framebuffers */
 FRAMEBUFFER initial_fb;
 
+/* Terminals */
+TERMINAL term;
+
 /* Interrupt descriptor table */
 __attribute__((aligned(0x10))) IDT_ENTRY g_idt[X86_64_IDT_ENTRIES] = {0};
 IDT_DESCRIPTOR g_idt_descriptor = {

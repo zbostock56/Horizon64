@@ -10,6 +10,7 @@
 #include <structs/framebuffer_str.h>
 #include <structs/gdt_str.h>
 #include <structs/regs_str.h>
+#include <structs/terminal_str.h>
 #include <graphics/graphics.h>
 
 typedef struct limine_file LIMINE_FILE;
@@ -23,6 +24,9 @@ extern uint8_t preempt_quantum;
 
 /* Framebuffers */
 extern FRAMEBUFFER initial_fb;
+
+/* Terminals */
+extern TERMINAL term;
 
 /* Interrupt descriptor table */
 extern IDT_ENTRY g_idt[X86_64_IDT_ENTRIES];

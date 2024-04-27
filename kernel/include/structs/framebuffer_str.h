@@ -11,7 +11,6 @@ typedef struct {
     uint64_t width;
     uint64_t pitch;
     uint16_t bpp;
-    IVEC2 cursor_pos;
 } FRAMEBUFFER;
 
 typedef enum {
@@ -23,5 +22,5 @@ typedef enum {
     COLOR_BLUE          = 0x0000AA,
     COLOR_MAGENTA       = 0xAA00AA,
     COLOR_CYAN          = 0x00AAAA,
-    COLOR_GREY          = 0xAAAAAA,
+    COLOR_WHITE         = 0xAAAAAA,
 } FRAMEBUFFER_COLORS;

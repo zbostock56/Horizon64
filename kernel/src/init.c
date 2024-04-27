@@ -1,8 +1,6 @@
 #include <init.h>
 
 /*
-    Main function of the "HAL" (hardware abstraction layer).
-
     Sets up GDT, IDT, ISR, IRQ, and other important system
     variables.
 */
@@ -16,7 +14,9 @@ void system_init() {
 
     /* Initialize global descriptor table */
     gdt_init();
+    /* Initialize interrupt descriptor table */
     idt_init();
+    /* Initialize interrupt service routines */
     isr_init();
 
     /* Initialize framebuffer */
@@ -24,10 +24,9 @@ void system_init() {
 
     /* Set up .psf1 font */
     psf1_font_init(psf_file_request, "zap-vga16.psf");
-    
-    fb_putch(&initial_fb, 4, 0, 0xAA0000, 0x000000, 'Z');
 
-    halt();
+    /* Initialize terminal */
+    init_terminal(initial_fb);
 
     // TODO: PIT, PIC
 }

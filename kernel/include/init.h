@@ -22,5 +22,4 @@ void isr_init();
 void idt_init();
 void psf1_font_init(struct limine_module_request req, const char *path);
 void fb_init(struct limine_framebuffer_request req);
-void fb_putch(FRAMEBUFFER *fb, uint32_t x, uint32_t y, 
-              uint32_t fgcolor, uint32_t bgcolor, uint8_t ch);
+void init_terminal(FRAMEBUFFER fb);

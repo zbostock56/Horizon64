@@ -13,5 +13,7 @@
 #define PSF2_SUCCESS (0)
 #define NOT_PSF2     (1)
 
+#define PSF1_FONT_WIDTH (8)
+
 /* SMP */
 #define NUM_CPUS (1)
