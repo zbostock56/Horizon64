@@ -74,9 +74,9 @@ ALL_OBJS += $(ASM_OBJS)
 
 # Default target.
 .PHONY: all
-all: dir bin/$(KERNEL)
+all: dir include/limine.h bin/$(KERNEL)
 
-./include/limine.h:
+include/limine.h:
 	curl -Lo $@ https://github.com/limine-bootloader/limine/raw/trunk/limine.h
 
 bin/$(KERNEL): linker.ld $(ALL_OBJS)

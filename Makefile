@@ -29,16 +29,16 @@ all: $(IMAGE_NAME).iso
 all-hdd: $(IMAGE_NAME).hdd
 
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64 -M q35 -m 2G -cdrom $(IMAGE_NAME).iso -boot d
+	qemu-system-x86_64 -M q35 -m 2G -debugcon stdio -cdrom $(IMAGE_NAME).iso -boot d
 
 run-uefi: ovmf $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35 -m 2G -bios ovmf/OVMF.fd -cdrom $(IMAGE_NAME).iso -boot d
 
 run-hdd: $(IMAGE_NAME).hdd
-	qemu-system-x86_64 -M q35 -m 2G -hda $(IMAGE_NAME).hdd
+	qemu-system-x86_64 -M q35 -m 2G -debugcon stdio -hda $(IMAGE_NAME).hdd
 
 run-hdd-uefi: ovmf $(IMAGE_NAME).hdd
-	qemu-system-x86_64 -M q35 -m 2G -bios ovmf/OVMF.fd -hda $(IMAGE_NAME).hdd
+	qemu-system-x86_64 -M q35 -m 2G -bios ovmf/OVMF.fd -debugcon stdio -hda $(IMAGE_NAME).hdd
 
 ovmf:
 	mkdir -p ovmf
@@ -60,13 +60,14 @@ $(IMAGE_NAME).iso: limine kernel
 	@echo "Creating horizon.iso..."
 	@rm -rf iso_root
 	@mkdir -p iso_root/boot
-	@cp -v kernel/bin/kernel iso_root/boot/
-	@mv iso_root/boot/kernel iso_root/boot/horizon
 	@mkdir -p iso_root/boot/limine
-	@cp -v limine.cfg limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root/boot/limine/
 	@mkdir -p iso_root/EFI/BOOT
-	@cp -v limine/BOOTX64.EFI iso_root/EFI/BOOT/
-	@cp -v limine/BOOTIA32.EFI iso_root/EFI/BOOT/
+	@cp -v kernel/bin/kernel iso_root/boot/
+	@cp -v ext/* iso_root
+	@mv iso_root/boot/kernel iso_root/boot/horizon
+	@cp -v limine.cfg limine/limine-bios.sys limine/limine-bios-cd.bin \
+		limine/limine-uefi-cd.bin iso_root/boot/limine/
+	@cp -v limine/BOOTX64.EFI limine/BOOTIA32.EFI iso_root/EFI/BOOT/
 	@xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin \
 		-no-emul-boot -boot-load-size 4 -boot-info-table \
 		--efi-boot boot/limine/limine-uefi-cd.bin \

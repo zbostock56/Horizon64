@@ -14,4 +14,7 @@ build_helpers/__pycache__
 limine/
 limine/*
 horizon.iso
-include/limine
+kernel/include/limine.h
+kernel/obj
+kernel/bin
+ext
