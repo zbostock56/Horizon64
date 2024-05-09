@@ -2,6 +2,11 @@
 
 /* Default for scheduling quantum time */
 #define QUANTUM (5)
+#define PIT_1MS (1000)
+
+/* Programmable interrupt controller (PIC) */
+#define PIC_REMAP_OFFSET        (0x20)
+#define NUM_HARDWARE_INTERRUPTS (0x10)
 
 /* -------------------------------- PSF Fonts ------------------------------- */
 /* structs/framebuffer_str.h */

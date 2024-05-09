@@ -35,6 +35,7 @@ override CFLAGS += \
     -fno-stack-check \
     -fno-lto \
     -fPIE \
+		-fno-omit-frame-pointer \
     -m64 \
     -march=x86-64 \
     -mno-80387 \
@@ -57,7 +58,8 @@ override LDFLAGS += \
     --no-dynamic-linker \
     -z text \
     -z max-page-size=0x1000 \
-    -T linker.ld
+    -T linker.ld \
+		-Map bin/kernel.map
 
 override NASMFLAGS += \
     -Wall \
@@ -94,9 +96,11 @@ obj/%.asm.o: %.asm
 	@echo "Assembled --> " $<
 
 dir:
-	@mkdir -p obj/src/gdt
-	@mkdir -p obj/src/interrupts
+	@mkdir -p obj/src/sys/gdt
+	@mkdir -p obj/src/sys/interrupts
 	@mkdir -p obj/src/graphics
+	@mkdir -p obj/src/sys/tick
+	@mkdir -p obj/src/util
 	@mkdir -p bin
 	@echo "Created obj and bin directories"
 

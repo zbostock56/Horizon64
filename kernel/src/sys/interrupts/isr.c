@@ -5,6 +5,7 @@ void isr_init_entries();
 
 void isr_init() {
   isr_init_entries();
+  /* Set all to open (will cause #GP if a gate is not open and is accessed) */
   for (int i = 0; i < 256; i++) {
     idt_enable_gate(i);
   }
@@ -18,8 +19,10 @@ void isr_init() {
     0-31: Reserved by Intel
     8-15: IRQ 0-7 by the BIOS bootstrap
     70h-78h: IRQ 8-15 by the BIOS bootstrap
+    
+    IRQ's are remapped to start at 0x20 (interrupt 32)
 */
-void isr_handler(int interrupt, REGISTERS *regs, uint64_t error_code) {
+void isr_handler(REGISTERS *regs) {
 
   /* TODO: Check for spurious interrupt */
 
@@ -28,20 +31,26 @@ void isr_handler(int interrupt, REGISTERS *regs, uint64_t error_code) {
   /* TODO: Set aside an ISR for scheduling */
 
   /* Process interrupt */
-  if (g_isr_handlers[interrupt] != NULL) {
-    g_isr_handlers[interrupt](regs);
-  } else if (interrupt >= 32) {
-    kprintf("Unhandled interupt %d!\n", interrupt);
+  if (g_isr_handlers[regs->interrupt] != NULL) {
+    /* Call general vector to service interrupt */
+    g_isr_handlers[regs->interrupt](regs);
+  } else if (regs->interrupt >= 32) {
+    /* Unreserved interrupt with no handler, hang the system */
+    kprintf("Unhandled interupt %d!\n\n", regs->interrupt);
+    walk_memory((void *) regs->rbp, 8);
     halt();
   } else {
-    kprintf("\n\nUnhandled exception of %s. Error code: %d (%x)\n",
-            exceptions[interrupt], error_code, error_code);
-    kprintf("RIP   : %x\nCS    : %x\nRFLAGS: %x\n"
-            "RSP   : %x\nSS    : %x\n"
-            "RAX %x  RBX %x  RCX %x  RDX %x\n"
-            "RSI %x  RDI %x  RBP %x\n"
-            "R8  %x  R9  %x  R10 %x  R11 %x\n"
-            "R12 %x  R13 %x  R14 %x  R15 %x\n\n",
+    /* Reserved interrupt, hang the system */
+    kprintf("\n\nUnhandled exception!\n%s.\nError code: %d (%x)\n\n",
+            exceptions[regs->interrupt], regs->error_code, regs->error_code);
+    walk_memory((void *) regs->rbp, 8);
+    // stack_walk((void *) regs->rbp, 4);
+    kprintf("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
+            "RSP   : (%x)\nSS    : (%x)\n"
+            "RAX   : %x\nRBX   : %x\nRCX   : %x\nRDX   : %x\n"
+            "RSI   : %x\nRDI   : %x\nRBP   : %x\n"
+            "R8    : %x\nR9    : %x\nR10   : %x\nR11   : %x\n"
+            "R12   : %x\nR13   : %x\nR14   : %x\nR15   : %x\n\n",
             regs->rip, regs->cs, regs->rflags, regs->rsp, regs->ss, regs->rax,
             regs->rbx, regs->rcx, regs->rdx, regs->rsi, regs->rdi, regs->rbp,
             regs->r8, regs->r9, regs->r10, regs->r11, regs->r12, regs->r13,
@@ -57,6 +66,8 @@ void isr_handler(int interrupt, REGISTERS *regs, uint64_t error_code) {
     use a vector that was registered here to service the interrupt.
 */
 void isr_register_handler(int interrupt, ISR_HANDLER handler) {
+  /* Set the vector which will be the function execution upon interruption */
   g_isr_handlers[interrupt] = handler;
+  /* Open the gate to allow the interrupt to be serviced */
   idt_enable_gate(interrupt);
 }

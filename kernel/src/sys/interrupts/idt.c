@@ -22,9 +22,11 @@ void idt_init() {
 }
 
 void idt_enable_gate(int interrupt) {
+  /* Set the present bit */
   SET(g_idt[interrupt].type, IDT_FLAG_PRESENT);
 }
 
 void idt_disable_gate(int interrupt) {
+  /* Zero the present bit */
   UNSET(g_idt[interrupt].type, IDT_FLAG_PRESENT);
 }

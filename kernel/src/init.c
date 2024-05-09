@@ -28,5 +28,6 @@ void system_init() {
     /* Initialize terminal */
     init_terminal(initial_fb);
 
-    // TODO: PIT, PIC
+    /* Initialize PIC, PIT */
+    irq_init();
 }

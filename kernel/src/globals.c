@@ -1,8 +1,11 @@
 #include <globals.h>
 
 /* Scheduling */
-uint64_t system_time = 0;
-uint8_t preempt_quantum = QUANTUM;
+volatile uint64_t system_time = 0;
+volatile uint8_t preempt_quantum = QUANTUM;
+
+/* Hardware interrupts */
+IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS];
 
 /* Framebuffers */
 FRAMEBUFFER initial_fb;

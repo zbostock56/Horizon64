@@ -15,7 +15,7 @@ static char* exceptions[] = {
     [9] = "Co-processor Segment Overrun",
     [10] = "Invalid TSS",
     [11] = "Segment Not Present",
-    [12] = "Stack-Segement Fault",
+    [12] = "Stack-Segment Fault",
     [13] = "General Protection Fault",
     [14] = "Page Fault",
     [15] = "",
@@ -52,7 +52,12 @@ static char* exceptions[] = {
 
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
+void isr_handler(REGISTERS *regs);
+void isr_init();
+void isr_register_handler(int interrupt, ISR_HANDLER handler);
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
 void idt_enable_gate(int interrupt);
 void idt_disable_gate(int interrupt);
+void walk_memory(void *rsp, uint8_t depth);
+void stack_walk(void *rbp, uint8_t depth);

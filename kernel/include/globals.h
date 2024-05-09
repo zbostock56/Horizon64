@@ -19,8 +19,11 @@ typedef struct limine_module_request LIMINE_MODULE_REQ;
 typedef struct limine_framebuffer_request LIMINE_FRAMEBUFF_REQ;
 
 /* System time and system timer information */
-extern uint64_t system_time;
-extern uint8_t preempt_quantum;
+extern volatile uint64_t system_time;
+extern volatile uint8_t preempt_quantum;
+
+/* Hardware Interrupts */
+extern IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS];
 
 /* Framebuffers */
 extern FRAMEBUFFER initial_fb;
