@@ -1,6 +1,6 @@
 #include <gdt.h>
 
-void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit, 
+void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
                            uint8_t access, uint8_t flags) {
     /* Set limit */
     entry->limit_low = GDT_LIMIT_LOW(limit);
@@ -18,7 +18,8 @@ void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
 /* TODO: Must be done for each CPU */
 void gdt_init(/* CPU *cpu_info */) {
     if (num_gdt + 1 > NUM_CPUS) {
-        kprintf("Trying to initialize a GDT for non-existance CPU!\n");
+        terminal_printf(&term,
+                        "Trying to initialize a GDT for non-existance CPU!\n");
         halt();
     }
     GDT_TABLE *gdt = (GDT_TABLE *) &g_gdt[num_gdt++];
@@ -81,7 +82,8 @@ void gdt_init(/* CPU *cpu_info */) {
     };
 
     gdt_load(&g);
-    kprintf("Finished initialization for CPU: %d\n", num_gdt - 1);
+    terminal_printf(&term,
+                    "Finished initialization for CPU: %d\n", num_gdt - 1);
 }
 
 /* TODO: Complete for each CPU */

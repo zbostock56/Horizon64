@@ -29,7 +29,7 @@ all: $(IMAGE_NAME).iso
 all-hdd: $(IMAGE_NAME).hdd
 
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64 -M q35 -m 2G -debugcon stdio -cdrom $(IMAGE_NAME).iso -boot d
+	qemu-system-x86_64 -debugcon stdio -M q35 -m 2G -cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on
 
 run-uefi: ovmf $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35 -m 2G -bios ovmf/OVMF.fd -cdrom $(IMAGE_NAME).iso -boot d

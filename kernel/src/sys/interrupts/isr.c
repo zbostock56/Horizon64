@@ -11,7 +11,7 @@ void isr_init() {
   }
   idt_disable_gate(0x80);
   enable_interrupts();
-  kprintf("ISR's are initialized, interrupts are enabled\n");
+  terminal_printf(&term, "ISR's are initialized, interrupts are enabled\n");
 }
 
 /*
@@ -19,7 +19,7 @@ void isr_init() {
     0-31: Reserved by Intel
     8-15: IRQ 0-7 by the BIOS bootstrap
     70h-78h: IRQ 8-15 by the BIOS bootstrap
-    
+
     IRQ's are remapped to start at 0x20 (interrupt 32)
 */
 void isr_handler(REGISTERS *regs) {
@@ -36,16 +36,16 @@ void isr_handler(REGISTERS *regs) {
     g_isr_handlers[regs->interrupt](regs);
   } else if (regs->interrupt >= 32) {
     /* Unreserved interrupt with no handler, hang the system */
-    kprintf("Unhandled interupt %d!\n\n", regs->interrupt);
+    terminal_printf(&term, "Unhandled interupt %d!\n\n", regs->interrupt);
     walk_memory((void *) regs->rbp, 8);
     halt();
   } else {
     /* Reserved interrupt, hang the system */
-    kprintf("\n\nUnhandled exception!\n%s.\nError code: %d (%x)\n\n",
+    terminal_printf(&term, "\n\nUnhandled exception!\n%s.\nError code: %d (%x)\n\n",
             exceptions[regs->interrupt], regs->error_code, regs->error_code);
     walk_memory((void *) regs->rbp, 8);
     // stack_walk((void *) regs->rbp, 4);
-    kprintf("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
+    terminal_printf(&term, "\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
             "RSP   : (%x)\nSS    : (%x)\n"
             "RAX   : %x\nRBX   : %x\nRCX   : %x\nRDX   : %x\n"
             "RSI   : %x\nRDI   : %x\nRBP   : %x\n"

@@ -47,3 +47,6 @@ extern PSF1_FONT font;
 
 /* Global use functions */
 void kprintf(const char *format, ...);
+void kputc(char c);
+void terminal_printf(TERMINAL *t, const char *format, ...);
+

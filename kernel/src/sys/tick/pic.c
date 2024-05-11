@@ -17,6 +17,7 @@ void pic_mask(int irq) {
 }
 
 void pic_unmask(int irq) {
+  terminal_printf(&term, "Unmasked IRQ %d\n", irq);
   pic_set_mask(g_pic_mask & ~(1 << irq));
 }
 

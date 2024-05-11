@@ -65,6 +65,17 @@ void terminal_push_cursor(TERMINAL *t) {
   t->cursor_pos.x++;
 }
 
+void terminal_pop_cursor(TERMINAL *t) {
+  if (!t) {
+    kprintf("Null terminal!\n");
+    return;
+  }
+
+  if (--t->cursor_pos.x < 1) {
+    t->cursor_pos.x++;
+  }
+}
+
 void terminal_putc(TERMINAL *t, uint8_t c) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -75,9 +86,21 @@ void terminal_putc(TERMINAL *t, uint8_t c) {
     t->cursor_pos.x = 1;
     return;
   }
+
+  /* Backspace */
+  if (c == 8) {
+    terminal_pop_cursor(t);
+    fb_putc(&t->framebuffer, t->cursor_pos.x * PSF1_FONT_WIDTH,
+          t->cursor_pos.y * font.header->character_size, t->foreground_color,
+          t->background_color, ' ');
+    return;
+  }
+
   fb_putc(&t->framebuffer, t->cursor_pos.x * PSF1_FONT_WIDTH,
           t->cursor_pos.y * font.header->character_size, t->foreground_color,
           t->background_color, c);
+
+
   terminal_push_cursor(t);
 }
 
@@ -85,4 +108,63 @@ void terminal_puts(TERMINAL *t, const char *s) {
   for (size_t i = 0; s[i]; i++) {
     terminal_putc(t, s[i]);
   }
+}
+
+static void terminal_hex(TERMINAL *t, size_t num) {
+  int i;
+  char buf[17];
+  if (!num) {
+    terminal_puts(t, "0x0");
+    return;
+  }
+
+  buf[16] = 0;
+
+  for (i = 15; num; i--) {
+    buf[i] = CONVERSION_TABLE[num % 16];
+    num /= 16;
+  }
+
+  i++;
+  terminal_puts(t, "0x");
+  terminal_puts(t, &buf[i]);
+}
+
+static void terminal_dec(TERMINAL *t, size_t num) {
+  int i;
+  char buf[21] = {0};
+
+  if (!num) {
+    terminal_putc(t, '0');
+    return;
+  }
+
+  for (i = 19; num; i--) {
+    buf[i] = (num % 10) + 0x30;
+    num /= 10;
+  }
+  i++;
+  terminal_puts(t, buf + i);
+}
+
+void terminal_printf(TERMINAL *t, const char *format, ...) {
+  va_list argp;
+  va_start(argp, format);
+
+  while (*format != '\0') {
+    if (*format == '%') {
+      format++;
+      if (*format == 'x') {
+        terminal_hex(t, va_arg(argp, size_t));
+      } else if (*format == 'd') {
+        terminal_dec(t, va_arg(argp, size_t));
+      } else if (*format == 's') {
+        terminal_puts(t, va_arg(argp, char *));
+      }
+    } else {
+      terminal_putc(t, *format);
+    }
+    format++;
+  }
+  va_end(argp);
 }

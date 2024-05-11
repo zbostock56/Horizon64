@@ -101,6 +101,7 @@ dir:
 	@mkdir -p obj/src/graphics
 	@mkdir -p obj/src/sys/tick
 	@mkdir -p obj/src/util
+	@mkdir -p obj/src/dev/keyboard
 	@mkdir -p bin
 	@echo "Created obj and bin directories"
 

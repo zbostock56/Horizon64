@@ -24,4 +24,4 @@ void psf1_font_init(struct limine_module_request req, const char *path);
 void fb_init(struct limine_framebuffer_request req);
 void init_terminal(FRAMEBUFFER fb);
 void irq_init();
-void isr_register_handler(int interrupt, ISR_HANDLER handler);
+void keyboard_init();

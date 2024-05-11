@@ -8,7 +8,7 @@ void irq_handler(REGISTERS *regs) {
     /* Handle hardware interrupt */
     g_irq_handler[irq]();
   } else {
-    kprintf("Unhandled hardware interrupt (IRQ) %d...\n", irq);
+    terminal_printf(&term, "Unhandled hardware interrupt (IRQ) %d...\n", irq);
   }
 
   /* Send end of interrupt to PIC */
@@ -16,6 +16,7 @@ void irq_handler(REGISTERS *regs) {
 }
 
 void irq_register_handler(int irq, IRQ_HANDLER handler) {
+  terminal_printf(&term, "Registered IRQ handler %d\n", irq);
   g_irq_handler[irq] = handler;
 }
 
@@ -28,22 +29,22 @@ void irq_init() {
   /* Check to make sure the PIC exists*/
 
   if (!pic->probe()) {
-    kprintf("WARNING: No PIC found!\n");
+    terminal_printf(&term, "WARNING: No PIC found!\n");
     return;
   }
 
-  kprintf("Found %s...\n", pic->name);
-  kprintf("Found %s...\n", pit->name);
+  terminal_printf(&term, "Found %s...\n", pic->name);
+  terminal_printf(&term, "Found %s...\n", pit->name);
 
   /* Set the offset to 0x20 (32) for the first interrupt which the PIC */
   /* will notify the CPU on */
 
   pic->initialize(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8);
 
-  kprintf("PIC master offset: %x (%d)...\nPIC slave offset: %x (%d)...\n",
+  terminal_printf(&term, "PIC master offset: %x (%d)...\nPIC slave offset: %x (%d)...\n",
           PIC_REMAP_OFFSET, PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8,
           PIC_REMAP_OFFSET + 8);
-  
+
   /* Set the programmable interrupt timer */
   pit->initialize(PIT_1MS);
 

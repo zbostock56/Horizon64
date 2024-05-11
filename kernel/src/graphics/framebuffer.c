@@ -73,3 +73,7 @@ void fb_refresh(FRAMEBUFFER *fb) {
     memcpy(fb->base, fb->swapbuffer, len);
   }
 }
+
+void fb_clear_screen(FRAMEBUFFER *fb) {
+  // TODO
+}

@@ -9,5 +9,5 @@ void _start() {
 
   /* TODO: Calculate available memory */
 
-  halt();
+  while (1) {}
 }

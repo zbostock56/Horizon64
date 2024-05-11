@@ -11,14 +11,6 @@ void system_init() {
         kprintf("Base revision not supported!\n");
         halt();
     }
-
-    /* Initialize global descriptor table */
-    gdt_init();
-    /* Initialize interrupt descriptor table */
-    idt_init();
-    /* Initialize interrupt service routines */
-    isr_init();
-
     /* Initialize framebuffer */
     fb_init(framebuffer_req);
 
@@ -28,6 +20,16 @@ void system_init() {
     /* Initialize terminal */
     init_terminal(initial_fb);
 
+
+    /* Initialize global descriptor table */
+    gdt_init();
+    /* Initialize interrupt descriptor table */
+    idt_init();
+    /* Initialize interrupt service routines */
+    isr_init();
+
     /* Initialize PIC, PIT */
     irq_init();
+
+    keyboard_init();
 }

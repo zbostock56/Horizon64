@@ -18,7 +18,7 @@ void idt_init() {
 
   /* Load the IDT */
   asm volatile("lidt %0" : : "m"(g_idt_descriptor));
-  kprintf("Finished loading IDT\n");
+  terminal_printf(&term, "Finished loading IDT\n");
 }
 
 void idt_enable_gate(int interrupt) {

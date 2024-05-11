@@ -3,7 +3,7 @@
 void pit_init(uint32_t hertz) {
   /* Check to make sure the frequency is within range */
   if (hertz < PIT_MIN_FREQ || hertz > PIT_MAX_FREQ) {
-    kprintf("PIT programmed out of range! Setting to default 1 ms...\n");
+    terminal_printf(&term, "PIT programmed out of range! Setting to default 1 ms...\n");
     hertz = PIT_DEFAULT_FREQ;
   }
 
@@ -20,11 +20,11 @@ void pit_init(uint32_t hertz) {
   outb(mode, MODE_COMMAND_REGISTER);
   outb(hertz & 0x00FF, PIT_CHANNEL_0_DATA_PORT);           /* LSB */
   outb((hertz & 0xFF00) >> 8, PIT_CHANNEL_0_DATA_PORT);    /* MSB */
-  
+
   /* Set the interrupt handler for the PIT (IRQ 0) to be serviceable */
   pic_unmask(0);
 
-  kprintf("PIT set to %d hz and IRQ0 is unmasked...\n", hertz);
+  terminal_printf(&term, "PIT set to %d hz...\n", hertz);
 }
 
 void pit_set_event(unsigned long delta) {
