@@ -1,4 +1,4 @@
-#include <idt.h>
+#include <sys/interrupts/idt.h>
 
 void idt_init_entry(int interrupt, void *base, uint16_t segment, uint8_t type) {
   g_idt[interrupt].segment_selector = segment;
@@ -18,7 +18,7 @@ void idt_init() {
 
   /* Load the IDT */
   asm volatile("lidt %0" : : "m"(g_idt_descriptor));
-  terminal_printf(&term, "Finished loading IDT\n");
+  klogi("Finished loading IDT\n");
 }
 
 void idt_enable_gate(int interrupt) {

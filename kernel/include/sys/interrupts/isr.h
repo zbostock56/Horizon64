@@ -2,6 +2,7 @@
 
 #include <globals.h>
 
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 static char* exceptions[] = {
     [0] = "Division by Zero",
     [1] = "Debug",
@@ -50,6 +51,9 @@ static char* exceptions[] = {
     [44] = "Reserved"
 };
 
+/* --------------------------------- DEFINES -------------------------------- */
+
+/* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void isr_handler(REGISTERS *regs);

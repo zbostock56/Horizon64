@@ -1,22 +1,15 @@
 #pragma once
 
-typedef struct {
-    float x;
-    float y;
-    float z;
-} VEC3;
+#include <globals.h>
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- DEFINES -------------------------------- */
-#define VEC3_ZERO_INIT  {0.0f, 0.0f, 0.0f}
-#define VEC3_ONE_INIT   {1.0f, 1.0f, 1.0f}
-
-#define VEC3_ZERO       ((VEC3) VEC3_ZERO_INIT)
-#define VEC3_ONE        ((VEC3) VEC3_ONE_INIT)
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
+int check_string_ending(const char *str, const char *end);
+void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
+                  LIMINE_FILE **file);
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */

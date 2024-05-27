@@ -1,4 +1,4 @@
-#include <asm.h>
+#include <sys/asm.h>
 #include <globals.h>
 
 void outb(int16_t port, uint8_t val) {

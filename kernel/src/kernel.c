@@ -5,9 +5,6 @@ void _start() {
   /* Sets vital system settings */
   system_init();
 
-  terminal_puts(&term, "Horizon OS\n");
-
-  /* TODO: Calculate available memory */
-
+  terminal_printf(&term, "Horizon OS\n");
   while (1) {}
 }

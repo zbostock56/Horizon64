@@ -1,22 +1,27 @@
 #pragma once
 
+#include <globals.h>
+#include <stdarg.h>
+// #include <common/lock.h>
+
 typedef struct {
-    float x;
-    float y;
-    float z;
-} VEC3;
+  uint8_t buffer[UINT16_MAX];
+  int start;
+  int end;
+  TERMINAL_MODE mode;
+} KLOG;
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
+static const char CONVERSION_TABLE[] = "0123456789abcdef";
+// static LOCK klog_shackle = {0};
+// static KLOG klog = {0};
 
 /* --------------------------------- DEFINES -------------------------------- */
-#define VEC3_ZERO_INIT  {0.0f, 0.0f, 0.0f}
-#define VEC3_ONE_INIT   {1.0f, 1.0f, 1.0f}
-
-#define VEC3_ZERO       ((VEC3) VEC3_ZERO_INIT)
-#define VEC3_ONE        ((VEC3) VEC3_ONE_INIT)
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
+void kprintf(const char *format, ...);
+void klog_implementation(int level, const char *format, ...);
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */

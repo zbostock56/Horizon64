@@ -1,8 +1,25 @@
-#include <kprint.h>
+#include <common/kprint.h>
 
 void kputc(char c) {
   __asm__ __volatile__("outb %0, %1" ::"a"(c), "Nd"(0xe9) : "memory");
 }
+
+// void klog_lock() {
+//   LOCK_LOCK(&klog_shackle);
+// }
+
+// void klog_unlock() {
+//   UNLOCK_LOCK(&klog_shackle);
+// }
+
+// void klog_init() {
+//   klog_lock();
+
+//   klog.start = 0;
+//   klog.end = 0;
+
+//   klog_unlock();
+// }
 
 void kprint(const char *msg) {
   for (size_t i = 0; msg[i]; i++) {
@@ -71,5 +88,24 @@ void kprintf(const char *format, ...) {
     }
     format++;
   }
+  va_end(argp);
+}
+
+void klog_implementation(int level, const char *format, ...) {
+  switch (level) {
+    case LEVEL_LOG:
+      kprintf("\e[32m[INFO] \e[0m ");
+      break;
+    case LEVEL_ERROR:
+      kprintf("\e[31m[ERROR]\e[0m ");
+      break;
+    case LEVEL_DEBUG:
+      kprintf("\e[34m[DEBUG]\e[0m ");
+      break;
+  }
+
+  va_list argp;
+  va_start(argp, format);
+  kprintf(format, argp);
   va_end(argp);
 }

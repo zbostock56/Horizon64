@@ -1,4 +1,4 @@
-#include <cpu.h>
+#include <sys/cpu.h>
 
 static inline void cpuid(int code, uint32_t* a, uint32_t* d) {
   __asm__ volatile ("cpuid"

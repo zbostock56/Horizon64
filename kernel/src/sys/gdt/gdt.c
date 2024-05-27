@@ -1,4 +1,4 @@
-#include <gdt.h>
+#include <sys/gdt/gdt.h>
 
 void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
                            uint8_t access, uint8_t flags) {
@@ -18,8 +18,7 @@ void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
 /* TODO: Must be done for each CPU */
 void gdt_init(/* CPU *cpu_info */) {
     if (num_gdt + 1 > NUM_CPUS) {
-        terminal_printf(&term,
-                        "Trying to initialize a GDT for non-existance CPU!\n");
+        kloge("Trying to initialize a GDT for non-existance CPU!\n");
         halt();
     }
     GDT_TABLE *gdt = (GDT_TABLE *) &g_gdt[num_gdt++];
@@ -82,8 +81,7 @@ void gdt_init(/* CPU *cpu_info */) {
     };
 
     gdt_load(&g);
-    terminal_printf(&term,
-                    "Finished initialization for CPU: %d\n", num_gdt - 1);
+    klogi("Finished GDT initialization for CPU: %d at %x\n", num_gdt - 1, gdt);
 }
 
 /* TODO: Complete for each CPU */

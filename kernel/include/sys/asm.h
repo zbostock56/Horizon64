@@ -1,22 +1,19 @@
 #pragma once
 
-typedef struct {
-    float x;
-    float y;
-    float z;
-} VEC3;
+#include <stdint.h>
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- DEFINES -------------------------------- */
-#define VEC3_ZERO_INIT  {0.0f, 0.0f, 0.0f}
-#define VEC3_ONE_INIT   {1.0f, 1.0f, 1.0f}
-
-#define VEC3_ZERO       ((VEC3) VEC3_ZERO_INIT)
-#define VEC3_ONE        ((VEC3) VEC3_ONE_INIT)
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
+void outb(int16_t port, uint8_t val);
+uint8_t inb(uint16_t port);
+void io_wait();
+void halt();
+void enable_interrupts();
+void disable_interrupts();
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */

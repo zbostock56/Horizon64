@@ -1,4 +1,4 @@
-#include <terminal.h>
+#include <dev/terminal.h>
 
 /*
   Initializes a framebuffer for the terminal and
@@ -16,7 +16,7 @@ void init_terminal(FRAMEBUFFER fb) {
   term.foreground_color = COLOR_WHITE;
   /* TODO: Edit to support multiple fonts */
   term.height = fb.height / font.header->character_size;
-  term.height = fb.width / PSF1_FONT_WIDTH;
+  term.width = fb.width / PSF1_FONT_WIDTH;
   term.cursor_pos = IVEC2_ONE;
 }
 
@@ -55,13 +55,18 @@ void terminal_push_cursor(TERMINAL *t) {
     return;
   }
 
-  /* TODO: t->width seems to be zero, look into this */
-
-  // if ((t->cursor_pos.x + 1) > t->width) {
-  //   t->cursor_pos.x = 0;
-  //   t->cursor_pos.y++;
-  //   return;
-  // }
+  if ((t->cursor_pos.x + 1) >= t->width) {
+    t->cursor_pos.x = TERMINAL_LEFT_OFFSET;
+    t->cursor_pos.y++;
+    return;
+  }
+  if (t->cursor_pos.y >= t->height &&
+      !(t->cursor_pos.y == t->height &&
+      t->cursor_pos.x == 0)) {
+    terminal_scroll(t);
+    t->cursor_pos.y--;
+    return;
+  }
   t->cursor_pos.x++;
 }
 
@@ -99,7 +104,6 @@ void terminal_putc(TERMINAL *t, uint8_t c) {
   fb_putc(&t->framebuffer, t->cursor_pos.x * PSF1_FONT_WIDTH,
           t->cursor_pos.y * font.header->character_size, t->foreground_color,
           t->background_color, c);
-
 
   terminal_push_cursor(t);
 }
@@ -167,4 +171,33 @@ void terminal_printf(TERMINAL *t, const char *format, ...) {
     format++;
   }
   va_end(argp);
+}
+
+void terminal_clear(TERMINAL *t) {
+  for (size_t y = 0; y < t->framebuffer.height; y++) {
+    for (size_t x = 0; x < t->framebuffer.width; x++) {
+      fb_putpixel(&(t->framebuffer), x, y, t->background_color);
+    }
+  }
+
+  t->cursor_pos.x = 0;
+  t->cursor_pos.y = 0;
+}
+
+void terminal_scroll(TERMINAL *t) {
+  const uint8_t char_size = font.header->character_size;
+
+  for (size_t y = 0; y < (t->cursor_pos.y - 1) * char_size; y++) {
+      for (size_t x = 0; x < t->framebuffer.width; x++) {
+          uint32_t c = fb_getpixel(&(t->framebuffer), x, y + char_size);
+          fb_putpixel(&(t->framebuffer), x, y, c);
+      }
+    }
+
+    size_t y = (t->cursor_pos.y - 1) * char_size;
+    for (; y < t->framebuffer.height; y++) {
+        for (size_t x = 0; x < t->framebuffer.width; x++) {
+            fb_putpixel(&(t->framebuffer), x, y, t->background_color);
+        }
+    }
 }

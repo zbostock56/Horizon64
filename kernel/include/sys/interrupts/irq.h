@@ -4,8 +4,13 @@
 #include <structs/pic_str.h>
 #include <structs/pit_str.h>
 
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 static const PIC_DRIVER *pic = NULL;
 static const PIT_DRIVER *pit = NULL;
+
+/* --------------------------------- DEFINES -------------------------------- */
+
+/* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void irq_handler(REGISTERS *regs);

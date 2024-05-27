@@ -64,5 +64,5 @@ void keyboard_init() {
   pic_unmask(1);
   enable_interrupts();
 
-  terminal_printf(&term, "Keyboard initialized...\n");
+  klogi("Keyboard initialized...\n");
 }

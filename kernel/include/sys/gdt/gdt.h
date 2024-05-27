@@ -1,8 +1,11 @@
 #pragma once
 
 #include <globals.h>
-#include <memory.h>
+#include <common/memory.h>
 
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
+
+/* --------------------------------- DEFINES -------------------------------- */
 /* Locations within the GDT to specfic segments */
 #define GDT_KERNEL_CODE_16_BIT      (0x8)
 #define GDT_KERNEL_DATA_16_BIT      (0x10)
@@ -14,6 +17,7 @@
 #define GDT_USER_DATA_64_BIT        (0x40)
 #define GDT_TSS                     (0x48)
 
+/* --------------------------------- MACROS --------------------------------- */
 #define GDT_LIMIT_LOW(limit)                (limit & 0xFFFF)
 #define GDT_BASE_LOW(base)                  (base & 0xFFFF)
 #define GDT_BASE_MID(base)                  ((base >> 16) & 0xFF)

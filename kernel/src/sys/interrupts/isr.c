@@ -1,4 +1,4 @@
-#include <isr.h>
+#include <sys/interrupts/isr.h>
 
 /* From the auto generated file */
 void isr_init_entries();
@@ -11,7 +11,7 @@ void isr_init() {
   }
   idt_disable_gate(0x80);
   enable_interrupts();
-  terminal_printf(&term, "ISR's are initialized, interrupts are enabled\n");
+  klogi("ISR's are initialized, interrupts are enabled\n");
 }
 
 /*
@@ -36,16 +36,16 @@ void isr_handler(REGISTERS *regs) {
     g_isr_handlers[regs->interrupt](regs);
   } else if (regs->interrupt >= 32) {
     /* Unreserved interrupt with no handler, hang the system */
-    terminal_printf(&term, "Unhandled interupt %d!\n\n", regs->interrupt);
+    kloge("Unhandled interupt %d!\n\n", regs->interrupt);
     walk_memory((void *) regs->rbp, 8);
     halt();
   } else {
     /* Reserved interrupt, hang the system */
-    terminal_printf(&term, "\n\nUnhandled exception!\n%s.\nError code: %d (%x)\n\n",
-            exceptions[regs->interrupt], regs->error_code, regs->error_code);
+    kloge("\n\nUnhandled exception!\n%s.\nError code: %d (%x)\n\n",
+          exceptions[regs->interrupt], regs->error_code, regs->error_code);
     walk_memory((void *) regs->rbp, 8);
     // stack_walk((void *) regs->rbp, 4);
-    terminal_printf(&term, "\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
+    kloge("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
             "RSP   : (%x)\nSS    : (%x)\n"
             "RAX   : %x\nRBX   : %x\nRCX   : %x\nRDX   : %x\n"
             "RSI   : %x\nRDI   : %x\nRBP   : %x\n"

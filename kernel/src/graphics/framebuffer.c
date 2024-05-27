@@ -38,6 +38,19 @@ void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color) {
   }
 }
 
+uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y) {
+  // if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
+  //     kprintf("base == backbuffer!\n");
+  //     return;
+  // }
+
+    if ((fb->pitch * y + x * 4) < fb->pitch * fb->height) {
+        return ((uint32_t *)(fb->backbuffer + (fb->pitch * y)))[x];
+    } else {
+        return 0;
+    }
+}
+
 void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,
               uint32_t bgcolor, uint8_t ch) {
   // if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {

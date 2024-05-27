@@ -1,9 +1,9 @@
-#include <pit.h>
+#include <sys/tick/pit.h>
 
 void pit_init(uint32_t hertz) {
   /* Check to make sure the frequency is within range */
   if (hertz < PIT_MIN_FREQ || hertz > PIT_MAX_FREQ) {
-    terminal_printf(&term, "PIT programmed out of range! Setting to default 1 ms...\n");
+    kloge("PIT programmed out of range! Setting to default 1 ms...\n");
     hertz = PIT_DEFAULT_FREQ;
   }
 
@@ -24,7 +24,7 @@ void pit_init(uint32_t hertz) {
   /* Set the interrupt handler for the PIT (IRQ 0) to be serviceable */
   pic_unmask(0);
 
-  terminal_printf(&term, "PIT set to %d hz...\n", hertz);
+  klogi("PIT set to %d hz...\n", hertz);
 }
 
 void pit_set_event(unsigned long delta) {

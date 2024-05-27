@@ -63,4 +63,4 @@ ISR%1:
   jmp isr_disp      ; Call general dispatcher
 %endmacro
 
-%include "include/isrs_gen.inc"
+%include "include/sys/interrupts/isrs_gen.inc"

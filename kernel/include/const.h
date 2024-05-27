@@ -35,3 +35,12 @@
 
 #define SHIFT_ENABLED   (0x01)
 #define SHIFT_DISABLED  (0x00)
+
+/* LOGGING */
+#define LEVEL_LOG   (0)
+#define LEVEL_ERROR (1)
+#define LEVEL_DEBUG (2)
+
+/* System Status */
+#define SYS_OK    (1)
+#define SYS_ERROR (0)

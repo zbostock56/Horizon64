@@ -3,10 +3,9 @@
 #include <globals.h>
 #include <structs/pic_str.h>
 
-#define PIC1_COMMAND_PORT              (0x20)
-#define PIC1_DATA_PORT                 (0x21)
-#define PIC2_COMMAND_PORT              (0xA0)
-#define PIC2_DATA_PORT                 (0xA1)
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
+static uint16_t g_pic_mask = 0xFFFF;
+static int g_auto_eoi = 0;
 
 enum {
     PIC_ICW1_ICW4           = 0x01,     /* If set, ICW4 must be read (its optional) */
@@ -31,8 +30,13 @@ enum {
     PIC_CMD_READ_ISR            = 0x0B,
 } PIC_CMD;
 
-static uint16_t g_pic_mask = 0xFFFF;
-static int g_auto_eoi = 0;
+/* --------------------------------- DEFINES -------------------------------- */
+#define PIC1_COMMAND_PORT              (0x20)
+#define PIC1_DATA_PORT                 (0x21)
+#define PIC2_COMMAND_PORT              (0xA0)
+#define PIC2_DATA_PORT                 (0xA1)
+
+/* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void pic_set_mask(uint16_t mask);

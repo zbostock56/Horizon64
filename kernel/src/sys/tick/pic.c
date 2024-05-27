@@ -1,4 +1,4 @@
-#include <pic.h>
+#include <sys/tick/pic.h>
 
 void pic_set_mask(uint16_t mask) {
   g_pic_mask = mask;
@@ -17,7 +17,7 @@ void pic_mask(int irq) {
 }
 
 void pic_unmask(int irq) {
-  terminal_printf(&term, "Unmasked IRQ %d\n", irq);
+  klogi("Unmasked IRQ %d\n", irq);
   pic_set_mask(g_pic_mask & ~(1 << irq));
 }
 
@@ -28,14 +28,14 @@ uint16_t pic_get_mask() {
 uint16_t pic_read_in_request_register() {
   outb(PIC1_COMMAND_PORT, PIC_CMD_READ_IRR);
   outb(PIC2_COMMAND_PORT, PIC_CMD_READ_IRR);
-  return ((uint16_t) inb(PIC2_COMMAND_PORT)) |
+  return ((uint16_t) inb(PIC1_COMMAND_PORT)) |
          (((uint16_t) inb(PIC2_COMMAND_PORT)) << 8);
 }
 
 uint16_t pic_read_in_service_register() {
   outb(PIC1_COMMAND_PORT, PIC_CMD_READ_ISR);
   outb(PIC2_COMMAND_PORT, PIC_CMD_READ_ISR);
-  return ((uint16_t) inb(PIC2_COMMAND_PORT)) |
+  return ((uint16_t) inb(PIC1_COMMAND_PORT)) |
          (((uint16_t) inb(PIC2_COMMAND_PORT)) << 8);
 }
 
