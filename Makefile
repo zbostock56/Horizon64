@@ -53,10 +53,14 @@ limine:
 		LDFLAGS="$(HOST_LDFLAGS)" \
 		LIBS="$(HOST_LIBS)"
 
+./ext:
+	mkdir -p ext
+	curl -Lo ./ext/zap-vga16.psf https://www.zap.org.au/projects/console-fonts-zap/src/zap-vga16.psf
+
 kernel:
 	$(MAKE) -C kernel
 
-$(IMAGE_NAME).iso: limine kernel
+$(IMAGE_NAME).iso: ./ext limine kernel
 	@echo "Creating horizon.iso..."
 	@rm -rf iso_root
 	@mkdir -p iso_root/boot
@@ -95,7 +99,7 @@ clean:
 	$(MAKE) -C kernel clean
 
 distclean: clean
-	rm -rf limine ovmf
+	rm -rf limine ovmf ext
 	$(MAKE) -C kernel distclean
 
 
