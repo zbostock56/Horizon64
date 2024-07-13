@@ -1,7 +1,30 @@
+/**
+ * @file pit.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to Programmable Interrupt Timer 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <structs/pit_str.h>
+
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
+/* Max and min PIT programmable frequencies */
+#define PIT_MIN_FREQ     (18)
+#define PIT_MAX_FREQ     (1193180)
+#define PIT_DEFAULT_FREQ (1000)
+
+/* Read/write channels */
+#define PIT_CHANNEL_0_DATA_PORT         (0x40)
+#define PIT_CHANNEL_1_DATA_PORT         (0x41)
+#define PIT_CHANNEL_2_DATA_PORT         (0x42)
+
+/* Write only channel */
+#define MODE_COMMAND_REGISTER           (0x43)
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 /*
@@ -59,20 +82,6 @@ enum {
     PIT_BINARY_MODE         = 0x0,
     PIT_BCD_MODE            = 0x1,
 } PIT_MODE_COMMAND_NUMBER_BASE;
-
-/* --------------------------------- DEFINES -------------------------------- */
-/* Max and min PIT programmable frequencies */
-#define PIT_MIN_FREQ     (18)
-#define PIT_MAX_FREQ     (1193180)
-#define PIT_DEFAULT_FREQ (1000)
-
-/* Read/write channels */
-#define PIT_CHANNEL_0_DATA_PORT         (0x40)
-#define PIT_CHANNEL_1_DATA_PORT         (0x41)
-#define PIT_CHANNEL_2_DATA_PORT         (0x42)
-
-/* Write only channel */
-#define MODE_COMMAND_REGISTER           (0x43)
 
 /* --------------------------------- MACROS --------------------------------- */
 #define PIT_MODE_COMMAND_SET_CHANNEL(x)     (x << 6)

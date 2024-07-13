@@ -1,5 +1,20 @@
+/**
+ * @file kprint.c
+ * @author Zack Bostock
+ * @brief Internal logging functionality
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <common/kprint.h>
 
+/**
+ * @brief Dumps character to 0xE9 COM port
+ * 
+ * @param c Character to dump
+ */
 void kputc(char c) {
   __asm__ __volatile__("outb %0, %1" ::"a"(c), "Nd"(0xe9) : "memory");
 }
@@ -21,17 +36,32 @@ void kputc(char c) {
 //   klog_unlock();
 // }
 
+/**
+ * @brief Prints a message to the log.
+ * 
+ * @param msg Message to log
+ */
 void kprint(const char *msg) {
   for (size_t i = 0; msg[i]; i++) {
     kputc(msg[i]);
   }
 }
 
+/**
+ * @brief Prints string to the log
+ * 
+ * @param msg String to log
+ */
 void kputs(const char *msg) {
   kprint(msg);
   kputc('\n');
 }
 
+/**
+ * @brief Internal helper function to print numbers.
+ * 
+ * @param num number to print as hex to the screen.
+ */
 static void kprint_hex(size_t num) {
   int i;
   char buf[17];
@@ -69,6 +99,12 @@ static void kprint_dec(size_t num) {
   kprint(buf + i);
 }
 
+/**
+ * @brief printf helper to put in log
+ * 
+ * @param format Format string
+ * @param ... variatic arguments
+ */
 void kprintf(const char *format, ...) {
   va_list argp;
   va_start(argp, format);
@@ -91,6 +127,13 @@ void kprintf(const char *format, ...) {
   va_end(argp);
 }
 
+/**
+ * @brief Logging internal implementation
+ * 
+ * @param level Logging level
+ * @param format Format string
+ * @param ... variatic arguments
+ */
 void klog_implementation(int level, const char *format, ...) {
   switch (level) {
     case LEVEL_LOG:

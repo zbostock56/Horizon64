@@ -1,5 +1,24 @@
+/**
+ * @file irq.c
+ * @author Zack Bostock
+ * @brief Initialization for hardware interrupts
+ * @verbatim
+ * In this file, the various devices which are based on hardware
+ * interrupts are setup. There are also helpers for registering handlers for
+ * those hardware interrupts.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <sys/interrupts/irq.h>
 
+/**
+ * @brief Generic hardware interrupt handler. Calls specific interrupt handler
+ *        if required.
+ * 
+ * @param regs Structure which has information about the calling process
+ */
 void irq_handler(REGISTERS *regs) {
   /* Translate between the vector number to hardware interrupt number */
   int irq = regs->interrupt - PIC_REMAP_OFFSET;
@@ -15,11 +34,20 @@ void irq_handler(REGISTERS *regs) {
   pic->send_end_of_interrupt(irq);
 }
 
+/**
+ * @brief Hardware interrupt handler registration helper.
+ * 
+ * @param irq Interrupt number to tie this handler to
+ * @param handler Handler itself
+ */
 void irq_register_handler(int irq, IRQ_HANDLER handler) {
   klogi("Registered IRQ handler %d\n", irq);
   g_irq_handler[irq] = handler;
 }
 
+/**
+ * @brief Main hardware interrupt initization function.
+ */
 void irq_init() {
   disable_interrupts();
 

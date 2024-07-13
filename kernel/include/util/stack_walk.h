@@ -1,10 +1,19 @@
+/**
+ * @file stack_walk.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to the stack walk utility 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

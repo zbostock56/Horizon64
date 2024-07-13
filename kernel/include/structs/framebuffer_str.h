@@ -1,3 +1,12 @@
+/**
+ * @file framebuffer_str.h
+ * @author Zack Bostock 
+ * @brief Structs utilized by the framebuffer functionality 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>

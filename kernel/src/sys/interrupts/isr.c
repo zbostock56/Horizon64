@@ -1,8 +1,24 @@
+/**
+ * @file isr.c
+ * @author Zack Bostock
+ * @brief Interrupt Service Routine setup and helpers.
+ * @verbatim
+ * In this file, there are helpers for registering handlers for specific
+ * Interrupt Service Routines (ISR). In addition, there is the generic ISR
+ * handler. Plus, the initialization function for the ISRs.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <sys/interrupts/isr.h>
 
 /* From the auto generated file */
 void isr_init_entries();
 
+/**
+ * @brief Initialization of ISRs.
+ */
 void isr_init() {
   isr_init_entries();
   /* Set all to open (will cause #GP if a gate is not open and is accessed) */
@@ -14,14 +30,18 @@ void isr_init() {
   klogi("ISR's are initialized, interrupts are enabled\n");
 }
 
-/*
-    Default Interrupt Vector Assignment:
-    0-31: Reserved by Intel
-    8-15: IRQ 0-7 by the BIOS bootstrap
-    70h-78h: IRQ 8-15 by the BIOS bootstrap
-
-    IRQ's are remapped to start at 0x20 (interrupt 32)
-*/
+/**
+ * @brief Generic ISR handler
+ * @verbatim
+ * Default Interrupt Vector Assignment:
+ *  0-31: Reserved by Intel
+ *  8-15: IRQ 0-7 by the BIOS bootstrap
+ *  70h-78h: IRQ 8-15 by the BIOS bootstrap
+ * 
+ * IRQ's are remapped to start at 0x20 (interrupt 32)
+ * 
+ * @param regs Information about the calling process.
+ */
 void isr_handler(REGISTERS *regs) {
 
   /* TODO: Check for spurious interrupt */
@@ -59,12 +79,17 @@ void isr_handler(REGISTERS *regs) {
   }
 }
 
-/*
-    Here, specific interrupt numbers are married to their
-    interrupt handler (vector) for futher processing. When
-    an interrupt occurs, the "common" handler will try to
-    use a vector that was registered here to service the interrupt.
-*/
+/**
+ * @brief Helper for registering handlers for specific ISRs.
+ * @verbatim
+ * Here, specific interrupt numbers are married to their
+ * interrupt handler (vector) for futher processing. When
+ * an interrupt occurs, the "common" handler will try to
+ * use a vector that was registered here to service the interrupt.
+ * 
+ * @param interrupt Interrupt number to associate to handler
+ * @param handler ISR handler itself
+ */
 void isr_register_handler(int interrupt, ISR_HANDLER handler) {
   /* Set the vector which will be the function execution upon interruption */
   g_isr_handlers[interrupt] = handler;

@@ -1,5 +1,23 @@
+/**
+ * @file pit.c
+ * @author Zack Bostock
+ * @brief Initialization for the Programmable Interrupt Timer
+ * @verbatim
+ * In this file, all the code needed to set up the Programmable Interrupt
+ * Timer (PIT), particularly the Intel 8253/8254 chip, is housed. This acts as the
+ * main driver code needed for chip functionality beyond initialization as well.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <sys/tick/pit.h>
 
+/**
+ * @brief Main initialization function for the PIT.
+ * 
+ * @param hertz Frequency in hertz to set the PIT to
+ */
 void pit_init(uint32_t hertz) {
   /* Check to make sure the frequency is within range */
   if (hertz < PIT_MIN_FREQ || hertz > PIT_MAX_FREQ) {
@@ -27,6 +45,11 @@ void pit_init(uint32_t hertz) {
   klogi("PIT set to %d hz...\n", hertz);
 }
 
+/**
+ * @brief Helper for setting events on the PIT.
+ * 
+ * @param delta Time away from now (current time) for the event
+ */
 void pit_set_event(unsigned long delta) {
   /* Used for timer events */
   disable_interrupts();
@@ -35,6 +58,11 @@ void pit_set_event(unsigned long delta) {
   enable_interrupts();
 }
 
+/**
+ * @brief Reads the set frequency on the PIT.
+ * 
+ * @return unsigned int Set frequency on the PIT
+ */
 unsigned int pit_read_frequency() {
   unsigned int count = 0;
 
@@ -48,6 +76,11 @@ unsigned int pit_read_frequency() {
   return count;
 }
 
+/**
+ * @brief Getter for the PIT driver and its functionality.
+ * 
+ * @return const PIT_DRIVER* PIT driver
+ */
 const PIT_DRIVER *pit_get_driver() {
   return &g_pit_driver;
 }

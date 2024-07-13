@@ -1,10 +1,17 @@
+/**
+ * @file psf.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to the usage of PC Screen Fonts 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
-
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* ------------------ PSF1 ------------------ */
 /* Little-endian */
 #define PSF1_MAGIC0      (0x36)
@@ -38,6 +45,8 @@
 #define PSF2_STARTSEQ          (0xFE)
 
 #define PSF2_MAXVERSION        (0x00)
+
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 /* Header checks */

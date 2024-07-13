@@ -1,5 +1,21 @@
+/**
+ * @file keyboard.c
+ * @author Zack Bostock
+ * @brief Keyboard initialization and helpers
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <dev/keyboard/keyboard.h>
 
+/**
+ * @brief Helper for setting a key on the keyboard
+ * 
+ * @param state State of key
+ * @param scancode Scancode to set
+ */
 void keyboard_set_key(uint8_t state, uint8_t scancode) {
   keyboard.key_pressed[scancode] = state;
 
@@ -13,9 +29,12 @@ void keyboard_set_key(uint8_t state, uint8_t scancode) {
     keyboard.ptr_to_update[scancode] = state;
   }
 }
-/*
-  Note: Key pressed and key releases generate different IRQs.
-*/
+
+/**
+ * @brief Hardware interrupt handler for the keyboard
+ * @verbatim
+ * Key pressed and key releases generate different IRQs.
+ */
 static void kbhandler() {
   uint8_t keycode = inb(PS2_DATA_PORT);
   uint8_t scancode = keycode & 0x7F;
@@ -44,6 +63,9 @@ static void kbhandler() {
 //   }
 // }
 
+/**
+ * @brief Intialization function for the keyboard
+ */
 void keyboard_init() {
   disable_interrupts();
 

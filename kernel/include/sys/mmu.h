@@ -1,13 +1,19 @@
+/**
+ * @file mmu.h
+ * @author Zack Bostock 
+ * @brief Contains information pertaining to the kernel's memory management
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <structs/mmu_str.h>
 #include <common/memory.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
-static KERNEL_MEM_INFO kmem = {0};
-
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define PAGES_PER_BYTE  (8)
 #define PAGE_SIZE       (4096)
 
@@ -15,6 +21,11 @@ static KERNEL_MEM_INFO kmem = {0};
 #define MEM_VIRT_OFFSET (0xFFFF800000000000)
 #define FREE            (1)
 #define ALLOCATED       (0)
+
+typedef uint8_t BITMAP_STATUS;
+
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
+static KERNEL_MEM_INFO kmem = {0};
 
 /* --------------------------------- MACROS --------------------------------- */
 #define ENTRY_TYPE_CHECK(entry)                                 \
@@ -56,7 +67,7 @@ static KERNEL_MEM_INFO kmem = {0};
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void pm_init(LIMINE_MEM_REQ req);
 static inline void bitmap_set(uint64_t address, uint64_t num_pages);
-static inline int bitmap_free(uint64_t address, uint64_t num_pages);
+static inline BITMAP_STATUS bitmap_free(uint64_t address, uint64_t num_pages);
 STATUS pm_free(uint64_t address, uint64_t num_pages);
 STATUS pm_allocate(uint64_t address, uint64_t num_pages);
 

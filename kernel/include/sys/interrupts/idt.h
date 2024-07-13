@@ -1,13 +1,22 @@
+/**
+ * @file idt.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to the Interrupt Descriptor Table 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <common/memory.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
-
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define SET(x, flag) (x |= (flag))
 #define UNSET(x, flag) (x &= ~(flag))
+
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

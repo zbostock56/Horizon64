@@ -18,3 +18,4 @@ kernel/include/limine.h
 kernel/obj
 kernel/bin
 ext
+scripts/pre-commit

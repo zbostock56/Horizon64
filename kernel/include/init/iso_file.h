@@ -1,10 +1,19 @@
+/**
+ * @file iso_file.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to using files from the system image 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

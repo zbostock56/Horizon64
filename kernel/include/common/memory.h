@@ -1,11 +1,20 @@
+/**
+ * @file memory.h
+ * @author Zack Bostock 
+ * @brief Kernel memory manipulation functionality
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>
 #include <stddef.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

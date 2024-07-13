@@ -1,3 +1,12 @@
+/**
+ * @file psf_structs.h
+ * @author Zack Bostock 
+ * @brief Structs pertaining to PC Screen Font driver 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>

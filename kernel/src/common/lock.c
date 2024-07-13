@@ -1,9 +1,25 @@
+/**
+ * @file lock.c
+ * @author Zack Bostock
+ * @brief Hardware locking functionality
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <common/lock.h>
 
-/*
-  Locks a hardware lock which can be used to ensure no other process is
-  able to perform this operation while another already is.
-*/
+/**
+ * @brief Locks a hardware lock
+ * @verbatim
+ * Locks a hardware lock which can be used to ensure no other process is
+ * able to perform this operation while another already is.
+ * 
+ * @param s LOCK structure
+ * @param f File name
+ * @param ln Line number
+ */
 void lock_lock_implementation(LOCK *s, const char *f, const int ln) {
   (void) f;
   (void) ln;
@@ -26,9 +42,13 @@ void lock_lock_implementation(LOCK *s, const char *f, const int ln) {
       : "memory", "cc");
 }
 
-/*
-  Relinquishes control of the hardware lock.
-*/
+/**
+ * @brief Unlock hardware lock
+ * 
+ * @param s LOCK structure
+ * @param f File name
+ * @param ln Line number
+ */
 void unlock_lock_implmentation(LOCK *s, const char *f, const int ln) {
   (void) f;
   (void) ln;

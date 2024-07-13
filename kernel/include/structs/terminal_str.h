@@ -1,3 +1,12 @@
+/**
+ * @file terminal_str.h
+ * @author Zack Bostock 
+ * @brief Structs pertaining to the terminal
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <structs/framebuffer_str.h>

@@ -1,3 +1,12 @@
+/**
+ * @file const.h
+ * @author Zack Bostock 
+ * @brief Storage location for globally used constants 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 /* Default for scheduling quantum time */

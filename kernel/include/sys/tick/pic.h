@@ -1,7 +1,22 @@
+/**
+ * @file pic.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to the Programmable Interrupt Controller 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <structs/pic_str.h>
+
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
+#define PIC1_COMMAND_PORT              (0x20)
+#define PIC1_DATA_PORT                 (0x21)
+#define PIC2_COMMAND_PORT              (0xA0)
+#define PIC2_DATA_PORT                 (0xA1)
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 static uint16_t g_pic_mask = 0xFFFF;
@@ -29,12 +44,6 @@ enum {
     PIC_CMD_READ_IRR            = 0x0A,
     PIC_CMD_READ_ISR            = 0x0B,
 } PIC_CMD;
-
-/* --------------------------------- DEFINES -------------------------------- */
-#define PIC1_COMMAND_PORT              (0x20)
-#define PIC1_DATA_PORT                 (0x21)
-#define PIC2_COMMAND_PORT              (0xA0)
-#define PIC2_DATA_PORT                 (0xA1)
 
 /* --------------------------------- MACROS --------------------------------- */
 

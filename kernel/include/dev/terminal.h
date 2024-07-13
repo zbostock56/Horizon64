@@ -1,13 +1,22 @@
+/**
+ * @file terminal.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to terminal functionality 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <stdarg.h>
 
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
+#define TERMINAL_LEFT_OFFSET (1)
+
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 static const char CONVERSION_TABLE[] = "0123456789abcdef";
-
-/* --------------------------------- DEFINES -------------------------------- */
-#define TERMINAL_LEFT_OFFSET (1)
 
 /* --------------------------------- MACROS --------------------------------- */
 

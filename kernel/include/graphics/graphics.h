@@ -1,3 +1,12 @@
+/**
+ * @file graphics.h
+ * @author Zack Bostock 
+ * @brief Easy one-stop include for graphics related headers 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <graphics/vec2.h>
@@ -7,7 +16,7 @@
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

@@ -1,10 +1,20 @@
+/**
+ * @file init.c
+ * @author Zack Bostock
+ * @brief Sets up system vitals
+ * @verbatim
+ * Sets up GDT, IDT, ISR, IRQ, and other important system variables.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <init/init.h>
 
-/*
-    Sets up GDT, IDT, ISR, IRQ, and other important system
-    variables.
-*/
-
+/**
+ * @brief Main system initialization function where high level handlers
+ *        are called.
+ */
 void system_init() {
     /* Initial Limine check */
     if (!LIMINE_BASE_REVISION_SUPPORTED) {
@@ -22,6 +32,9 @@ void system_init() {
 
     /* Initialize interrupt descriptor table */
     idt_init();
+
+    /* Initialize CPU specific features */
+    cpu_init(0);
 
     /* Initialize interrupt service routines */
     isr_init();

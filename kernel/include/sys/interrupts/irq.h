@@ -1,14 +1,24 @@
+/**
+ * @file irq.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to hardware interrupts 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <structs/pic_str.h>
 #include <structs/pit_str.h>
 
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
+
+
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 static const PIC_DRIVER *pic = NULL;
 static const PIT_DRIVER *pit = NULL;
-
-/* --------------------------------- DEFINES -------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

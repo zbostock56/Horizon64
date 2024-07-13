@@ -1,5 +1,25 @@
+/**
+ * @file idt.c
+ * @author Zack Bostock
+ * @brief Initialization for the Interrupt Descriptor Table
+ * @verbatim
+ * In this file is the initialization code and helpers for the Interrupt
+ * Descriptor Table (IDT).
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <sys/interrupts/idt.h>
 
+/**
+ * @brief Helper to create IDT entries.
+ * 
+ * @param interrupt Entry number
+ * @param base Base in memory
+ * @param segment Segment in memory
+ * @param type Type of gate
+ */
 void idt_init_entry(int interrupt, void *base, uint16_t segment, uint8_t type) {
   g_idt[interrupt].segment_selector = segment;
   g_idt[interrupt].base_low = ((uint64_t)base) & 0xFFFF;
@@ -10,6 +30,9 @@ void idt_init_entry(int interrupt, void *base, uint16_t segment, uint8_t type) {
   /* _reserved already set to zero from memset() */
 }
 
+/**
+ * @brief Main initialization function for the IDT.
+ */
 void idt_init() {
   /* Zero out all IDT entries */
   for (size_t i = 0; i < X86_64_IDT_ENTRIES; i++) {
@@ -21,11 +44,21 @@ void idt_init() {
   klogi("Finished loading IDT\n");
 }
 
+/**
+ * @brief Enables an interrupt in the IDT.
+ * 
+ * @param interrupt Interrupt to enable
+ */
 void idt_enable_gate(int interrupt) {
   /* Set the present bit */
   SET(g_idt[interrupt].type, IDT_FLAG_PRESENT);
 }
 
+/**
+ * @brief Disables an interrupt in the IDT.
+ * 
+ * @param interrupt Interrupt to disable
+ */
 void idt_disable_gate(int interrupt) {
   /* Zero the present bit */
   UNSET(g_idt[interrupt].type, IDT_FLAG_PRESENT);

@@ -1,10 +1,19 @@
+/**
+ * @file lock.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to hardware locks 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <structs/lock_str.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void lock_lock_implementation(LOCK *s, const char *f, const int ln);

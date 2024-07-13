@@ -1,5 +1,21 @@
+/**
+ * @file psf.c
+ * @author Zack Bostock
+ * @brief Helpers for .psf files
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <init/psf.h>
 
+/**
+ * @brief Gets the glyphs from a .psf type file
+ * 
+ * @param file File of glyphs
+ * @return int Success or failure status
+ */
 int psf1_get_glyphs(LIMINE_FILE *file) {
   font.header = (PSF1_HEADER *) file->address;
   if (!PSF1_MAGIC_CHECK(font.header->magic)) {
@@ -10,6 +26,12 @@ int psf1_get_glyphs(LIMINE_FILE *file) {
   return PSF1_SUCCESS;
 }
 
+/**
+ * @brief Helper to initialize a psf font for the system
+ * 
+ * @param req Request for the file from the bootloader
+ * @param path Path of the file in the system image
+ */
 void psf1_font_init(struct limine_module_request req, const char *path) {
 
   if (!req.response) {

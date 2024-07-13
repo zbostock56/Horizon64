@@ -1,3 +1,12 @@
+/**
+ * @file globals.h
+ * @author Zack Bostock 
+ * @brief Global scope initialization area for global variables 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>

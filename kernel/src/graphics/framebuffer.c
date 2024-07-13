@@ -1,5 +1,20 @@
+/**
+ * @file framebuffer.c
+ * @author Zack Bostock
+ * @brief Helpers and initalization for the screen framebuffer
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <graphics/framebuffer.h>
 
+/**
+ * @brief Initialization of a framebuffer
+ * 
+ * @param req Request for framebuffer from bootloader
+ */
 void fb_init(struct limine_framebuffer_request req) {
 
   if (!req.response || req.response->framebuffer_count < 1) {
@@ -27,6 +42,14 @@ void fb_init(struct limine_framebuffer_request req) {
         in order to properly support double-buffering.
 */
 
+/**
+ * @brief Helper for changing the color of a pixel on the screen.
+ * 
+ * @param fb Framebuffer to change
+ * @param x X-coordinate on the screen
+ * @param y Y-coordinate on the screen
+ * @param color Color to change to
+ */
 void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color) {
   // if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
   //     kprintf("base == backbuffer!\n");
@@ -38,6 +61,14 @@ void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color) {
   }
 }
 
+/**
+ * @brief Helper to get a pixels color from the screen
+ * 
+ * @param fb Framebuffer to view
+ * @param x X-coordinate on the screen
+ * @param y Y-coordinate on the screen
+ * @return uint32_t Color value of the pixel
+ */
 uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y) {
   // if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
   //     kprintf("base == backbuffer!\n");
@@ -51,6 +82,16 @@ uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y) {
     }
 }
 
+/**
+ * @brief Helper to put a character on the framebuffer.
+ * 
+ * @param fb Framebuffer to change
+ * @param x X-coordinate on the screen
+ * @param y Y-coordinate on the screen 
+ * @param fgcolor Foreground color of the character
+ * @param bgcolor Background color of the character
+ * @param ch Character to put on the screen
+ */
 void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,
               uint32_t bgcolor, uint8_t ch) {
   // if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
@@ -72,6 +113,11 @@ void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,
   }
 }
 
+/**
+ * @brief Refreshes a framebuffer
+ * 
+ * @param fb Framebuffer struct to refresh
+ */
 void fb_refresh(FRAMEBUFFER *fb) {
   if ((uint64_t)fb->base != (uint64_t)fb->backbuffer) {
     uint64_t len = fb->pitch * fb->height;
@@ -87,6 +133,11 @@ void fb_refresh(FRAMEBUFFER *fb) {
   }
 }
 
+/**
+ * @brief Helper to clear the screen
+ * 
+ * @param fb Framebuffer to clear
+ */
 void fb_clear_screen(FRAMEBUFFER *fb) {
   // TODO
 }

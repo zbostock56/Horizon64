@@ -1,10 +1,19 @@
+/**
+ * @file asm.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to c-wrapped assembly functions 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

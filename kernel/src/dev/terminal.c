@@ -1,10 +1,23 @@
+/**
+ * @file terminal.c
+ * @author Zack Bostock
+ * @brief Helpers and initialization of the terminal
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <dev/terminal.h>
 
-/*
-  Initializes a framebuffer for the terminal and
-  sets basic information about the framebuffer and the
-  terminal variables to support text output
-*/
+/**
+ * @brief Main initialization of a terminal
+ * @verbatim
+ * Initializes a framebuffer for the terminal and sets basic information about
+ * the framebuffer and the terminal variable to support text output.
+ * 
+ * @param fb 
+ */
 void init_terminal(FRAMEBUFFER fb) {
   /* TODO: pass as pointer once memory allocation finished */
   // if (!fb) {
@@ -20,6 +33,12 @@ void init_terminal(FRAMEBUFFER fb) {
   term.cursor_pos = IVEC2_ONE;
 }
 
+/**
+ * @brief Helper to set the foreground of the terminal
+ * 
+ * @param t Terminal to change
+ * @param color Color to set the foreground to
+ */
 void terminal_set_foreground(TERMINAL *t, FRAMEBUFFER_COLORS color) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -28,6 +47,12 @@ void terminal_set_foreground(TERMINAL *t, FRAMEBUFFER_COLORS color) {
   t->foreground_color = color;
 }
 
+/**
+ * @brief Helper for setting the background of the terminal
+ * 
+ * @param t Terminal to change
+ * @param color Color to set the background to
+ */
 void terminal_set_background(TERMINAL *t, FRAMEBUFFER_COLORS color) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -36,6 +61,13 @@ void terminal_set_background(TERMINAL *t, FRAMEBUFFER_COLORS color) {
   t->background_color = color;
 }
 
+/**
+ * @brief Sets the terminal cursor pos object
+ * 
+ * @param t Terminal to change
+ * @param x X-coordinate
+ * @param y Y-coordinate
+ */
 void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -49,6 +81,11 @@ void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
   t->cursor_pos.y = y;
 }
 
+/**
+ * @brief Helper to move the terminal cursor forward
+ * 
+ * @param t Terminal to change
+ */
 void terminal_push_cursor(TERMINAL *t) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -70,6 +107,11 @@ void terminal_push_cursor(TERMINAL *t) {
   t->cursor_pos.x++;
 }
 
+/**
+ * @brief Helper to move the cursor backwards.
+ * 
+ * @param t Terminal to change 
+ */
 void terminal_pop_cursor(TERMINAL *t) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -81,6 +123,12 @@ void terminal_pop_cursor(TERMINAL *t) {
   }
 }
 
+/**
+ * @brief Helper to put a character on the screen in the terminal.
+ * 
+ * @param t Terminal to change
+ * @param c Character to put on the screen
+ */
 void terminal_putc(TERMINAL *t, uint8_t c) {
   if (!t) {
     kprintf("Null terminal!\n");
@@ -108,12 +156,24 @@ void terminal_putc(TERMINAL *t, uint8_t c) {
   terminal_push_cursor(t);
 }
 
+/**
+ * @brief Helper to put a string on the screen
+ * 
+ * @param t Terminal to change
+ * @param s String to put on the screen
+ */
 void terminal_puts(TERMINAL *t, const char *s) {
   for (size_t i = 0; s[i]; i++) {
     terminal_putc(t, s[i]);
   }
 }
 
+/**
+ * @brief Internal helper function for terminal printf
+ * 
+ * @param t Terminal to change
+ * @param num Number to print in hex
+ */
 static void terminal_hex(TERMINAL *t, size_t num) {
   int i;
   char buf[17];
@@ -134,6 +194,12 @@ static void terminal_hex(TERMINAL *t, size_t num) {
   terminal_puts(t, &buf[i]);
 }
 
+/**
+ * @brief Internal helper for terminal printf
+ * 
+ * @param t Terminal to change
+ * @param num Number to print as decimal
+ */
 static void terminal_dec(TERMINAL *t, size_t num) {
   int i;
   char buf[21] = {0};
@@ -151,6 +217,13 @@ static void terminal_dec(TERMINAL *t, size_t num) {
   terminal_puts(t, buf + i);
 }
 
+/**
+ * @brief Main terminal printf function
+ * 
+ * @param t Terminal to change
+ * @param format Format string
+ * @param ... variatic arguments
+ */
 void terminal_printf(TERMINAL *t, const char *format, ...) {
   va_list argp;
   va_start(argp, format);
@@ -173,6 +246,11 @@ void terminal_printf(TERMINAL *t, const char *format, ...) {
   va_end(argp);
 }
 
+/**
+ * @brief Helper for clearing the terminal screen
+ * 
+ * @param t Terminal to clear
+ */
 void terminal_clear(TERMINAL *t) {
   for (size_t y = 0; y < t->framebuffer.height; y++) {
     for (size_t x = 0; x < t->framebuffer.width; x++) {
@@ -184,6 +262,11 @@ void terminal_clear(TERMINAL *t) {
   t->cursor_pos.y = 0;
 }
 
+/**
+ * @brief Helper to scroll the terminal down
+ * 
+ * @param t Terminal to scroll
+ */
 void terminal_scroll(TERMINAL *t) {
   const uint8_t char_size = font.header->character_size;
 

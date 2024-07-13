@@ -1,3 +1,12 @@
+/**
+ * @file keyboard_str.h
+ * @author Zack Bostock 
+ * @brief Structs pertaining to keyboard driver functionality 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>

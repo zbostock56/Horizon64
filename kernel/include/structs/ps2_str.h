@@ -1,3 +1,12 @@
+/**
+ * @file ps2_str.h
+ * @author Zack Bostock 
+ * @brief Structs pertaining to PS2 driver 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 /* Reference: https://wiki.osdev.org/"8042"_PS/2_Controller */

@@ -1,11 +1,18 @@
+/**
+ * @file gdt.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to the Global Descriptor Table
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <common/memory.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
-
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* Locations within the GDT to specfic segments */
 #define GDT_KERNEL_CODE_16_BIT      (0x8)
 #define GDT_KERNEL_DATA_16_BIT      (0x10)
@@ -16,6 +23,8 @@
 #define GDT_USER_CODE_64_BIT        (0x38)
 #define GDT_USER_DATA_64_BIT        (0x40)
 #define GDT_TSS                     (0x48)
+
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 #define GDT_LIMIT_LOW(limit)                (limit & 0xFFFF)

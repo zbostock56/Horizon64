@@ -1,16 +1,28 @@
+/**
+ * @file mmu.c
+ * @author Zack Bostock
+ * @brief Memory Management Unit
+ * @verbatim
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <sys/mmu.h>
 
-/*
-  Physcial Memory Initialization
-
-  Utilize a 8-bit integer as a representation of eight pages, then store in an
-  array. Each page is 4 KB on x86_64.
-
-  The minimum allocatable is 1 page (which is managed by the requesting process
-  after being allocated using the standard library). The total overhead,
-  assuming that one bit is used per entry is, around 2 MB assuming a total
-  memory size of 64 GB, or around half a 4KB page consumed.
-*/
+/**
+ * @brief Physical memory initialization
+ * @verbatim
+ * Utilize a 8-bit integer as a representation of eight pages, then store in an
+ * array. Each page is 4 KB on x86_64.
+ *
+ * The minimum allocatable is 1 page (which is managed by the requesting process
+ * after being allocated using the standard library). The total overhead,
+ * assuming that one bit is used per entry is, around 2 MB assuming a total
+ * memory size of 64 GB, or around half a 4KB page consumed.
+ *
+ * @param req Request from Limine bootloader
+ */
 void pm_init(LIMINE_MEM_REQ req) {
     /* Check validity of request from bootloader */
     if (!req.response || !req.response->entry_count) {
@@ -25,7 +37,7 @@ void pm_init(LIMINE_MEM_REQ req) {
     /* Check entries for their types, their alignment, and their potential overlap */
     for (int i = 0; i < req.response->entry_count; i++) {
       struct limine_memmap_entry *entry = req.response->entries[i];
-      
+
       /* Check what type of memory is being passed from the bootloader and    */
       /* check to see if it is valid memory that can be used. If not, ignore. */
       if (ENTRY_TYPE_CHECK(entry)) {
@@ -63,9 +75,6 @@ void pm_init(LIMINE_MEM_REQ req) {
     memset(kmem.bitmap, 0, bitmap_size);
     klogi("Physical Memory Bitmap Location: %x\n", kmem.bitmap);
 
-    klogi("Total memory size is:\n");
-    PRINT_MEM_SIZE(kmem.total_size);
-
     /* Populate the bitmap */
     for (uint64_t i = 0; i < req.response->entry_count; i++) {
       struct limine_memmap_entry *entry = req.response->entries[i];
@@ -89,10 +98,12 @@ void pm_init(LIMINE_MEM_REQ req) {
           (kmem.total_size - kmem.free_size) / (1024 * 1024));
 }
 
-/* 
-  Given a starting address, set the pages to used for the number of
-  pages requested.
-*/
+/**
+ * @brief Sets bits int the physical memory bitmap
+ * 
+ * @param address Starting address
+ * @param num_pages Number of pages to allocate
+ */
 static inline void bitmap_set(uint64_t address, uint64_t num_pages) {
   for (uint64_t i = address; i < address + (num_pages * PAGE_SIZE);
        i += PAGE_SIZE) {
@@ -102,11 +113,14 @@ static inline void bitmap_set(uint64_t address, uint64_t num_pages) {
   }
 }
 
-/* 
-  Given a starting address, check if the number of pages requested
-  are free or allocated.
-*/
-static inline int bitmap_free(uint64_t address, uint64_t num_pages) {
+/**
+ * @brief Frees pages represented by the bitmap.
+ * 
+ * @param address Starting address
+ * @param num_pages Number of pages requested to be freed
+ * @return BITMAP_STATUS Returns ALLOCATED if allocated and FREE otherwise
+ */
+static inline BITMAP_STATUS bitmap_free(uint64_t address, uint64_t num_pages) {
   for (uint64_t i = address; i < address + (num_pages * PAGE_SIZE);
        i += PAGE_SIZE) {
     if (!(kmem.bitmap[i / (PAGE_SIZE * PAGES_PER_BYTE)] &

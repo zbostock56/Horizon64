@@ -1,12 +1,21 @@
+/**
+ * @file framebuffer.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to framebuffer functionality 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <common/memory.h>
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
-
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define DEFAULT_BG (COLOR_BLACK)
+
+/* ----------------------------- STATIC GLOBALS ----------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

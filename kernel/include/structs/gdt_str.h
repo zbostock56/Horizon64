@@ -1,3 +1,12 @@
+/**
+ * @file gdt_str.h
+ * @author Zack Bostock 
+ * @brief Structs for the Global Descriptor Table functionality 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <stdint.h>

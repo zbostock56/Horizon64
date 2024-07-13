@@ -1,13 +1,22 @@
+/**
+ * @file keyboard.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to keyboard functionality 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
 #include <structs/ps2_str.h>
 #include <structs/keyboard_str.h>
 
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
+
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 static volatile KEYBOARD_MOUSE keyboard = {0};
-
-/* --------------------------------- DEFINES -------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

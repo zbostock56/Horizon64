@@ -1,3 +1,12 @@
+/**
+ * @file isr.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to Interrupt Service Routines 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
@@ -51,7 +60,7 @@ static char* exceptions[] = {
     [44] = "Reserved"
 };
 
-/* --------------------------------- DEFINES -------------------------------- */
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 

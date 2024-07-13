@@ -1,6 +1,17 @@
+/**
+ * @file init.h
+ * @author Zack Bostock 
+ * @brief Information pertaining to initialization of the kernel 
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #pragma once
 
 #include <globals.h>
+
+/* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
 /* ----------------------------- STATIC GLOBALS ----------------------------- */
 static volatile LIMINE_BASE_REVISION(1);
@@ -24,8 +35,6 @@ static volatile struct limine_hhdm_request hhdm_request = {
     .revision = 0
 };
 
-/* --------------------------------- DEFINES -------------------------------- */
-
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
@@ -33,6 +42,7 @@ void system_init();
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
 void gdt_init(/* CPU *cpu_info */);
+void cpu_init(size_t cpu_number);
 void isr_init();
 void idt_init();
 void psf1_font_init(struct limine_module_request req, const char *path);
