@@ -3,16 +3,16 @@
  * @author Zack Bostock
  * @brief Helpers and initalization for the screen framebuffer
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <graphics/framebuffer.h>
 
 /**
  * @brief Initialization of a framebuffer
- * 
+ *
  * @param req Request for framebuffer from bootloader
  */
 void fb_init(struct limine_framebuffer_request req) {
@@ -44,7 +44,7 @@ void fb_init(struct limine_framebuffer_request req) {
 
 /**
  * @brief Helper for changing the color of a pixel on the screen.
- * 
+ *
  * @param fb Framebuffer to change
  * @param x X-coordinate on the screen
  * @param y Y-coordinate on the screen
@@ -63,7 +63,7 @@ void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color) {
 
 /**
  * @brief Helper to get a pixels color from the screen
- * 
+ *
  * @param fb Framebuffer to view
  * @param x X-coordinate on the screen
  * @param y Y-coordinate on the screen
@@ -84,10 +84,10 @@ uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y) {
 
 /**
  * @brief Helper to put a character on the framebuffer.
- * 
+ *
  * @param fb Framebuffer to change
  * @param x X-coordinate on the screen
- * @param y Y-coordinate on the screen 
+ * @param y Y-coordinate on the screen
  * @param fgcolor Foreground color of the character
  * @param bgcolor Background color of the character
  * @param ch Character to put on the screen
@@ -115,7 +115,7 @@ void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,
 
 /**
  * @brief Refreshes a framebuffer
- * 
+ *
  * @param fb Framebuffer struct to refresh
  */
 void fb_refresh(FRAMEBUFFER *fb) {
@@ -135,7 +135,7 @@ void fb_refresh(FRAMEBUFFER *fb) {
 
 /**
  * @brief Helper to clear the screen
- * 
+ *
  * @param fb Framebuffer to clear
  */
 void fb_clear_screen(FRAMEBUFFER *fb) {

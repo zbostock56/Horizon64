@@ -1,11 +1,11 @@
 /**
  * @file control_registers_str.h
- * @author Zack Bostock 
+ * @author Zack Bostock
  * @brief Information regarding the cpu control registers and their bits'
- *        meanings 
- * 
+ *        meanings
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -182,7 +182,7 @@ typedef enum {
 
 /*
   Control registers 1, 5-7, 9-15:
-  
+
   These are reserved, the CPU will through a #UD exception when trying
   to access them.
 */

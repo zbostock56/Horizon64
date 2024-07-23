@@ -3,16 +3,16 @@
  * @author Zack Bostock
  * @brief Memory helpers, needed for compiler
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <common/memory.h>
 
 /**
  * @brief Copies memory from one location to another.
- * 
+ *
  * @param dst Dest pointer
  * @param src Source pointer
  * @param num Size of memory to copy
@@ -28,8 +28,8 @@ void *memcpy(void *dst, const void *src, size_t num) {
 }
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  * @param ptr Memory location to start from
  * @param value Value to set it to
  * @param num Number of bytes to set
@@ -45,7 +45,7 @@ void *memset(void *ptr, int value, size_t num) {
 
 /**
  * @brief Compares to pieces of memory to another
- * 
+ *
  * @param ptr1 First memory location to compare to
  * @param ptr2 Second memory location
  * @param num Number of bytes to compare
@@ -65,7 +65,7 @@ int memcmp(const void *ptr1, const void *ptr2, size_t num) {
 
 /**
  * @brief Moves memory from one place to another.
- * 
+ *
  * @param dest Destination of where to move to
  * @param src Source of where the data is
  * @param n Number of bytes to move

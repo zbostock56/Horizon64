@@ -6,17 +6,21 @@
  * In this file, the various devices which are based on hardware
  * interrupts are setup. There are also helpers for registering handlers for
  * those hardware interrupts.
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <sys/interrupts/irq.h>
 
+static IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS];
+static const PIC_DRIVER *pic = NULL;
+static const PIT_DRIVER *pit = NULL;
+
 /**
  * @brief Generic hardware interrupt handler. Calls specific interrupt handler
  *        if required.
- * 
+ *
  * @param regs Structure which has information about the calling process
  */
 void irq_handler(REGISTERS *regs) {
@@ -36,7 +40,7 @@ void irq_handler(REGISTERS *regs) {
 
 /**
  * @brief Hardware interrupt handler registration helper.
- * 
+ *
  * @param irq Interrupt number to tie this handler to
  * @param handler Handler itself
  */

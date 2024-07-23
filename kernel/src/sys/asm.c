@@ -3,9 +3,9 @@
  * @author Zack Bostock
  * @brief Commonly used assembly instructions wrapped in C functions.
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <sys/asm.h>
@@ -13,7 +13,7 @@
 
 /**
  * @brief 8-bit function which utilizes the out instruction.
- * 
+ *
  * @param port Port to output to
  * @param val Value output to port
  */
@@ -26,7 +26,7 @@ __asm__ volatile ("outb %b0, %w1"
 
 /**
  * @brief 8-bit function which utilizes the in instruction.
- * 
+ *
  * @param port Port to read from
  * @return uint8_t Returns 8-bit value read from the port
  */

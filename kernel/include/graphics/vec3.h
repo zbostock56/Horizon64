@@ -1,10 +1,10 @@
 /**
  * @file vec3.h
- * @author Zack Bostock 
- * @brief Information pertaining to 3D floating-point vectors 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to 3D floating-point vectors
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -22,10 +22,8 @@ typedef struct {
 #define VEC3_ZERO       ((VEC3) VEC3_ZERO_INIT)
 #define VEC3_ONE        ((VEC3) VEC3_ONE_INIT)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

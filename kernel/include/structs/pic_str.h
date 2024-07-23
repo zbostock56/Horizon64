@@ -1,10 +1,10 @@
 /**
  * @file pic_str.h
- * @author Zack Bostock 
- * @brief Structs pertaining to the Programmable Interrupt Controller driver 
- * 
+ * @author Zack Bostock
+ * @brief Structs pertaining to the Programmable Interrupt Controller driver
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

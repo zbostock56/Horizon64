@@ -1,10 +1,10 @@
 /**
  * @file asm.h
- * @author Zack Bostock 
- * @brief Information pertaining to c-wrapped assembly functions 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to c-wrapped assembly functions
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -13,7 +13,7 @@
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
@@ -24,5 +24,3 @@ void io_wait();
 void halt();
 void enable_interrupts();
 void disable_interrupts();
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

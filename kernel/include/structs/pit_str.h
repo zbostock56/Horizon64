@@ -1,10 +1,10 @@
 /**
  * @file pit_str.h
- * @author Zack Bostock 
- * @brief Structs pertaining to the Programmable Interrupt Timer driver 
- * 
+ * @author Zack Bostock
+ * @brief Structs pertaining to the Programmable Interrupt Timer driver
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

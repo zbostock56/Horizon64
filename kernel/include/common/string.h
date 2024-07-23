@@ -1,15 +1,13 @@
 /**
- * @file kernel.h
+ * @file string.h
  * @author Zack Bostock
- * @brief Information pertaining to the starting of the kernel
+ * @brief Information pertaining to string operations
  *
  * @copyright Copyright (c) 2024
  *
  */
 
-#pragma once
-
-#include <globals.h>
+#include <stddef.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
@@ -18,7 +16,4 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */
-void system_init();
-void terminal_puts(TERMINAL *t, const char *s);
+char *strncpy(char *destination, const char *source, size_t num);

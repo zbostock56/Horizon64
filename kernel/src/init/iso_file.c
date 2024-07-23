@@ -3,16 +3,16 @@
  * @author Zack Bostock
  * @brief Helpers for reading from files in the system image
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <init/iso_file.h>
 
 /**
  * @brief Helper to see if the string ends which a specific string sequence.
- * 
+ *
  * @param str String to search through
  * @param end Ending to look for
  * @return int 1 if the specified ending, 0 otherwise
@@ -61,7 +61,7 @@ int check_string_ending(const char *str, const char *end) {
  * @verbatim
  * Expects the file name to be passed in with the limine module request
  * associated with that file
- * 
+ *
  * @param name Name of the file
  * @param module_request Module from the bootloader
  * @param file File to return through

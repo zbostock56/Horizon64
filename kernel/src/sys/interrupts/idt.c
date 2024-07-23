@@ -5,16 +5,23 @@
  * @verbatim
  * In this file is the initialization code and helpers for the Interrupt
  * Descriptor Table (IDT).
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <sys/interrupts/idt.h>
 
+/* Interrupt descriptor table */
+__attribute__((aligned(0x10))) static IDT_ENTRY g_idt[X86_64_IDT_ENTRIES] = {0};
+IDT_DESCRIPTOR g_idt_descriptor = {
+    sizeof(g_idt) - 1,
+    (uint64_t) g_idt
+};
+
 /**
  * @brief Helper to create IDT entries.
- * 
+ *
  * @param interrupt Entry number
  * @param base Base in memory
  * @param segment Segment in memory
@@ -46,7 +53,7 @@ void idt_init() {
 
 /**
  * @brief Enables an interrupt in the IDT.
- * 
+ *
  * @param interrupt Interrupt to enable
  */
 void idt_enable_gate(int interrupt) {
@@ -56,7 +63,7 @@ void idt_enable_gate(int interrupt) {
 
 /**
  * @brief Disables an interrupt in the IDT.
- * 
+ *
  * @param interrupt Interrupt to disable
  */
 void idt_disable_gate(int interrupt) {

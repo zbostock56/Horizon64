@@ -6,12 +6,62 @@
  * In this file, there are helpers for registering handlers for specific
  * Interrupt Service Routines (ISR). In addition, there is the generic ISR
  * handler. Plus, the initialization function for the ISRs.
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <sys/interrupts/isr.h>
+
+static char* exceptions[] = {
+    [0] = "Division by Zero",
+    [1] = "Debug",
+    [2] = "Non-Maskable Interrupt",
+    [3] = "Breakpoint",
+    [4] = "Overflow",
+    [5] = "Bound Range Exceeded",
+    [6] = "Invalid Opcode",
+    [7] = "Device Not Available",
+    [8] = "Double Fault",
+    [9] = "Co-processor Segment Overrun",
+    [10] = "Invalid TSS",
+    [11] = "Segment Not Present",
+    [12] = "Stack-Segment Fault",
+    [13] = "General Protection Fault",
+    [14] = "Page Fault",
+    [15] = "",
+    [16] = "x87 Floating-Point Exception",
+    [17] = "Alignment Check",
+    [18] = "Machine Check",
+    [19] = "SIMD Floating-Point Exception",
+    [20] = "Virtualization Exception",
+    [21] = "Control Protection Exception",
+    [22] = "",
+    [23] = "",
+    [24] = "",
+    [25] = "",
+    [26] = "",
+    [27] = "",
+    [28] = "Hypervisor Injection Exception",
+    [29] = "VMM Communication Exception",
+    [30] = "Security Exception",
+    [31] = "",
+    [32] = "Reserved",
+    [33] = "Reserved",
+    [34] = "Reserved",
+    [35] = "Reserved",
+    [36] = "Reserved",
+    [37] = "Reserved",
+    [38] = "Reserved",
+    [39] = "Reserved",
+    [40] = "Reserved",
+    [41] = "Reserved",
+    [42] = "Reserved",
+    [43] = "Reserved",
+    [44] = "Reserved"
+};
+
+static ISR_HANDLER g_isr_handlers[X86_64_IDT_ENTRIES] = {0};
 
 /* From the auto generated file */
 void isr_init_entries();
@@ -37,9 +87,9 @@ void isr_init() {
  *  0-31: Reserved by Intel
  *  8-15: IRQ 0-7 by the BIOS bootstrap
  *  70h-78h: IRQ 8-15 by the BIOS bootstrap
- * 
+ *
  * IRQ's are remapped to start at 0x20 (interrupt 32)
- * 
+ *
  * @param regs Information about the calling process.
  */
 void isr_handler(REGISTERS *regs) {
@@ -86,7 +136,7 @@ void isr_handler(REGISTERS *regs) {
  * interrupt handler (vector) for futher processing. When
  * an interrupt occurs, the "common" handler will try to
  * use a vector that was registered here to service the interrupt.
- * 
+ *
  * @param interrupt Interrupt number to associate to handler
  * @param handler ISR handler itself
  */

@@ -1,10 +1,10 @@
 /**
  * @file cpu_str.h
- * @author Zack Bostock 
- * @brief Structs utilized by CPU functionality 
- * 
+ * @author Zack Bostock
+ * @brief Structs utilized by CPU functionality
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

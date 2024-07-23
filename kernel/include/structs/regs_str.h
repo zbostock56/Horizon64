@@ -1,10 +1,10 @@
 /**
  * @file regs_str.h
- * @author Zack Bostock 
- * @brief Structs pertaining to the CPU registers 
- * 
+ * @author Zack Bostock
+ * @brief Structs pertaining to the CPU registers
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

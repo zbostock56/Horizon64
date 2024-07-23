@@ -3,16 +3,18 @@
  * @author Zack Bostock
  * @brief Keyboard initialization and helpers
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <dev/keyboard/keyboard.h>
 
+static volatile KEYBOARD_MOUSE keyboard = {0};
+
 /**
  * @brief Helper for setting a key on the keyboard
- * 
+ *
  * @param state State of key
  * @param scancode Scancode to set
  */

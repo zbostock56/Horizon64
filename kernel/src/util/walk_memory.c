@@ -3,16 +3,16 @@
  * @author Zack Bostock
  * @brief Helper for walking through a memory space.
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <util/walk_memory.h>
 
 /**
  * @brief Helper for walking through a memory space
- * 
+ *
  * @param rsp Stack pointer to start at
  * @param depth How far to walk
  */

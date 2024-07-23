@@ -3,9 +3,9 @@
  * @author Zack Bostock
  * @brief Main entry point for kernel
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <kernel.h>

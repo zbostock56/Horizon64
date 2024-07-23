@@ -1,16 +1,21 @@
 /**
  * @file gdt.h
- * @author Zack Bostock 
+ * @author Zack Bostock
  * @brief Information pertaining to the Global Descriptor Table
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
 
 #include <globals.h>
+
+#include <structs/gdt_str.h>
+
 #include <common/memory.h>
+
+#include <sys/asm.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* Locations within the GDT to specfic segments */
@@ -24,7 +29,7 @@
 #define GDT_USER_DATA_64_BIT        (0x40)
 #define GDT_TSS                     (0x48)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 #define GDT_LIMIT_LOW(limit)                (limit & 0xFFFF)
@@ -35,7 +40,7 @@
 #define GDT_BASE_HIGH(base)                 ((base >> 24) & 0xFF)
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit, 
+void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
                            uint8_t access, uint8_t flags);
 void gdt_init(/* CPU *cpu_info */);
 

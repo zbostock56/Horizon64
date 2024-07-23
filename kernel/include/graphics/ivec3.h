@@ -1,10 +1,10 @@
 /**
  * @file ivec3.h
- * @author Zack Bostock 
- * @brief Information pertaining to 3D integer vectors 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to 3D integer vectors
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -22,10 +22,8 @@ typedef struct {
 #define IVEC3_ZERO       ((IVEC3) IVEC3_ZERO_INIT)
 #define IVEC3_ONE        ((IVEC3) IVEC3_ONE_INIT)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

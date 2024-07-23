@@ -3,9 +3,9 @@
  * @author Zack Bostock
  * @brief Helper for printing out the stack if exception occurs.
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <util/stack_walk.h>
@@ -18,7 +18,7 @@
  * in the stack. Since Limine bootloader does not necessarily zero out
  * the base pointer when it takes control, we specific depth in order
  * to not dereference invalid memory.
- * 
+ *
  * @param rbp Base pointer from the current stack frame
  * @param depth How deep to search through the stack
  */

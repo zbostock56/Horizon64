@@ -123,8 +123,8 @@ void get_cpu_vendor(char *copy_to) {
 }
 
 /**
- * @brief Get the cpu model name 
- * 
+ * @brief Get the cpu model name
+ *
  * @param copy_to Buffer to copy model name into
  */
 void get_cpu_model_name(char *copy_to) {
@@ -152,10 +152,10 @@ void get_cpu_model_name(char *copy_to) {
 
 /**
  * @brief Get the CPU family, stepping, and model number
- * 
- * @param f Family of the CPU 
- * @param stepping Stepping of the CPU 
- * @param mn Model number of the CPU 
+ *
+ * @param f Family of the CPU
+ * @param stepping Stepping of the CPU
+ * @param mn Model number of the CPU
  */
 void get_cpu_family(int *f, int *stepping, int *mn) {
     uint32_t registers[4];
@@ -177,10 +177,10 @@ void get_cpu_family(int *f, int *stepping, int *mn) {
 
 /**
  * @brief Get the CPU cache info
- * 
- * @param cache_line_size How many bytes is the cache line 
- * @param l2_cache_size How many Kilobytes of L2 cache 
- * @param l3_cache_size How many Kilobytes of L3 cache 
+ *
+ * @param cache_line_size How many bytes is the cache line
+ * @param l2_cache_size How many Kilobytes of L2 cache
+ * @param l3_cache_size How many Kilobytes of L3 cache
  */
 void get_cpu_cache_info(int *cache_line_size, int *l2_cache_size,
                         int *l3_cache_size) {

@@ -3,20 +3,22 @@
  * @author Zack Bostock
  * @brief Helpers and initialization of the terminal
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <dev/terminal.h>
+
+static const char CONVERSION_TABLE[] = "0123456789abcdef";
 
 /**
  * @brief Main initialization of a terminal
  * @verbatim
  * Initializes a framebuffer for the terminal and sets basic information about
  * the framebuffer and the terminal variable to support text output.
- * 
- * @param fb 
+ *
+ * @param fb
  */
 void init_terminal(FRAMEBUFFER fb) {
   /* TODO: pass as pointer once memory allocation finished */
@@ -35,7 +37,7 @@ void init_terminal(FRAMEBUFFER fb) {
 
 /**
  * @brief Helper to set the foreground of the terminal
- * 
+ *
  * @param t Terminal to change
  * @param color Color to set the foreground to
  */
@@ -49,7 +51,7 @@ void terminal_set_foreground(TERMINAL *t, FRAMEBUFFER_COLORS color) {
 
 /**
  * @brief Helper for setting the background of the terminal
- * 
+ *
  * @param t Terminal to change
  * @param color Color to set the background to
  */
@@ -63,7 +65,7 @@ void terminal_set_background(TERMINAL *t, FRAMEBUFFER_COLORS color) {
 
 /**
  * @brief Sets the terminal cursor pos object
- * 
+ *
  * @param t Terminal to change
  * @param x X-coordinate
  * @param y Y-coordinate
@@ -83,7 +85,7 @@ void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
 
 /**
  * @brief Helper to move the terminal cursor forward
- * 
+ *
  * @param t Terminal to change
  */
 void terminal_push_cursor(TERMINAL *t) {
@@ -109,8 +111,8 @@ void terminal_push_cursor(TERMINAL *t) {
 
 /**
  * @brief Helper to move the cursor backwards.
- * 
- * @param t Terminal to change 
+ *
+ * @param t Terminal to change
  */
 void terminal_pop_cursor(TERMINAL *t) {
   if (!t) {
@@ -125,7 +127,7 @@ void terminal_pop_cursor(TERMINAL *t) {
 
 /**
  * @brief Helper to put a character on the screen in the terminal.
- * 
+ *
  * @param t Terminal to change
  * @param c Character to put on the screen
  */
@@ -158,7 +160,7 @@ void terminal_putc(TERMINAL *t, uint8_t c) {
 
 /**
  * @brief Helper to put a string on the screen
- * 
+ *
  * @param t Terminal to change
  * @param s String to put on the screen
  */
@@ -170,7 +172,7 @@ void terminal_puts(TERMINAL *t, const char *s) {
 
 /**
  * @brief Internal helper function for terminal printf
- * 
+ *
  * @param t Terminal to change
  * @param num Number to print in hex
  */
@@ -196,7 +198,7 @@ static void terminal_hex(TERMINAL *t, size_t num) {
 
 /**
  * @brief Internal helper for terminal printf
- * 
+ *
  * @param t Terminal to change
  * @param num Number to print as decimal
  */
@@ -219,7 +221,7 @@ static void terminal_dec(TERMINAL *t, size_t num) {
 
 /**
  * @brief Main terminal printf function
- * 
+ *
  * @param t Terminal to change
  * @param format Format string
  * @param ... variatic arguments
@@ -248,7 +250,7 @@ void terminal_printf(TERMINAL *t, const char *format, ...) {
 
 /**
  * @brief Helper for clearing the terminal screen
- * 
+ *
  * @param t Terminal to clear
  */
 void terminal_clear(TERMINAL *t) {
@@ -264,7 +266,7 @@ void terminal_clear(TERMINAL *t) {
 
 /**
  * @brief Helper to scroll the terminal down
- * 
+ *
  * @param t Terminal to scroll
  */
 void terminal_scroll(TERMINAL *t) {

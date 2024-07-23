@@ -1,10 +1,10 @@
 /**
  * @file vec2.h
- * @author Zack Bostock 
- * @brief Information pertaining to 2D floating-point vectors 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to 2D floating-point vectors
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -21,10 +21,8 @@ typedef struct {
 #define VEC2_ZERO       ((VEC2) VEC2_ZERO_INIT)
 #define VEC2_ONE        ((VEC2) VEC2_ONE_INIT)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

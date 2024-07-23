@@ -1,10 +1,10 @@
 /**
  * @file lock_str.h
  * @author Zack Bostock
- * @brief Structs pertaining to hardware locking functionality 
- * 
+ * @brief Structs pertaining to hardware locking functionality
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

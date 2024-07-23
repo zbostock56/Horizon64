@@ -4,9 +4,9 @@
  * @brief Sets up system vitals
  * @verbatim
  * Sets up GDT, IDT, ISR, IRQ, and other important system variables.
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <init/init.h>
@@ -41,6 +41,7 @@ void system_init() {
 
     /* Memory initialization */
     pm_init(mem_req);
+    vm_init(mem_req, kernel_addr_request);
 
     /* Initialize framebuffer */
     fb_init(framebuffer_req);

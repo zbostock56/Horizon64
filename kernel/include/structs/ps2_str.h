@@ -1,10 +1,10 @@
 /**
  * @file ps2_str.h
- * @author Zack Bostock 
- * @brief Structs pertaining to PS2 driver 
- * 
+ * @author Zack Bostock
+ * @brief Structs pertaining to PS2 driver
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

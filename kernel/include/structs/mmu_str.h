@@ -1,10 +1,10 @@
 /**
  * @file mmu_str.h
- * @author Zack Bostock 
- * @brief Structs pertaining to memory management unit functionality 
- * 
+ * @author Zack Bostock
+ * @brief Structs pertaining to memory management unit functionality
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once

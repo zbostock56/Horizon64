@@ -1,10 +1,10 @@
 /**
  * @file kprint.h
- * @author Zack Bostock 
- * @brief Information pertaining to kernel logging/printing 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to kernel logging/printing
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -21,7 +21,7 @@ typedef struct {
   TERMINAL_MODE mode;
 } KLOG;
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 static const char CONVERSION_TABLE[] = "0123456789abcdef";
 // static LOCK klog_shackle = {0};
 // static KLOG klog = {0};
@@ -31,5 +31,3 @@ static const char CONVERSION_TABLE[] = "0123456789abcdef";
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void kprintf(const char *format, ...);
 void klog_implementation(int level, const char *format, ...);
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

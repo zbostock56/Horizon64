@@ -1,10 +1,10 @@
 /**
  * @file ivec2.h
- * @author Zack Bostock 
- * @brief Information pertaining to 2D integer vectors 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to 2D integer vectors
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -21,11 +21,9 @@ typedef struct {
 #define IVEC2_ZERO       ((IVEC2) IVEC2_ZERO_INIT)
 #define IVEC2_ONE        ((IVEC2) IVEC2_ONE_INIT)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void ivec2_scale(IVEC2 dest, int scale, IVEC2 source);
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

@@ -5,16 +5,20 @@
  * @verbatim
  * In this file are the initialization functions associated with the Global
  * Descriptor Table (GDT).
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <sys/gdt/gdt.h>
 
+/* Global descriptor table */
+static GDT_TABLE g_gdt[NUM_CPUS] = {0};
+static size_t num_gdt = 0;
+
 /**
  * @brief Helper for making entry in the GDT.
- * 
+ *
  * @param entry ENTRY struct to modify
  * @param base Base in memory
  * @param limit High end limit in memory
@@ -38,7 +42,7 @@ void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
 
 /**
  * @brief Initialization function for the GDT
- * 
+ *
  */
 void gdt_init(/* CPU *cpu_info */) {
     /* TODO: Must be done for each CPU */

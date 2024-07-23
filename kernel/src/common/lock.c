@@ -3,9 +3,9 @@
  * @author Zack Bostock
  * @brief Hardware locking functionality
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <common/lock.h>
@@ -15,7 +15,7 @@
  * @verbatim
  * Locks a hardware lock which can be used to ensure no other process is
  * able to perform this operation while another already is.
- * 
+ *
  * @param s LOCK structure
  * @param f File name
  * @param ln Line number
@@ -44,7 +44,7 @@ void lock_lock_implementation(LOCK *s, const char *f, const int ln) {
 
 /**
  * @brief Unlock hardware lock
- * 
+ *
  * @param s LOCK structure
  * @param f File name
  * @param ln Line number

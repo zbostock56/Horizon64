@@ -3,16 +3,16 @@
  * @author Zack Bostock
  * @brief Internal logging functionality
  * @verbatim
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <common/kprint.h>
 
 /**
  * @brief Dumps character to 0xE9 COM port
- * 
+ *
  * @param c Character to dump
  */
 void kputc(char c) {
@@ -38,7 +38,7 @@ void kputc(char c) {
 
 /**
  * @brief Prints a message to the log.
- * 
+ *
  * @param msg Message to log
  */
 void kprint(const char *msg) {
@@ -49,7 +49,7 @@ void kprint(const char *msg) {
 
 /**
  * @brief Prints string to the log
- * 
+ *
  * @param msg String to log
  */
 void kputs(const char *msg) {
@@ -59,7 +59,7 @@ void kputs(const char *msg) {
 
 /**
  * @brief Internal helper function to print numbers.
- * 
+ *
  * @param num number to print as hex to the screen.
  */
 static void kprint_hex(size_t num) {
@@ -101,7 +101,7 @@ static void kprint_dec(size_t num) {
 
 /**
  * @brief printf helper to put in log
- * 
+ *
  * @param format Format string
  * @param ... variatic arguments
  */
@@ -129,7 +129,7 @@ void kprintf(const char *format, ...) {
 
 /**
  * @brief Logging internal implementation
- * 
+ *
  * @param level Logging level
  * @param format Format string
  * @param ... variatic arguments

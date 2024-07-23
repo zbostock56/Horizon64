@@ -1,30 +1,33 @@
 /**
  * @file keyboard.h
- * @author Zack Bostock 
- * @brief Information pertaining to keyboard functionality 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to keyboard functionality
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
 
 #include <globals.h>
+
 #include <structs/ps2_str.h>
 #include <structs/keyboard_str.h>
+#include <structs/regs_str.h>
+
+#include <sys/asm.h>
+#include <sys/interrupts/irq.h>
+#include <sys/tick/pic.h>
+
+#include <dev/keyboard/scancodes.h>
+#include <dev/terminal.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
-static volatile KEYBOARD_MOUSE keyboard = {0};
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */
-void irq_register_handler(int irq, IRQ_HANDLER handler);
-char get_character_from_scancode(uint8_t scancode, uint8_t shift,
-                                 uint8_t caps_lock);
-void pic_unmask(int irq);
-void terminal_putc(TERMINAL *t, uint8_t c);
+void keyboard_set_key(uint8_t state, uint8_t scancode);
+void keyboard_init();

@@ -1,10 +1,10 @@
 /**
  * @file gdt_str.h
- * @author Zack Bostock 
- * @brief Structs for the Global Descriptor Table functionality 
- * 
+ * @author Zack Bostock
+ * @brief Structs for the Global Descriptor Table functionality
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -83,7 +83,7 @@ typedef enum {
     GDT_ACCESS_EXECUTABLE               = 0x08,
 
     GDT_ACCESS_CODE_CONFORMING          = 0x04,
-    
+
     GDT_ACCESS_DATA_DIRECTION_DOWN      = 0x04,
     GDT_ACCESS_DATA_DIRECTION_UP        = 0x00,
 

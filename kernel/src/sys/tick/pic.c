@@ -10,16 +10,43 @@
  * enabled. After initialization, all interrupts are masked and the device
  * drivers individually unmask the interrupt lines which correspond to their
  * devices.
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <sys/tick/pic.h>
 
+static uint16_t g_pic_mask = 0xFFFF;
+static int g_auto_eoi = 0;
+
+enum {
+    PIC_ICW1_ICW4           = 0x01,     /* If set, ICW4 must be read (its optional) */
+    PIC_ICW1_SINGLE         = 0x02,     /* If set, means there is only one 8259 PIC */
+    PIC_ICW1_INTERVAL4      = 0x04,     /* Address interval */
+    PIC_ICW1_LEVEL          = 0x08,     /* Edge or level triggered mode */
+    PIC_ICW1_INITIALIZE     = 0x10,     /* Tell PIC we are initializing (required!) */
+} PIC_ICW1;
+
+enum {
+    PIC_ICW4_8086           = 0x01,      /* Set for 8086 platform */
+    PIC_ICW4_AUTO_EOI       = 0x02,      /* Automatically set the end of interrupt flag */
+    PIC_ICW4_BUFFER_MASTER  = 0x04,      /* Do we buffer the master PIC? */
+    PIC_ICW4_BUFFER_SLAVE   = 0x00,      /* Do we buffer the slave PIC? */
+    PIC_ICW4_BUFFERRED      = 0x08,      /* Do we buffer interrupts as they come in? */
+    PIC_ICW4_SFNM           = 0x10,      /* Specially fully nested mode */
+} PIC_ICW4;
+
+enum {
+    PIC_CMD_END_OF_INTERRUPT    = 0x20,
+    PIC_CMD_READ_IRR            = 0x0A,
+    PIC_CMD_READ_ISR            = 0x0B,
+} PIC_CMD;
+
+
 /**
  * @brief Sets the mask of the PIC.
- * 
+ *
  * @param mask Specified mask to set
  */
 void pic_set_mask(uint16_t mask) {
@@ -31,7 +58,7 @@ void pic_set_mask(uint16_t mask) {
 }
 
 /**
- * @brief Disables PIC-based interrups by masking all interrupt lines. 
+ * @brief Disables PIC-based interrups by masking all interrupt lines.
  */
 void pic_disable() {
   pic_set_mask(0xFFFF);
@@ -39,7 +66,7 @@ void pic_disable() {
 
 /**
  * @brief Masks an interrupt line.
- * 
+ *
  * @param irq Interrupt line number to mask
  */
 void pic_mask(int irq) {
@@ -48,7 +75,7 @@ void pic_mask(int irq) {
 
 /**
  * @brief Unmasks an interrupt line.
- * 
+ *
  * @param irq Interrupt line to unmask
  */
 void pic_unmask(int irq) {
@@ -58,7 +85,7 @@ void pic_unmask(int irq) {
 
 /**
  * @brief Fetches the mask for which interrupts are masked.
- * 
+ *
  * @return uint16_t Retreived mask
  */
 uint16_t pic_get_mask() {
@@ -67,7 +94,7 @@ uint16_t pic_get_mask() {
 
 /**
  * @brief Reads the in-request register on the PIC.
- * 
+ *
  * @return uint16_t Contents of the in-request register
  */
 uint16_t pic_read_in_request_register() {
@@ -79,7 +106,7 @@ uint16_t pic_read_in_request_register() {
 
 /**
  * @brief Reads the in-service register on the PIC.
- * 
+ *
  * @return uint16_t Contents of the in-service register
  */
 uint16_t pic_read_in_service_register() {
@@ -91,7 +118,7 @@ uint16_t pic_read_in_service_register() {
 
 /**
  * @brief Establishes existance of the PIC.
- * 
+ *
  * @return int Returns 1 if exists, 0 otherwise
  */
 int pic_probe() {
@@ -102,7 +129,7 @@ int pic_probe() {
 
 /**
  * @brief Send the end of interrupt.
- * 
+ *
  * @param irq Interrupt line to send the end of interrupt on
  */
 void pic_send_end_of_interrupt(int irq) {
@@ -114,7 +141,7 @@ void pic_send_end_of_interrupt(int irq) {
 
 /**
  * @brief Main initialization function for the PIC.
- * 
+ *
  * @param offset_pic_1 Offset for the master controller
  * @param offset_pic_2 Offset for the slave controller
  */
@@ -164,7 +191,7 @@ void pic_configure(uint8_t offset_pic_1, uint8_t offset_pic_2) {
 
 /**
  * @brief Gets the PIC driver structure for access to driver functions.
- * 
+ *
  * @return const PIC_DRIVER* PIC driver
  */
 const PIC_DRIVER *pic_get_driver() {

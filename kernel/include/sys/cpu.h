@@ -1,10 +1,10 @@
 /**
  * @file cpu.h
- * @author Zack Bostock 
- * @brief Information pertaining to CPU initialization and functions 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to CPU initialization and functions
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -36,7 +36,7 @@
 /* corresponding bit in rFLAGS is cleared.                                 */
 #define MSR_SFMASK              (0xC0000084)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
@@ -77,5 +77,3 @@
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void cpu_init(size_t cpu_number);
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */

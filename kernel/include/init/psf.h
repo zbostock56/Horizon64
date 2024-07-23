@@ -1,15 +1,21 @@
 /**
  * @file psf.h
- * @author Zack Bostock 
- * @brief Information pertaining to the usage of PC Screen Fonts 
- * 
+ * @author Zack Bostock
+ * @brief Information pertaining to the usage of PC Screen Fonts
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
 
 #include <globals.h>
+
+#include <common/limine_typedefs.h>
+
+#include <sys/asm.h>
+
+#include <init/iso_file.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* ------------------ PSF1 ------------------ */
@@ -46,7 +52,7 @@
 
 #define PSF2_MAXVERSION        (0x00)
 
-/* ----------------------------- STATIC GLOBALS ----------------------------- */
+/* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 /* Header checks */
@@ -56,7 +62,3 @@
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 int psf1_get_glyphs(LIMINE_FILE *file);
 void psf1_font_init(struct limine_module_request req, const char *path);
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */
-void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
-                  LIMINE_FILE **file);
