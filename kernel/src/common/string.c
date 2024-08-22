@@ -32,3 +32,17 @@ char *strncpy(char *dest, const char *src, size_t num) {
     }
     return dest;
 }
+
+/**
+ * @brief Finds the length of a string using the null terminator
+ *
+ * @param str String to find length of
+ * @return size_t Length of string based on null terminator
+ */
+size_t strlen(const char *str) {
+    const char *s = str;
+    while (*s) {
+        ++s;
+    }
+    return s - str;
+}

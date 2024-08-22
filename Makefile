@@ -22,6 +22,8 @@ $(eval $(call DEFAULT_VAR,HOST_LDFLAGS,$(DEFAULT_HOST_LDFLAGS)))
 override DEFAULT_HOST_LIBS :=
 $(eval $(call DEFAULT_VAR,HOST_LIBS,$(DEFAULT_HOST_LIBS)))
 
+MEMORY := 8G
+
 .PHONY: all all-hdd run run-uefi run-hdd run-hdd-uefi kernel clean distclean
 
 all: $(IMAGE_NAME).iso
@@ -29,16 +31,20 @@ all: $(IMAGE_NAME).iso
 all-hdd: $(IMAGE_NAME).hdd
 
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64 -debugcon stdio -M q35 -m 2G -cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on
+	qemu-system-x86_64 -debugcon stdio -M q35 -m $(MEMORY) -cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on
+
+debug: $(IMAGE_NAME).iso
+	./scripts/remove_from_port.sh
+	qemu-system-x86_64 -S -s -M q35 -m $(MEMORY) -cdrom $(IMAGE_NAME).iso -boot d -curses -nographic
 
 run-uefi: ovmf $(IMAGE_NAME).iso
-	qemu-system-x86_64 -M q35 -m 2G -bios ovmf/OVMF.fd -cdrom $(IMAGE_NAME).iso -boot d
+	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd -cdrom $(IMAGE_NAME).iso -boot d
 
 run-hdd: $(IMAGE_NAME).hdd
-	qemu-system-x86_64 -M q35 -m 2G -debugcon stdio -hda $(IMAGE_NAME).hdd
+	qemu-system-x86_64 -M q35 -m $(MEMORY) -debugcon stdio -hda $(IMAGE_NAME).hdd
 
 run-hdd-uefi: ovmf $(IMAGE_NAME).hdd
-	qemu-system-x86_64 -M q35 -m 2G -bios ovmf/OVMF.fd -debugcon stdio -hda $(IMAGE_NAME).hdd
+	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd -debugcon stdio -hda $(IMAGE_NAME).hdd
 
 ovmf:
 	mkdir -p ovmf

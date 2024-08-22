@@ -45,6 +45,7 @@ void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
  *
  */
 void gdt_init(/* CPU *cpu_info */) {
+    klogi("INIT GDT: starting...\n");
     /* TODO: Must be done for each CPU */
     if (num_gdt + 1 > NUM_CPUS) {
         kloge("Trying to initialize a GDT for non-existance CPU!\n");
@@ -110,7 +111,8 @@ void gdt_init(/* CPU *cpu_info */) {
     };
 
     gdt_load(&g);
-    klogi("Finished GDT initialization for CPU: %d at %x\n", num_gdt - 1, gdt);
+    klogi("GDT initialized for CPU: %d at %x\n", num_gdt - 1, gdt);
+    klogi("INIT GDT (CPU %d): finished...\n", num_gdt - 1);
 }
 
 /* TODO: Complete for each CPU */

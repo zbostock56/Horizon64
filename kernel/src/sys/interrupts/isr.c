@@ -70,6 +70,7 @@ void isr_init_entries();
  * @brief Initialization of ISRs.
  */
 void isr_init() {
+  klogi("INIT ISR: starting...\n");
   isr_init_entries();
   /* Set all to open (will cause #GP if a gate is not open and is accessed) */
   for (int i = 0; i < 256; i++) {
@@ -78,6 +79,7 @@ void isr_init() {
   idt_disable_gate(0x80);
   enable_interrupts();
   klogi("ISR's are initialized, interrupts are enabled\n");
+  klogi("INIT ISR: finished...\n");
 }
 
 /**
@@ -106,16 +108,17 @@ void isr_handler(REGISTERS *regs) {
     g_isr_handlers[regs->interrupt](regs);
   } else if (regs->interrupt >= 32) {
     /* Unreserved interrupt with no handler, hang the system */
-    kloge("Unhandled interupt %d!\n\n", regs->interrupt);
+    klogi("Unhandled interupt %d!\n\n", regs->interrupt);
     walk_memory((void *) regs->rbp, 8);
     halt();
   } else {
     /* Reserved interrupt, hang the system */
-    kloge("\n\nUnhandled exception!\n%s.\nError code: %d (%x)\n\n",
+    kloge("Unhandled Exception!\n");
+    klogi("%s.\nError code: %d (%x)\n\n",
           exceptions[regs->interrupt], regs->error_code, regs->error_code);
     walk_memory((void *) regs->rbp, 8);
-    // stack_walk((void *) regs->rbp, 4);
-    kloge("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
+    stack_walk((void *) regs->rbp, 4);
+    klogi("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
             "RSP   : (%x)\nSS    : (%x)\n"
             "RAX   : %x\nRBX   : %x\nRCX   : %x\nRDX   : %x\n"
             "RSI   : %x\nRDI   : %x\nRBP   : %x\n"

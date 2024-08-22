@@ -69,6 +69,7 @@ static void kbhandler() {
  * @brief Intialization function for the keyboard
  */
 void keyboard_init() {
+  klogi("INIT KEYBOARD: starting...\n");
   disable_interrupts();
 
   outb(PS2_COMMAND_REGISTER, COMMAND_DISABLE_FIRST_PS2_PORT);
@@ -88,5 +89,5 @@ void keyboard_init() {
   pic_unmask(1);
   enable_interrupts();
 
-  klogi("Keyboard initialized...\n");
+  klogi("INIT KEYBOARD: finished...\n");
 }

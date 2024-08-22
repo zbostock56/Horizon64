@@ -57,6 +57,7 @@ extern ADDR_SPACE kernel_addr_space;
 #define ENTRY_TYPE_CHECK(entry)                                 \
       (entry->type == LIMINE_MEMMAP_USABLE ||                   \
       entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE ||    \
+      entry->type == LIMINE_MEMMAP_KERNEL_AND_MODULES ||        \
       entry->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE)            \
 
 #define PRINT_MEM_SIZE(size) {                                  \
@@ -65,28 +66,51 @@ extern ADDR_SPACE kernel_addr_space;
                   size, size / 1024, size / 1024 / 1024);       \
 }
 
-#define PRINT_MEM_ENTRY_INFO(entry) {                           \
-  klogi("Physical Memory Entry\n"                               \
-                          "Base: %x (%d)\nLength: %x (%d)\n",   \
-                          entry->base, entry->base,             \
-                          entry->length, entry->length);        \
+#define ENTRY_INFO(entry) {                                     \
   switch (entry->type) {                                        \
     case LIMINE_MEMMAP_USABLE:                                  \
       klogi("Type: LIMINE_MEMMAP_USABLE\n");                    \
       break;                                                    \
-    case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:                  \
-      klogi(                                                    \
-        "Type: LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE\n");        \
+    case LIMINE_MEMMAP_RESERVED:                                \
+      klogi("Type: LIMINE_MEMMAP_RESERVED\n");                  \
       break;                                                    \
     case LIMINE_MEMMAP_ACPI_RECLAIMABLE:                        \
       klogi(                                                    \
         "Type: LIMINE_MEMMAP_ACPI_RECLAIMABLE\n");              \
       break;                                                    \
+    case LIMINE_MEMMAP_ACPI_NVS:                                \
+        klogi(                                                  \
+          "Type: LIMINE_MEMMAP_ACPI_NVS\n");                    \
+        break;                                                  \
+    case LIMINE_MEMMAP_BAD_MEMORY:                              \
+        klogi(                                                  \
+          "Type: LIMINE_MEMMAP_BAD_MEMORY\n");                  \
+        break;                                                  \
+    case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:                  \
+      klogi(                                                    \
+        "Type: LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE\n");        \
+      break;                                                    \
+    case LIMINE_MEMMAP_KERNEL_AND_MODULES:                      \
+      klogi(                                                    \
+        "Type: LIMINE_MEMMAP_KERNEL_AND_MODULES\n");            \
+      break;                                                    \
+    case LIMINE_MEMMAP_FRAMEBUFFER:                             \
+      klogi(                                                    \
+        "Type: LIMINE_MEMMAP_FRAMEBUFFER\n");                   \
+      break;                                                    \
   }                                                             \
 }
 
-#define PHYS_TO_VIRT(in)              (((uint64_t) in) + MEM_VIRT_OFFSET)
-#define VIRT_TO_PHYS(in)              (((uint64_t) in) - MEM_VIRT_OFFSET)
+#define PRINT_MEM_ENTRY_INFO(entry) {                           \
+  klogi("Memory entry at range %x - %x\n"                       \
+        "\t(Length: %d (%d KB))\n\t",                           \
+        entry->base, entry->base + entry->length,               \
+        entry->length, entry->length / 1024);                   \
+  ENTRY_INFO(entry)                                             \
+}
+
+#define PHYS_TO_VIRT(in)              (((uint64_t) (in)) + MEM_VIRT_OFFSET)
+#define VIRT_TO_PHYS(in)              (((uint64_t) (in)) - MEM_VIRT_OFFSET)
 #define NUM_PAGES(addr)               (((addr) + PAGE_SIZE - 1) / PAGE_SIZE)
 #define PAGE_ALIGN(addr)              (NUM_PAGES(addr) * PAGE_SIZE)
 #define MAKE_TABLE_ENTRY(addr, flags) ((addr & ~(0xFFF)) | flags)
@@ -102,6 +126,7 @@ STATUS pm_free(uint64_t address, uint64_t num_pages);
 STATUS pm_allocate(uint64_t address, uint64_t num_pages);
 uint64_t pm_get(uint64_t num_pages, uint64_t address, const char *func,
                 size_t line_number);
+void pm_used();
 uint64_t vm_get_phys_addr(ADDR_SPACE *addr_space, uint64_t virt_addr);
 void vm_unmap(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t num_pages);
 void vm_map(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t phys_addr,

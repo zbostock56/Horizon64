@@ -24,6 +24,7 @@
 /* psf.h */
 #define PSF1_SUCCESS (0)
 #define NOT_PSF1     (1)
+#define PSF1_FAIL    (2)
 #define PSF2_SUCCESS (0)
 #define NOT_PSF2     (1)
 
@@ -31,6 +32,7 @@
 
 /* SMP */
 #define NUM_CPUS (1)
+#define MAX_CPUS (256)
 
 /* Keyboard */
 #define ARROW_UP        (0x48)
@@ -52,4 +54,8 @@
 
 /* System Status */
 #define SYS_OK    (1)
-#define SYS_ERROR (0)
+#define SYS_ERR (0)
+
+/* Common */
+#define FALSE   (0)
+#define TRUE    (1)

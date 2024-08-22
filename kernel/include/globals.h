@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <const.h>
 #include <limine.h>
+#include <common/errno.h>
 #include <structs/psf_structs.h>
 #include <structs/framebuffer_str.h>
 #include <structs/terminal_str.h>

@@ -18,6 +18,12 @@ void _start() {
   /* Sets vital system settings */
   system_init();
 
-  terminal_printf(&term, "Horizon OS\n");
+  terminal_printf(&term,
+  "                     _                     __    _  _   \n"
+  "  /\\  /\\ ___   _ __ (_) ____ ___   _ __   / /_  | || |  \n"
+  " / /_/ // _ \\ | '__|| ||_  // _ \\ | '_ \\ | '_ \\ | || |_ \n"
+  "/ __  /| (_) || |   | | / /| (_) || | | || (_) ||__   _|\n"
+  "\\/ /_/  \\___/ |_|   |_|/___|\\___/ |_| |_| \\___/    |_|  \n"
+  "                                                        \n");
   while (1) {}
 }

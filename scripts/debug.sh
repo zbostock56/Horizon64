@@ -1,27 +1,25 @@
 #!/bin/bash
 
-QEMU_ARGS="-S -gdb stdio -m 32"
-
-if [ "$#" -le 1 ]; then
-    echo "Usage: ./debug.sh <image_type> <image>"
-    exit 1
+if [ -e "$1" ]; then
+  echo "Usage: ./debug.sh [first_function_breakpoint]"
+  exit 1
 fi
 
-case "$1" in
-    "floppy")   QEMU_ARGS="${QEMU_ARGS} -fda $PWD/$2"
-    ;;
-    "disk")     QEMU_ARGS="${QEMU_ARGS} -hda $PWD/$2"
-    ;;
-    *)          echo "Unknown image type $1."
-                exit 2
-esac
+pgrep -x "qemu-system-x86" >> /dev/null
+while [ $? -gt 0 ]; do
+  sleep 1
+  pgrep -x "qemu-system-x86" >> /dev/null
+done
 
-# b *0x7c00
-# layout asm
-cat > .vscode/.gdb_script.gdb << EOF
-    symbol-file $PWD/build/i686_debug/kernel/kernel.elf
-    set disassembly-flavor intel
-    target remote | qemu-system-i386 $QEMU_ARGS
+if ! [ -d "./.gdb" ]; then
+  mkdir ./.gdb
+fi
+
+cat > .gdb/.gdb_script.gdb << EOF
+    file kernel/bin/kernel
+    target remote localhost:1234
+    break $1
+    c
 EOF
 
-gdb -x .vscode/.gdb_script.gdb
+gdb -x .gdb/.gdb_script.gdb

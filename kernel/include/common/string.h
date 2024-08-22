@@ -17,3 +17,4 @@
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 char *strncpy(char *destination, const char *source, size_t num);
+size_t strlen(const char *str);

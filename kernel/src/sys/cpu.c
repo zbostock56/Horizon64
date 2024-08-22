@@ -32,7 +32,7 @@ static inline STATUS cpuid(uint32_t feature, uint32_t *eax, uint32_t *ebx,
     unsigned int ret = __get_cpuid(feature, eax, ebx, ecx, edx);
     if (ret != 1) {
         klogi("CPUID failed with feature input %x!!\n", feature);
-        return SYS_ERROR;
+        return SYS_ERR;
     }
     return SYS_OK;
 }
@@ -80,7 +80,7 @@ static inline void write_msr(uint32_t msr, uint64_t val) {
  * @brief Helper function to check if a cpu feature is supported
  *
  * @param feature Feature to check if compatible
- * @return STATUS SYS_ERROR if no, SYS_OK if yes
+ * @return STATUS SYS_ERR if no, SYS_OK if yes
  */
 STATUS check_cpu_support(CPUID_FEATURE feature) {
     uint32_t registers[4];
@@ -90,7 +90,7 @@ STATUS check_cpu_support(CPUID_FEATURE feature) {
     if (registers[feature.registers] & feature.mask) {
         return SYS_OK;
     } else {
-        return SYS_ERROR;
+        return SYS_ERR;
     }
 }
 
@@ -198,13 +198,13 @@ void get_cpu_cache_info(int *cache_line_size, int *l2_cache_size,
  */
 void print_cpu_info() {
     char vendor[13] = {0};
-    int family;
-    int model_number;
-    int stepping;
+    int family = 0;
+    int model_number = 0;
+    int stepping = 0;
     char brand[49] = {0};
-    int cache_line_size;
-    int l2_cache_size;
-    int l3_cache_size;
+    int cache_line_size = 0;
+    int l2_cache_size = 0;
+    int l3_cache_size = 0;
 
     get_cpu_vendor(vendor);
     get_cpu_family(&family, &stepping, &model_number);
@@ -217,8 +217,8 @@ void print_cpu_info() {
     klogi("Model name:  %s\n", brand);
     klogi("Stepping:    %d\n", stepping);
     klogi("Cache Lines: %d Bytes\n", cache_line_size);
-    klogi("L2 cache:    %dK\n", l2_cache_size);
-    klogi("L3 cache:    %dK\n", l3_cache_size);
+    klogi("L2 cache:    %d KB\n", l2_cache_size);
+    klogi("L3 cache:    %d KB\n", l3_cache_size);
 }
 
 /**
@@ -227,6 +227,8 @@ void print_cpu_info() {
  * @param cpu_number Denotes which cpu to start
  */
 void cpu_init(size_t cpu_number) {
+
+    klogi("INIT CPU %d: starting...\n", cpu_number);
 
     /* Check for PAT support and enable */
     /*
@@ -243,7 +245,7 @@ void cpu_init(size_t cpu_number) {
                 the CPU to write data directly to memory without caching it.
     */
     if (check_cpu_support(cpuid_feature_pat)) {
-        klogi("CPU INIT: cpu %d enabling page attribute table\n", cpu_number);
+        klogi("CPU INIT: CPU %d enabling page attribute table\n", cpu_number);
         uint64_t pat_value = read_msr(MSR_PAT);
         pat_value &= (uint64_t) (0xFFFFFFFF);
         pat_value |= ((uint64_t) (0x1)) << 32;
@@ -263,7 +265,7 @@ void cpu_init(size_t cpu_number) {
     WRITE_TO_CR4_BIT(CR4_UNMASKED_SIMD_FLOATING_POINT_EXCEPTIONS);
 
     /* Print out the CPU manufacturer */
-    klogi("CPU INIT: Printing out CPU %d's info\n", cpu_number);
+    klogi("Printing out CPU %d's info\n", cpu_number);
     print_cpu_info();
-    klogi("Initialization for CPU %d finished...\n", cpu_number);
+    klogi("INIT CPU %d: finished...\n", cpu_number);
 }

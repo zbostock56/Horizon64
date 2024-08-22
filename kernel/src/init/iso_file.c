@@ -69,6 +69,14 @@ int check_string_ending(const char *str, const char *end) {
 void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
                   LIMINE_FILE **file) {
     LIMINE_MODULE_RESP *module_response = module_request.response;
+
+    /* Check bootloader provided return value */
+    if (!module_response) {
+        kloge("FONT INIT: request's response for font file is NULL!\n");
+        halt();
+    }
+
+    /* Loop through modules and look for one that matches */
     for (size_t i = 0; i < module_response->module_count; i++) {
         LIMINE_FILE *f = module_response->modules[i];
         if (check_string_ending(f->path, name)) {

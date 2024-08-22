@@ -1,7 +1,7 @@
 /**
- * @file iso_file.h
+ * @file rsdp.h
  * @author Zack Bostock
- * @brief Information pertaining to using files from the system image
+ * @brief Functions associated with the Root System Descriptor Table (RSDP)
  *
  * @copyright Copyright (c) 2024
  *
@@ -9,11 +9,11 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include <globals.h>
 
-#include <common/limine_typedefs.h>
-
-#include <sys/asm.h>
+#include <structs/rsdp_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
@@ -22,6 +22,4 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-int check_string_ending(const char *str, const char *end);
-void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
-                  LIMINE_FILE **file);
+STATUS rsdp_checksum_check(XSDP *rsdp);

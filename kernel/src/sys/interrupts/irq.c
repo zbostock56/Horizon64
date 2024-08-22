@@ -53,6 +53,7 @@ void irq_register_handler(int irq, IRQ_HANDLER handler) {
  * @brief Main hardware interrupt initization function.
  */
 void irq_init() {
+  klogi("INIT IRQ: starting...\n");
   disable_interrupts();
 
   pic = pic_get_driver();
@@ -89,4 +90,5 @@ void irq_init() {
   }
 
   enable_interrupts();
+  klogi("INIT IRQ: finished...\n");
 }

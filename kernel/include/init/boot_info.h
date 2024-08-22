@@ -1,7 +1,7 @@
 /**
- * @file iso_file.h
+ * @file boot_info.h
  * @author Zack Bostock
- * @brief Information pertaining to using files from the system image
+ * @brief Information pertaining to info about the bootloader
  *
  * @copyright Copyright (c) 2024
  *
@@ -9,11 +9,8 @@
 
 #pragma once
 
-#include <globals.h>
-
 #include <common/limine_typedefs.h>
-
-#include <sys/asm.h>
+#include <common/kprint.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
@@ -22,6 +19,4 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-int check_string_ending(const char *str, const char *end);
-void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
-                  LIMINE_FILE **file);
+STATUS print_boot_info(LIMINE_BL_INFO_REQ req);

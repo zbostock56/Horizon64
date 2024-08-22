@@ -14,6 +14,7 @@
 #include <common/limine_typedefs.h>
 
 #include <sys/asm.h>
+#include <sys/mmu.h>
 
 #include <init/iso_file.h>
 
@@ -26,8 +27,21 @@
 #define PSF1_FULL_MAGIC  (0x0436)
 
 /* PSF1 font mode bits */
+/**
+ *  NOTE: PSF1_MODE512
+ *  If this bit is set, the font face will have 512 glyphs. If it is unset,
+ *  then the font face will have just 256 glyphs.
+ */
 #define PSF1_MODE512     (0x01)
+/**
+ * NOTE: PSF1_MODEHASTAB
+ * If this bit is set, then the font face will have a unicode table
+ */
 #define PSF1_MODEHASTAB  (0x02)
+/**
+ * NOTE: PSF1_MODESEQ
+ * Equivalent to PSF1_MODEHASTAB.
+ */
 #define PSF1_MODESEQ     (0x04)
 #define PSF1_MAXMODE     (0x05)
 

@@ -41,14 +41,16 @@ void idt_init_entry(int interrupt, void *base, uint16_t segment, uint8_t type) {
  * @brief Main initialization function for the IDT.
  */
 void idt_init() {
+  klogi("INIT IDT: starting...\n");
   /* Zero out all IDT entries */
   for (size_t i = 0; i < X86_64_IDT_ENTRIES; i++) {
     memset(&g_idt[i], 0, sizeof(IDT_ENTRY));
   }
 
   /* Load the IDT */
+  klogi("Loading IDT\n");
   asm volatile("lidt %0" : : "m"(g_idt_descriptor));
-  klogi("Finished loading IDT\n");
+  klogi("INIT IDT: finished...\n");
 }
 
 /**

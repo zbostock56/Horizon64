@@ -29,21 +29,23 @@ override CFLAGS += \
 	-Werror \
 	-ffreestanding \
 	-nostdlib \
-    -fPIC \
+    -fno-PIC \
     -std=gnu11 \
     -fno-stack-protector \
     -fno-stack-check \
     -fno-lto \
-    -fPIE \
-		-fno-omit-frame-pointer \
+    -fno-PIE \
+	-fno-omit-frame-pointer \
     -m64 \
     -march=x86-64 \
     -mno-80387 \
     -mno-mmx \
     -mno-sse \
     -mno-sse2 \
-    -mcmodel=large \
-    -mno-red-zone
+    -mcmodel=kernel \
+    -mno-red-zone \
+	-ffunction-sections \
+	-fdata-sections
 
 override CPPFLAGS := \
     -I ./include \
@@ -59,7 +61,8 @@ override LDFLAGS += \
     -z text \
     -z max-page-size=0x1000 \
     -T linker.ld \
-		-Map bin/kernel.map
+	-Map bin/kernel.map \
+	-gc-sections
 
 override NASMFLAGS += \
     -Wall \
@@ -97,6 +100,7 @@ obj/%.asm.o: %.asm
 
 dir:
 	@mkdir -p obj/src/sys/gdt
+	@mkdir -p obj/src/sys/acpi
 	@mkdir -p obj/src/sys/interrupts
 	@mkdir -p obj/src/graphics
 	@mkdir -p obj/src/sys/tick

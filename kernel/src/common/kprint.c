@@ -118,6 +118,8 @@ void kprintf(const char *format, ...) {
         kprint_dec(va_arg(argp, size_t));
       } else if (*format == 's') {
         kprint(va_arg(argp, char *));
+      } else if (*format == 'c') {
+        kputc(va_arg(argp, int));
       }
     } else {
       kputc(*format);

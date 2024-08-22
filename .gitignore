@@ -10,7 +10,6 @@ bochs_config
 *.ini
 .scon*
 build_helpers/__pycache__
-*.txt
 limine/
 limine/*
 horizon.iso
@@ -19,3 +18,11 @@ kernel/obj
 kernel/bin
 ext
 scripts/pre-commit
+scripts/memory_plotter/vvv
+scripts/memory_plotter/env
+scripts/memory_plotter/venv
+scripts/memory_plotter/chunks*
+scripts/memory_plotter/plots
+scripts/memory_plotter/__pycache__
+scripts/memory_plotter/mem_map.txt
+.gdb

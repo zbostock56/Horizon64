@@ -32,6 +32,7 @@ ADDR_SPACE kernel_addr_space = {0};
  * @param req Request from Limine bootloader
  */
 void pm_init(LIMINE_MEM_REQ req) {
+    klogi("INIT PM: starting...\n");
     /* Check validity of request from bootloader */
     LIMINE_MEM_RES *res = req.response;
 
@@ -50,6 +51,8 @@ void pm_init(LIMINE_MEM_REQ req) {
 
       /* Check what type of memory is being passed from the bootloader and    */
       /* check to see if it is valid memory that can be used. If not, ignore. */
+      /* Here, we also add if the memory is marked as kernel or modules since */
+      /* we still need this to be available to all processes. */
       if (ENTRY_TYPE_CHECK(entry)) {
         kmem.total_size += entry->length;
       } else {
@@ -101,11 +104,22 @@ void pm_init(LIMINE_MEM_REQ req) {
 
     /* Mark bitmap as used memory */
     pm_allocate(VIRT_TO_PHYS(kmem.bitmap), NUM_PAGES(bitmap_size));
-    klogi("Physical Memory initialization finished...\n");
-    klogi("Memory total: %d MB | Physcial limit: %x, free: %d MB, used: %d MB\n",
-          kmem.total_size / (1024 * 1024), kmem.physical_limit,
-          kmem.free_size / (1024 * 1024),
-          (kmem.total_size - kmem.free_size) / (1024 * 1024));
+    klogi("Printing usage info...\n");
+    pm_used();
+    klogi("INIT PM: finished...\n");
+}
+
+/**
+ * @brief Helper function for printing out physical memory which is used.
+ */
+void pm_used() {
+    int squared = 1024 * 1024;
+    klogi("Memory total: %d MB | Physcial limit: %x, Virtual Limit %x\n"
+          "free: %d MB, used: %d MB\n",
+          kmem.total_size / squared, kmem.physical_limit,
+          kmem.physical_limit + MEM_VIRT_OFFSET,
+          kmem.free_size / squared,
+          (kmem.total_size - kmem.free_size) / squared);
 }
 
 /**
@@ -157,7 +171,7 @@ STATUS pm_free(uint64_t address, uint64_t num_pages) {
       kmem.free_size += PAGE_SIZE;
     } else {
       /* Can be used to find double frees if a page is already free */
-      ret = SYS_ERROR;
+      ret = SYS_ERR;
     }
 
     kmem.bitmap[i / (PAGE_SIZE * PAGES_PER_BYTE)] |=
@@ -177,7 +191,7 @@ STATUS pm_free(uint64_t address, uint64_t num_pages) {
  */
 STATUS pm_allocate(uint64_t address, uint64_t num_pages) {
   if (!bitmap_free(address, num_pages)) {
-    return SYS_ERROR;
+    return SYS_ERR;
   }
 
   bitmap_set(address, num_pages);
@@ -325,7 +339,7 @@ static void unmap_page_entry(ADDR_SPACE *addr_space, uint64_t virt_addr) {
     }
 
     pd[pde] = 0;
-    if (pm_free(VIRT_TO_PHYS(pt), DEFAULT_PAGES) == SYS_ERROR) {
+    if (pm_free(VIRT_TO_PHYS(pt), DEFAULT_PAGES) == SYS_ERR) {
         klogi("VM: Failed to free pt\n");
         halt();
     }
@@ -345,7 +359,7 @@ static void unmap_page_entry(ADDR_SPACE *addr_space, uint64_t virt_addr) {
     }
 
     pdpt[pdpe] = 0;
-    if (pm_free(VIRT_TO_PHYS(pd), DEFAULT_PAGES) == SYS_ERROR) {
+    if (pm_free(VIRT_TO_PHYS(pd), DEFAULT_PAGES) == SYS_ERR) {
         klogi("VM: Failed to free pd\n");
         halt();
     }
@@ -364,7 +378,7 @@ static void unmap_page_entry(ADDR_SPACE *addr_space, uint64_t virt_addr) {
     }
 
     pml4[pml4e] = 0;
-    if (pm_free(VIRT_TO_PHYS(pdpt), DEFAULT_PAGES) == SYS_ERROR) {
+    if (pm_free(VIRT_TO_PHYS(pdpt), DEFAULT_PAGES) == SYS_ERR) {
         klogi("VM: Failed to free pdpt\n");
         halt();
     }
@@ -473,14 +487,15 @@ void vm_map(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t phys_addr,
  * @param k_req Kernel address request
  */
 void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
+    klogi("INIT VM: starting...\n");
     /* Check inputs from the bootloader */
     LIMINE_MEM_RES *m = req.response;
     LIMINE_K_ADDR_RES *kernel = k_req.response;
     if (!m) {
-        kloge("VM INIT: mem map request is NULL!\n");
+        kloge("INIT VM: mem map request is NULL!\n");
         halt();
     } else if (!kernel) {
-        kloge("VM INIT: kernel address request is NULL!\n");
+        kloge("INIT VM: kernel address request is NULL!\n");
         halt();
     }
 
@@ -496,13 +511,14 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
 
     vm_map(NULL, MEM_VIRT_OFFSET, 0, min, VM_USERMODE);
 
+    /* Map the number of pages up to the physical limit */
     size_t num_pages = NUM_PAGES(kmem.physical_limit);
     for (i = 0; i < num_pages * PAGE_SIZE; i += PAGE_SIZE) {
-        map_page_entry(NULL, MEM_VIRT_OFFSET + i, i, VM_USERMODE);
+        map_page_entry(NULL, MEM_VIRT_OFFSET + i, i, VM_DEFAULT);
     }
 
-    klogi("VM INIT: Mapped %d bytes to %x\n", kmem.physical_limit,
-                                              MEM_VIRT_OFFSET);
+    klogi("Mapped %d MB of pages to %x\n", kmem.physical_limit / (1024 * 1024),
+                                           MEM_VIRT_OFFSET);
 
     for (i = 0; i < m->entry_count; i++) {
         struct limine_memmap_entry *entry = m->entries[i];
@@ -513,31 +529,86 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
             /* Should share for all processes */
             vm_map(NULL, virt_addr, entry->base, NUM_PAGES(entry->length),
                    VM_DEFAULT);
-            klogi("Mapped kernel %x to %x (length: %d, #%d)\n", entry->base,
-                  virt_addr, entry->length, i);
+            klogi("Mapped kernel %x to %x - %x\n"
+                  "\t(length: %d (%d KB), #%d)\n\t",
+                  entry->base, virt_addr, virt_addr + entry->length,
+                  entry->length, entry->length / 1024, i);
+            ENTRY_INFO(entry)
         } else if (entry->type == LIMINE_MEMMAP_FRAMEBUFFER) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                    NUM_PAGES(entry->length), VM_DEFAULT);
-            klogi("Mapped framebuffer %x to %x (length: %d, #%d)\n",
-                  entry->base, PHYS_TO_VIRT(entry->base), entry->length, i);
+            klogi("Mapped framebuffer %x to %x - %x\n"
+                  "\t(length: %d (%d KB), #%d)\n\t",
+                  entry->base, PHYS_TO_VIRT(entry->base),
+                  PHYS_TO_VIRT(entry->base + entry->length),
+                  entry->length, entry->length / 1024, i);
+            ENTRY_INFO(entry)
+        } else if (entry->type == LIMINE_MEMMAP_USABLE) {
+            int part_bitmap = 0;
+            if (VIRT_TO_PHYS(kmem.bitmap) >= entry->base &&
+                VIRT_TO_PHYS(kmem.bitmap) < entry->base + entry->length) {
+                part_bitmap = 1;
+            }
+            vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
+                   NUM_PAGES(entry->length), VM_DEFAULT);
+            klogi("Mapped usable %x to %x - %x\n"
+                  "\t(length: %d (%d KB), #%d, type: %d, %s)\n\t",
+                  entry->base, PHYS_TO_VIRT(entry->base),
+                  PHYS_TO_VIRT(entry->base + entry->length),
+                  entry->length, entry->length / 1024, i, entry->type,
+                  part_bitmap ? "only kernel accessable" :
+                  "all tasks accessable");
+            ENTRY_INFO(entry)
+        } else if (entry->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE) {
+            vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
+                  NUM_PAGES(entry->length), VM_DEFAULT);
+            klogi("Mapped ACPI %x to %x - %x\n"
+                  "\t(length: %d (%d KB), #%d)\n\t",
+                  entry->base, PHYS_TO_VIRT(entry->base),
+                  PHYS_TO_VIRT(entry->base + entry->length),
+                  entry->length, entry->length / 1024, i);
+            ENTRY_INFO(entry)
+        } else if (entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+            vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
+                  NUM_PAGES(entry->length), VM_DEFAULT);
+            klogi("Mapped BL memory %x to %x - %x\n"
+                  "\t(length: %d (%d KB), #%d)\n\t",
+                  entry->base, PHYS_TO_VIRT(entry->base),
+                  PHYS_TO_VIRT(entry->base + entry->length),
+                  entry->length, entry->length / 1024, i);
+            ENTRY_INFO(entry)
+        } else {
+            /* Skip over these entries since we don't want to use them as     */
+            /* accessable memory. Just print out their info to give a better  */
+            /* picture of what the memory space looks like.                   */
+            klogi("NO MAP: ");
+            PRINT_MEM_ENTRY_INFO(entry)
         }
     }
 
     write_cr(cr3, VIRT_TO_PHYS(kernel_addr_space.pml4));
-    klogi("VM INIT: Finished...\n");
+    klogi("INIT VM: finished...\n");
 }
 
+/**
+ * @brief creates an address space of the default size
+ */
 ADDR_SPACE *create_address_space() {
     ADDR_SPACE *as = kmalloc(sizeof(ADDR_SPACE));
 
     if (!as) {
         kloge("VM: Cannot create new address space, out of memory!\n");
-        halt();
+        return NULL;
     }
 
     memset(as, 0, sizeof(ADDR_SPACE));
 
     as->pml4 = kmalloc(PAGE_SIZE * DEFAULT_PAGES);
+    if (!as->pml4) {
+        kloge("VM: Cannot give address space default pages, out of memory!\n");
+        kfree(as);
+        return NULL;
+    }
     as->lock = LOCK_NEW();
 
     for (size_t i = 0; i < vector_len(&global_mem_map); i++) {

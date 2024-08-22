@@ -17,6 +17,8 @@
  */
 void fb_init(struct limine_framebuffer_request req) {
 
+  klogi("INIT FRAMEBUFFER: starting...\n");
+
   if (!req.response || req.response->framebuffer_count < 1) {
     kprintf("Framebuffer either no response or not correct count!\n");
     halt();
@@ -29,11 +31,12 @@ void fb_init(struct limine_framebuffer_request req) {
     initial_fb.height = fb->height;
     initial_fb.width = fb->width;
     initial_fb.pitch = fb->pitch;
+    klogi("Framebuffer: %d x %d pixels\n", fb->width, fb->height);
     initial_fb.bpp = fb->bpp;
     // initial_fb.swapbuffer = malloc(fb->width * fb->height * 4);
   }
 
-  kprintf("Successfully initialized framebuffer\n");
+  klogi("INIT FRAMEBUFFER: finished...\n");
 }
 
 /*

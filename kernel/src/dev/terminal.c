@@ -26,13 +26,19 @@ void init_terminal(FRAMEBUFFER fb) {
   //   kprintf("NULL framebuffer when trying to init terminal!\n");
   //   return;
   // }
+  klogi("INIT TERMINAL: starting...\n");
   term.framebuffer = fb;
   term.background_color = COLOR_BLACK;
   term.foreground_color = COLOR_WHITE;
   /* TODO: Edit to support multiple fonts */
+  if (!font.header) {
+    kloge("INIT TERMINAL: Trying to use a NULL font header!\n");
+    return;
+  }
   term.height = fb.height / font.header->character_size;
   term.width = fb.width / PSF1_FONT_WIDTH;
   term.cursor_pos = IVEC2_ONE;
+  klogi("INIT TERMINAL: finished...\n");
 }
 
 /**
@@ -139,6 +145,10 @@ void terminal_putc(TERMINAL *t, uint8_t c) {
   if (c == '\n') {
     t->cursor_pos.y++;
     t->cursor_pos.x = 1;
+    return;
+  }
+  if (!font.header) {
+    kloge("TERM PUTC: Trying to use a NULL font header!\n");
     return;
   }
 
@@ -270,6 +280,11 @@ void terminal_clear(TERMINAL *t) {
  * @param t Terminal to scroll
  */
 void terminal_scroll(TERMINAL *t) {
+  if (!font.header) {
+    kloge("TERM SCROLL: Trying to use a NULL font header!\n");
+    return;
+  }
+
   const uint8_t char_size = font.header->character_size;
 
   for (size_t y = 0; y < (t->cursor_pos.y - 1) * char_size; y++) {
