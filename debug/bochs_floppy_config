@@ -1,7 +1,0 @@
-megs: 128
-romimage: file=/home/zbostock/Downloads/bochs-2.7/bios/BIOS-bochs-latest
-vgaromimage: file=/home/zbostock/Downloads/bochs-2.7/bios/VGABIOS-elpin-2.40
-floppya: 1_44=../build/main_floppy.img, status=inserted
-boot: floppy
-mouse: enabled=0
-display_library: sdl2, options="gui_debug"
