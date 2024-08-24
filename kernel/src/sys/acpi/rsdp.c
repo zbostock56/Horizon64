@@ -10,21 +10,6 @@
 #include <sys/acpi/rsdp.h>
 
 /**
- * @brief Helper for adding together bytes in the RSDP structure.
- *
- * @param addr Starting address to add from
- * @param length Length of bytes to add
- * @return uint8_t Resulting sum
- */
-static uint8_t calculate_checksum(const uint8_t *addr, size_t length) {
-    uint8_t sum = 0;
-    for (size_t i = 0; i < length; i++) {
-        sum += addr[i];
-    }
-    return sum;
-}
-
-/**
  * @brief Checks the checksum of the RSDP to ensure the data is valid
  * @verbatim
  * Before the RSDP is relied upon you should check that the checksum is valid.

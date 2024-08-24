@@ -63,6 +63,9 @@ void system_init() {
     /* ACPI (and MADT) initialization */
     acpi_init(rsdp_request);
 
+    /* High Precision Event Timer (HPET) initialization */
+    hpet_init();
+
     /* Initialize framebuffer */
     fb_init(framebuffer_req);
 

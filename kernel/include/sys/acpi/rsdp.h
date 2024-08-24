@@ -13,6 +13,7 @@
 
 #include <globals.h>
 
+#include <sys/acpi/acpi.h>
 #include <structs/rsdp_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */

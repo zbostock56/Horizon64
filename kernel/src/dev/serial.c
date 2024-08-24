@@ -50,7 +50,6 @@ STATUS serial_init() {
     outb(COM1 + 0, 0xAE);
     if (inb(COM1 + 0) != 0xAE) {
         serial_enabled = ERR_SERIAL_FAULTY;
-        klogi("INIT SERIAL: finished...\n");
         return SYS_ERR;
     }
     /* Set in normal operation mode */

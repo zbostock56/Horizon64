@@ -46,3 +46,4 @@
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 ACPI_SDT *acpi_get_sdt(const char *signature);
 void acpi_init(LIMINE_RSDP_REQ req);
+uint8_t calculate_checksum(const uint8_t *addr, size_t length);

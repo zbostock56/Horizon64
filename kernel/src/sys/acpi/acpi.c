@@ -16,6 +16,21 @@ static ACPI_SDT *sdt = NULL;
 static uint8_t use_xsdt = FALSE;
 
 /**
+ * @brief Helper for adding together bytes in the ACPI structure.
+ *
+ * @param addr Starting address to add from
+ * @param length Length of bytes to add
+ * @return uint8_t Resulting sum
+ */
+uint8_t calculate_checksum(const uint8_t *addr, size_t length) {
+    uint8_t sum = 0;
+    for (size_t i = 0; i < length; i++) {
+        sum += addr[i];
+    }
+    return sum;
+}
+
+/**
  * @brief Finds the the requested System Descriptor Table, if it exists
  *
  * @param signature The signature of the type of SDT which is being looked for

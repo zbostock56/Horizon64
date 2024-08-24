@@ -36,7 +36,6 @@ typedef struct {
  * @brief Since Version 2.0 it has been extended
  */
 typedef struct {
-    //RSDP rsdp;
     char signature[8];
     uint8_t checksum;
     char oemid[6];
