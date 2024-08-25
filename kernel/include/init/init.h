@@ -17,6 +17,7 @@
 
 #include <sys/acpi/acpi.h>
 #include <sys/acpi/hpet.h>
+#include <sys/cmos.h>
 #include <sys/cpu.h>
 #include <sys/gdt/gdt.h>
 #include <sys/mmu.h>

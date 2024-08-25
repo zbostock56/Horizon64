@@ -66,6 +66,9 @@ void system_init() {
     /* High Precision Event Timer (HPET) initialization */
     hpet_init();
 
+    /* Intialize CMOS/RTC */
+    cmos_init();
+
     /* Initialize framebuffer */
     fb_init(framebuffer_req);
 
