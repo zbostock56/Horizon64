@@ -69,6 +69,9 @@ void system_init() {
     /* Intialize CMOS/RTC */
     cmos_init();
 
+    /* Intialize PCI device list */
+    pci_init();
+
     /* Initialize framebuffer */
     fb_init(framebuffer_req);
 

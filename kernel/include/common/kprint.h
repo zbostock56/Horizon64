@@ -22,7 +22,7 @@ typedef struct {
 } KLOG;
 
 /* -------------------------------- GLOBALS --------------------------------- */
-static const char CONVERSION_TABLE[] = "0123456789abcdef";
+static const char CONVERSION_TABLE[] = "0123456789ABCDEF";
 // static LOCK klog_shackle = {0};
 // static KLOG klog = {0};
 

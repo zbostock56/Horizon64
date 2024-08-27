@@ -15,7 +15,7 @@ override DEFAULT_CC := ../toolchain/x86_64-elf/bin/x86_64-elf-gcc
 $(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
 override DEFAULT_LD := ../toolchain/x86_64-elf/bin/x86_64-elf-ld
 $(eval $(call DEFAULT_VAR,LD,$(DEFAULT_LD)))
-override DEFAULT_CFLAGS := -g -O2 -pipe -lgcc
+override DEFAULT_CFLAGS := -g -Og -pipe -lgcc
 $(eval $(call DEFAULT_VAR,CFLAGS,$(DEFAULT_CFLAGS)))
 override DEFAULT_CPPFLAGS :=
 $(eval $(call DEFAULT_VAR,CPPFLAGS,$(DEFAULT_CPPFLAGS)))

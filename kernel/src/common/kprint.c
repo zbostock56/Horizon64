@@ -62,7 +62,7 @@ void kputs(const char *msg) {
  *
  * @param num number to print as hex to the screen.
  */
-static void kprint_hex(size_t num) {
+static void kprint_hex(size_t num, uint32_t width) {
   int i;
   char buf[17];
   if (!num) {
@@ -71,10 +71,16 @@ static void kprint_hex(size_t num) {
   }
 
   buf[16] = 0;
-
-  for (i = 15; num; i--) {
-    buf[i] = CONVERSION_TABLE[num % 16];
-    num /= 16;
+  if (width != 0) {
+    for (i = 15; num && i >= (16 - width); i--) {
+      buf[i] = CONVERSION_TABLE[num % 16];
+      num /= 16;
+    }
+  } else {
+    for (i = 15; num; i--) {
+      buf[i] = CONVERSION_TABLE[num % 16];
+      num /= 16;
+    }
   }
 
   i++;
@@ -112,8 +118,14 @@ void kprintf(const char *format, ...) {
   while (*format != '\0') {
     if (*format == '%') {
       format++;
+      uint32_t arg_width = 0;
+      if (((*format) >= '0') && ((*format) <= '9')) {
+        arg_width *= 10;
+        arg_width += *format - '0';
+        format++;
+      }
       if (*format == 'x') {
-        kprint_hex(va_arg(argp, size_t));
+        kprint_hex(va_arg(argp, size_t), arg_width);
       } else if (*format == 'd') {
         kprint_dec(va_arg(argp, size_t));
       } else if (*format == 's') {

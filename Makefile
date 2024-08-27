@@ -32,7 +32,7 @@ all: $(IMAGE_NAME).iso
 all-hdd: $(IMAGE_NAME).hdd
 
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64 -debugcon stdio -M q35 -m $(MEMORY) $(TIME) -cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on
+	qemu-system-x86_64 -enable-kvm -debugcon stdio -M q35 -m $(MEMORY) $(TIME) -cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on
 
 debug: $(IMAGE_NAME).iso
 	./scripts/remove_from_port.sh
