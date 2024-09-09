@@ -14,6 +14,7 @@ Horizon64 is a hobbyist operating system designed for the x86_64 architecture. I
 - 64-bit kernel
 - Basic system initialization
   - ACPI
+  - APIC
   - HPET
   - PCI Device Scanning
   - CMOS
