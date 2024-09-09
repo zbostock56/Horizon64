@@ -454,7 +454,7 @@ void vm_unmap(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t num_pages) {
 }
 
 /**
- * @brief Makes a number of pages to an address space
+ * @brief Maps a number of pages to an address space
  *
  * @param addr_space Address space to map pages to
  * @param virt_addr Virtual address of the pages

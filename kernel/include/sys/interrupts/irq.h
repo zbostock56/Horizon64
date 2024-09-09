@@ -18,6 +18,7 @@
 #include <sys/asm.h>
 #include <sys/tick/pic.h>
 #include <sys/tick/pit.h>
+#include <sys/tick/clkhandler.h>
 #include <sys/interrupts/isr.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
@@ -29,7 +30,7 @@
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void irq_handler(REGISTERS *regs);
 void irq_register_handler(int irq, IRQ_HANDLER handler);
+void irq_unregister_handler(int irq);
 void irq_init();
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
-void clkhandler();

@@ -25,6 +25,7 @@
 #include <sys/interrupts/isr.h>
 #include <sys/interrupts/idt.h>
 #include <sys/interrupts/irq.h>
+#include <sys/acpi/apic.h>
 
 #include <init/psf.h>
 #include <init/boot_info.h>

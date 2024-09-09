@@ -19,7 +19,7 @@
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* Max and min PIT programmable frequencies */
 #define PIT_MIN_FREQ     (18)
-#define PIT_MAX_FREQ     (1193180)
+#define PIT_MAX_FREQ     (1193182)
 #define PIT_DEFAULT_FREQ (1000)
 
 /* Read/write channels */

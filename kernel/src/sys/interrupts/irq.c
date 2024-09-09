@@ -12,8 +12,9 @@
  */
 
 #include <sys/interrupts/irq.h>
+#include <sys/acpi/apic.h>
 
-static IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS];
+static IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS] = {0};
 static const PIC_DRIVER *pic = NULL;
 static const PIT_DRIVER *pit = NULL;
 
@@ -31,11 +32,9 @@ void irq_handler(REGISTERS *regs) {
     /* Handle hardware interrupt */
     g_irq_handler[irq]();
   } else {
-    kloge("Unhandled hardware interrupt (IRQ) %d...\n", irq);
+    kloge("Unhandled hardware interrupt (IRQ) %d (INT %d)...\n", irq, regs->interrupt);
   }
-
-  /* Send end of interrupt to PIC */
-  pic->send_end_of_interrupt(irq);
+  /* Legacy PIC has auto end of interrupts enabled... no need to send manually */
 }
 
 /**
@@ -47,6 +46,16 @@ void irq_handler(REGISTERS *regs) {
 void irq_register_handler(int irq, IRQ_HANDLER handler) {
   klogi("Registered IRQ handler %d\n", irq);
   g_irq_handler[irq] = handler;
+}
+
+/**
+ * @brief Helper to remove a hardware interrupt handler
+ *
+ * @param irq IRQ hanlder to remove
+ */
+void irq_unregister_handler(int irq) {
+    klogi("Unregistering IRQ handler %d\n", irq);
+    g_irq_handler[irq] = NULL;
 }
 
 /**

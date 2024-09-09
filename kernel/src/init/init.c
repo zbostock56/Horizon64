@@ -83,9 +83,12 @@ void system_init() {
 
     /* Initialize PIC, PIT */
     irq_init();
-
+    
     /* Initialize keyboard driver */
     keyboard_init();
+
+    /* Initialize Advanced Programmable Interrupt Controller */
+    apic_init();
 
     klogi("SYSTEM INIT: System initialized successfully...\n");
 }

@@ -36,6 +36,8 @@ uint16_t pic_read_in_service_register();
 int pic_probe();
 void pic_send_end_of_interrupt(int irq);
 void pic_configure(uint8_t offset_pic_1, uint8_t offset_pic_2);
+void pic_save_mask();
+void pic_restore_mask();
 const PIC_DRIVER *pic_get_driver();
 
 /* --------------------------------- DRIVER --------------------------------- */

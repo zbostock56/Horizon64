@@ -13,68 +13,22 @@
 #include <common/memory.h>
 
 static char cpu_manufacturer[13] = {0};
+/*
+    Some predefined vendors that GCC recognizes where the value of EBX is
+    already known.
+*/
 
-/**
- * @brief Uses the the cpuid function from gcc to determine the availability
- *        of CPU specific features.
- *
- * @param feature Specific feature to check
- * @note feature will be OR'd with 0x80000000 upon the call to __get_cpuid
- * @ref https://github.com/gcc-mirror/gcc/blob/master/gcc/config/i386/cpuid.h
- *
- * @param eax EAX register to pass into cpuid
- * @param ebx EBX register to pass into cpuid
- * @param ecx ECX register to pass into cpuid
- * @param edx EDX register to pass into cpuid
- */
-static inline STATUS cpuid(uint32_t feature, uint32_t *eax, uint32_t *ebx,
-                           uint32_t *ecx, uint32_t *edx) {
-    unsigned int ret = __get_cpuid(feature, eax, ebx, ecx, edx);
-    if (ret != 1) {
-        klogi("CPUID failed with feature input %x!!\n", feature);
-        return SYS_ERR;
-    }
-    return SYS_OK;
-}
+static VENDOR vendor_intel = {
+    .ebx = signature_INTEL_ebx,
+    .vendor_name = CPUID_VENDOR_INTEL
+};
 
-/**
- * @brief Reads the model specific register specified.
- *
- * @param msr Certain model specific register
- * @return uint64_t Current value in msr
- */
-static inline uint64_t read_msr(uint32_t msr) {
-    uint32_t low, high;
+static VENDOR vendor_amd = {
+    .ebx = signature_AMD_ebx,
+    .vendor_name = CPUID_VENDOR_AMD
+};
 
-    __asm__ volatile("mov %[msr], %%ecx;"
-                     "rdmsr;"
-                     "mov %%eax, %[low];"
-                     "mov %%edx, %[high];"
-                     : [low] "=g"(low), [high] "=g"(high)
-                     : [msr] "g"(msr)
-                     : "eax", "ecx", "edx");
 
-    return (((uint64_t) high << 32) | low);
-}
-
-/**
- * @brief Writes 64 bits to a model specific register.
- *
- * @param msr MSR to write to
- * @param val Value to write to MSR.
- */
-static inline void write_msr(uint32_t msr, uint64_t val) {
-    uint32_t low = val & UINT32_MAX;
-    uint32_t high = (val >> 32) & UINT32_MAX;
-
-    __asm__ volatile("mov %[msr], %%ecx;"
-                     "mov %[low], %%eax;"
-                     "mov %[high], %%edx;"
-                     "wrmsr;"
-                     :
-                     : [msr] "g"(msr), [low] "g"(low), [high] "g"(high)
-                     : "eax", "ecx", "edx");
-}
 
 /**
  * @brief Helper function to check if a cpu feature is supported

@@ -84,17 +84,19 @@ void pit_init(uint32_t hertz) {
 
   /* Calculate the value to send to the PIT */
   hertz = PIT_MAX_FREQ / hertz;
+  if ((PIT_MAX_FREQ % hertz) > (hertz / 2)) {
+    hertz++;
+  }
 
   /* Inform the PIT what modes we are using */
   uint8_t mode = PIT_BINARY_MODE |
                  PIT_MODE_COMMAND_SET_OP_MODE(PIT_MODE_3) |
                  PIT_MODE_COMMAND_SET_ACCESS_MODE(PIT_LO_AND_HIGH) |
                  PIT_MODE_COMMAND_SET_CHANNEL(PIT_CHANNEL_0);
-
   /* Program the PIT with the frequency */
-  outb(mode, MODE_COMMAND_REGISTER);
-  outb(hertz & 0x00FF, PIT_CHANNEL_0_DATA_PORT);           /* LSB */
-  outb((hertz & 0xFF00) >> 8, PIT_CHANNEL_0_DATA_PORT);    /* MSB */
+  outb(MODE_COMMAND_REGISTER, mode);
+  outb(PIT_CHANNEL_0_DATA_PORT, hertz & 0x00FF);           /* LSB */
+  outb(PIT_CHANNEL_0_DATA_PORT, (hertz & 0xFF00) >> 8);    /* MSB */
 
   /* Set the interrupt handler for the PIT (IRQ 0) to be serviceable */
   pic_unmask(0);
@@ -110,8 +112,8 @@ void pit_init(uint32_t hertz) {
 void pit_set_event(unsigned long delta) {
   /* Used for timer events */
   disable_interrupts();
-  outb(delta & 0xFF, PIT_CHANNEL_0_DATA_PORT);  /* LSB */
-  outb(delta >> 8, PIT_CHANNEL_0_DATA_PORT);    /* MSB */
+  outb(PIT_CHANNEL_0_DATA_PORT, delta & 0xFF);  /* LSB */
+  outb(PIT_CHANNEL_0_DATA_PORT, delta >> 8);    /* MSB */
   enable_interrupts();
 }
 

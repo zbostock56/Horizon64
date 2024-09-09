@@ -18,7 +18,7 @@
 #include <sys/tick/pic.h>
 
 static uint16_t g_pic_mask = 0xFFFF;
-static int g_auto_eoi = 0;
+static int g_auto_eoi = 1;
 
 enum {
     PIC_ICW1_ICW4           = 0x01,     /* If set, ICW4 must be read (its optional) */
@@ -81,6 +81,20 @@ void pic_mask(int irq) {
 void pic_unmask(int irq) {
   klogi("Unmasked IRQ %d\n", irq);
   pic_set_mask(g_pic_mask & ~(1 << irq));
+}
+
+/**
+ * @brief Saves the mask of the PIC in its current form
+ */
+void pic_save_mask() {
+    g_pic_mask = pic_get_mask();
+}
+
+/**
+ * @brief Used to restore to mask of the PIC from its previous state
+ */
+void pic_restore_mask() {
+    pic_set_mask(g_pic_mask);
 }
 
 /**

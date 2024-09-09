@@ -11,6 +11,7 @@
 
 #include <globals.h>
 #include <structs/control_registers_str.h>
+#include <structs/cpu_str.h>
 
 /* GCC built-in cpuid headers */
 #include <cpuid.h>
@@ -35,6 +36,9 @@
 /* The low 32 bits are the SYSCALL flag mask. If a bit in this is set, the */
 /* corresponding bit in rFLAGS is cleared.                                 */
 #define MSR_SFMASK              (0xC0000084)
+/* Holds the base address of the local Advanced Programmable Interrupt */
+/* Controller.                                                         */
+#define MSR_APIC_BASE           (0x0000001B)
 
 /* -------------------------------- GLOBALS --------------------------------- */
 
@@ -77,3 +81,66 @@
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void cpu_init(size_t cpu_number);
+STATUS check_cpu_support(CPUID_FEATURE feature);
+
+/**
+ * @brief Uses the the cpuid function from gcc to determine the availability
+ *        of CPU specific features.
+ *
+ * @param feature Specific feature to check
+ * @note feature will be OR'd with 0x80000000 upon the call to __get_cpuid
+ * @ref https://github.com/gcc-mirror/gcc/blob/master/gcc/config/i386/cpuid.h
+ *
+ * @param eax EAX register to pass into cpuid
+ * @param ebx EBX register to pass into cpuid
+ * @param ecx ECX register to pass into cpuid
+ * @param edx EDX register to pass into cpuid
+ */
+static inline STATUS cpuid(uint32_t feature, uint32_t *eax, uint32_t *ebx,
+                           uint32_t *ecx, uint32_t *edx) {
+    unsigned int ret = __get_cpuid(feature, eax, ebx, ecx, edx);
+    if (ret != 1) {
+        klogi("CPUID failed with feature input %x!!\n", feature);
+        return SYS_ERR;
+    }
+    return SYS_OK;
+}
+
+/**
+ * @brief Reads the model specific register specified.
+ *
+ * @param msr Certain model specific register
+ * @return uint64_t Current value in msr
+ */
+static inline uint64_t read_msr(uint32_t msr) {
+    uint32_t low, high;
+
+    __asm__ volatile("mov %[msr], %%ecx;"
+                     "rdmsr;"
+                     "mov %%eax, %[low];"
+                     "mov %%edx, %[high];"
+                     : [low] "=g"(low), [high] "=g"(high)
+                     : [msr] "g"(msr)
+                     : "eax", "ecx", "edx");
+
+    return (((uint64_t) high << 32) | low);
+}
+
+/**
+ * @brief Writes 64 bits to a model specific register.
+ *
+ * @param msr MSR to write to
+ * @param val Value to write to MSR.
+ */
+static inline void write_msr(uint32_t msr, uint64_t val) {
+    uint32_t low = val & UINT32_MAX;
+    uint32_t high = (val >> 32) & UINT32_MAX;
+
+    __asm__ volatile("mov %[msr], %%ecx;"
+                     "mov %[low], %%eax;"
+                     "mov %[high], %%edx;"
+                     "wrmsr;"
+                     :
+                     : [msr] "g"(msr), [low] "g"(low), [high] "g"(high)
+                     : "eax", "ecx", "edx");
+}

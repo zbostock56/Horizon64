@@ -121,21 +121,6 @@ enum {
 #define CPUID_VENDOR_QNX           " QNXQVMBSQG "
 
 /*
-    Some predefined vendors that GCC recognizes where the value of EBX is
-    already known.
-*/
-
-static VENDOR vendor_intel = {
-    .ebx = signature_INTEL_ebx,
-    .vendor_name = CPUID_VENDOR_INTEL
-};
-
-static VENDOR vendor_amd = {
-    .ebx = signature_AMD_ebx,
-    .vendor_name = CPUID_VENDOR_AMD
-};
-
-/*
   Specific instances of the CPUID_FEATURE struct which are being checked
   in cpu.c
 */
@@ -146,8 +131,20 @@ static const CPUID_FEATURE cpuid_feature_apic = {
     .mask = CPUID_FEAT_EDX_APIC
 };
 
+static const CPUID_FEATURE cpuid_feature_2xapic = {
+    .feature = 0x00000001,
+    .registers = CPUID_ECX,
+    .mask = CPUID_FEAT_ECX_X2APIC
+};
+
 static const CPUID_FEATURE cpuid_feature_pat = {
     .feature = 0x00000001,
     .registers = CPUID_EDX,
     .mask = CPUID_FEAT_EDX_PAT
+};
+
+static const CPUID_FEATURE cpuid_feature_mtrr = {
+    .feature = 0x00000001,
+    .registers = CPUID_EDX,
+    .mask = CPUID_FEAT_EDX_MTRR,
 };
