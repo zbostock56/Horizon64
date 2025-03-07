@@ -115,11 +115,11 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         regs->cs = DEFAULT_UMODE_CODE;
         regs->ss = DEFAULT_UMODE_DATA;
 
-        klogd("PROCESS CREATED: New user mode process (%d):\n\t\t"
-              "USTACK TOP: %x | USTACK BOTTOM: %x\n\t\t"
-              "KSTACK TOP: %x | KSTACK BOTTOM: %x\n",
-               p->id,
-               p->ustack_top, p->ustack_bottom, p->kstack_top, p->kstack_bottom);
+        klogd("PROCESS CREATED: New user mode process (%d):\n", p->id);
+        klogd("USTACK TOP: %x | USTACK BOTTOM: %x\n",
+              p->ustack_top, p->ustack_bottom);
+        klogd("KSTACK TOP: %x | KSTACK BOTTOM: %x\n",
+              p->kstack_top, p->kstack_bottom);
     } else {
         p->kstack_bottom = kmalloc(STACK_SIZE);
         if (!p->kstack_bottom) {
@@ -132,8 +132,9 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         p->ustack_bottom = NULL;
         p->ustack_top = NULL;
 
-        klogd("PROCESS CREATED: New kernel mode process (%d):\n\t\t"
-              "STACK TOP: %x | STACK BOTTOM: %x\n",
+        klogd("PROCESS CREATED: New kernel mode process (%d):\n",
+               p->id);
+        klogd("STACK TOP: %x | STACK BOTTOM: %x\n",
                p->id, p->kstack_top, p->kstack_bottom);
 
         /* Set the currently used stack */

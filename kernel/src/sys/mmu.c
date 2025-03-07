@@ -117,12 +117,12 @@ void pm_init(LIMINE_MEM_REQ req) {
  */
 void pm_used() {
     int squared = 1024 * 1024;
-    klogt("Memory total: %d MB\n\tPhysical Base: %x\n\tVirtual Base: %x\n\t"
-          "Free: %d MB\n\tUsed: %d MB\n",
-          kmem.total_size / squared, kmem.physical_limit,
-          kmem.physical_limit + MEM_VIRT_OFFSET,
-          kmem.free_size / squared,
-          (kmem.total_size - kmem.free_size) / squared);
+    klogi("Memory Total: %d MB\n",
+           kmem.total_size / squared);
+    klogd("Physical Base: %x\n", kmem.physical_limit);
+    klogd("Virtual Base: %x\n", kmem.physical_limit + MEM_VIRT_OFFSET);
+    klogd("Free: %d MB\n", kmem.free_size / squared);
+    klogd("Used: %d MB\n", (kmem.total_size - kmem.free_size) / squared);
 }
 
 /**
@@ -534,18 +534,18 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
             /* Should share for all processes */
             vm_map(NULL, virt_addr, entry->base, NUM_PAGES(entry->length),
                    VM_DEFAULT);
-            klogd("Mapped kernel %x to %x - %x\n"
-                  "\t(length: %d (%d KB), #%d)\n",
-                  entry->base, virt_addr, virt_addr + entry->length,
+            klogd("Mapped kernel %x to %x - %x\n",
+                  entry->base, virt_addr, virt_addr + entry->length);
+            klogd("(length: %d (%d KB), #%d)\n",
                   entry->length, entry->length / 1024, i);
             ENTRY_INFO(entry)
         } else if (entry->type == LIMINE_MEMMAP_FRAMEBUFFER) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                    NUM_PAGES(entry->length), VM_DEFAULT);
-            klogd("Mapped framebuffer %x to %x - %x\n"
-                  "\t(length: %d (%d KB), #%d)\n",
+            klogd("Mapped framebuffer %x to %x - %x\n",
                   entry->base, PHYS_TO_VIRT(entry->base),
-                  PHYS_TO_VIRT(entry->base + entry->length),
+                  PHYS_TO_VIRT(entry->base + entry->length));
+            klogd("\t(length: %d (%d KB), #%d)\n",
                   entry->length, entry->length / 1024, i);
             ENTRY_INFO(entry)
         } else if (entry->type == LIMINE_MEMMAP_USABLE) {
@@ -556,10 +556,10 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
             }
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                    NUM_PAGES(entry->length), VM_DEFAULT);
-            klogd("Mapped usable %x to %x - %x\n"
-                  "\t(length: %d (%d KB), #%d, type: %d, %s)\n",
+            klogd("Mapped usable %x to %x - %x\n",
                   entry->base, PHYS_TO_VIRT(entry->base),
-                  PHYS_TO_VIRT(entry->base + entry->length),
+                  PHYS_TO_VIRT(entry->base + entry->length));
+            klogd("\t(length: %d (%d KB), #%d, type: %d, %s)\n",
                   entry->length, entry->length / 1024, i, entry->type,
                   part_bitmap ? "only kernel accessable" :
                   "all tasks accessable");
@@ -567,26 +567,26 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
         } else if (entry->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                   NUM_PAGES(entry->length), VM_DEFAULT);
-            klogd("Mapped ACPI %x to %x - %x\n"
-                  "\t(length: %d (%d KB), #%d)\n",
+            klogd("Mapped ACPI %x to %x - %x\n",
                   entry->base, PHYS_TO_VIRT(entry->base),
-                  PHYS_TO_VIRT(entry->base + entry->length),
+                  PHYS_TO_VIRT(entry->base + entry->length));
+            klogd("\t(length: %d (%d KB), #%d)\n",
                   entry->length, entry->length / 1024, i);
             ENTRY_INFO(entry)
         } else if (entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                   NUM_PAGES(entry->length), VM_DEFAULT);
-            klogd("Mapped BL memory %x to %x - %x\n"
-                  "\t(length: %d (%d KB), #%d)\n",
+            klogd("Mapped BL memory %x to %x - %x\n",
                   entry->base, PHYS_TO_VIRT(entry->base),
-                  PHYS_TO_VIRT(entry->base + entry->length),
+                  PHYS_TO_VIRT(entry->base + entry->length));
+            klogd("\t(length: %d (%d KB), #%d)\n",
                   entry->length, entry->length / 1024, i);
             ENTRY_INFO(entry)
         } else {
             /* Skip over these entries since we don't want to use them as     */
             /* accessable memory. Just print out their info to give a better  */
             /* picture of what the memory space looks like.                   */
-            klogd("NO MAP:\n");
+            klogd("NO MAP: ");
             PRINT_MEM_ENTRY_INFO(entry)
         }
     }

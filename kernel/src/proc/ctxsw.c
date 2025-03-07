@@ -212,10 +212,6 @@ void ctxsw(void *stack, int64_t mode) {
         pnext = proc_idle[cpu_id];
     }
 
-    if (pnext->id == 4) {
-        klogd("This is the one\n");
-    }
-
     pnext->state = PROC_RUNNING;
     proc_running[cpu_id] = pnext;
 
@@ -625,6 +621,7 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
     LOCK_LOCK(&ctxsw_lock);
 
     /* Create new process in userland */
+    /* TODO: Massive hiccup when calling process_create, look into */
     pnew = process_create(pname, NULL, 0, PROC_UMODE, !pcurr ?
                                                        NULL : pcurr->addrspace);
 

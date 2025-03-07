@@ -69,42 +69,42 @@ extern ADDR_SPACE kernel_addr_space;
 #define ENTRY_INFO(entry) {                                     \
   switch (entry->type) {                                        \
     case LIMINE_MEMMAP_USABLE:                                  \
-      klogt("Type: LIMINE_MEMMAP_USABLE\n");                    \
+      klogt("\tType: LIMINE_MEMMAP_USABLE\n");                  \
       break;                                                    \
     case LIMINE_MEMMAP_RESERVED:                                \
-      klogt("Type: LIMINE_MEMMAP_RESERVED\n");                  \
+      klogt("\tType: LIMINE_MEMMAP_RESERVED\n");                \
       break;                                                    \
     case LIMINE_MEMMAP_ACPI_RECLAIMABLE:                        \
       klogt(                                                    \
-        "Type: LIMINE_MEMMAP_ACPI_RECLAIMABLE\n");              \
+        "\tType: LIMINE_MEMMAP_ACPI_RECLAIMABLE\n");            \
       break;                                                    \
     case LIMINE_MEMMAP_ACPI_NVS:                                \
         klogt(                                                  \
-          "Type: LIMINE_MEMMAP_ACPI_NVS\n");                    \
+          "\tType: LIMINE_MEMMAP_ACPI_NVS\n");                  \
         break;                                                  \
     case LIMINE_MEMMAP_BAD_MEMORY:                              \
         klogt(                                                  \
-          "Type: LIMINE_MEMMAP_BAD_MEMORY\n");                  \
+          "\tType: LIMINE_MEMMAP_BAD_MEMORY\n");                \
         break;                                                  \
     case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:                  \
       klogt(                                                    \
-        "Type: LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE\n");        \
+        "\tType: LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE\n");      \
       break;                                                    \
     case LIMINE_MEMMAP_KERNEL_AND_MODULES:                      \
       klogt(                                                    \
-        "Type: LIMINE_MEMMAP_KERNEL_AND_MODULES\n");            \
+        "\tType: LIMINE_MEMMAP_KERNEL_AND_MODULES\n");          \
       break;                                                    \
     case LIMINE_MEMMAP_FRAMEBUFFER:                             \
       klogt(                                                    \
-        "Type: LIMINE_MEMMAP_FRAMEBUFFER\n");                   \
+        "\tType: LIMINE_MEMMAP_FRAMEBUFFER\n");                 \
       break;                                                    \
   }                                                             \
 }
 
 #define PRINT_MEM_ENTRY_INFO(entry) {                           \
-  klogt("Memory entry at range %x - %x\n"                       \
-        "\t(Length: %d (%d KB))\n",                             \
-        entry->base, entry->base + entry->length,               \
+  klogn("Memory entry at range %x - %x\n",                      \
+        entry->base, entry->base + entry->length);              \
+  klogt("\t(Length: %d (%d KB))\n",                             \
         entry->length, entry->length / 1024);                   \
   ENTRY_INFO(entry)                                             \
 }

@@ -43,9 +43,9 @@ void backtrace() {
 
     CPU *cpu = smp_get_curr_cpu(NO_FORCE_GET_CPU);
     if (cpu) {
-        klogt("\nStacktrace (CPU %d):\n", cpu->cpu_id);
+        klogn("\nStacktrace (CPU %d):\n", cpu->cpu_id);
     } else {
-        klogt("\nStacktrace:\n");
+        klogn("\nStacktrace:\n");
     }
     for (size_t i = 0;; i++) {
         uint64_t func_addr = *(rbp + 1);

@@ -139,10 +139,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send checksum error... ");
     if ((value >> 0) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
     /*
         Receive Checksum Error:
@@ -151,10 +151,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for receive checksum error... ");
     if ((value >> 1) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
     /*
         Send Accept Error:
@@ -163,10 +163,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send accept error... ");
     if ((value >> 2) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
     /*
         Receive Accept Error:
@@ -175,10 +175,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for receive accept error... ");
     if ((value >> 3) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
     /*
         Redirectable IPI Error:
@@ -189,10 +189,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for redirectable IPI error... ");
     if ((value >> 4) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
     /*
         Send Illegal Vector Error:
@@ -203,10 +203,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send illegal vector error... ");
     if ((value >> 5) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
 
     /*
@@ -218,10 +218,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send illegal vector error... ");
     if ((value >> 6) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
 
     /*
         Illegal Register Address:
@@ -237,10 +237,10 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for illegal register address error... ");
     if ((value >> 7) & 0x1) {
-        klogt("error\n");
+        klogn("error\n");
         goto error;
     }
-    klogt("success\n");
+    klogn("success\n");
     return;
     error:
         kloge("INIT APIC: Failed error register check");

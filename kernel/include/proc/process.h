@@ -12,8 +12,8 @@
 #include <structs/process_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
-#define DEFAULT_UMODE_DATA      (0x3B)
-#define DEFAULT_UMODE_CODE      (0x43)
+#define DEFAULT_UMODE_DATA      (0x43)
+#define DEFAULT_UMODE_CODE      (0x3B)
 #define DEFAULT_KMODE_DATA      (0x30)
 #define DEFAULT_KMODE_CODE      (0x28)
 

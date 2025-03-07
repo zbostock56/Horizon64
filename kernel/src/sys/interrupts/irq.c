@@ -73,7 +73,7 @@ void irq_init() {
   /* Check to make sure the PIC exists*/
 
   if (!pic->probe()) {
-    //kloge("WARNING: No PIC found!\n");
+    klogw("IRQ INIT: No PIC found!\n");
     return;
   }
 
@@ -85,9 +85,10 @@ void irq_init() {
 
   pic->initialize(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8);
 
-  klogi("PIC master offset: %x (%d)...\n\tPIC slave offset: %x (%d)...\n",
-        PIC_REMAP_OFFSET, PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8,
-        PIC_REMAP_OFFSET + 8);
+  klogi("PIC master offset: %x (%d)...\n",
+        PIC_REMAP_OFFSET, PIC_REMAP_OFFSET);
+  klogi("PIC slave offset: %x (%d)...\n",
+        PIC_REMAP_OFFSET + 8, PIC_REMAP_OFFSET + 8);
 
   /* Set the programmable interrupt timer */
   pit->initialize(PIT_1MS);

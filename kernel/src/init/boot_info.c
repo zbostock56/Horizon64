@@ -21,7 +21,8 @@ STATUS print_boot_info(LIMINE_BL_INFO_REQ req) {
         kloge("INIT BL INFO: request for bootloader info is NULL!\n");
         return SYS_ERR;
     }
-    klogi("INIT BL INFO:\n\tName: %s\n\tVersion: %s\n",
+    klogi("INIT BL INFO:\n");
+    klogi("Name: %s\tVersion: %s\n",
           res->name, res->version);
     return SYS_OK;
 }
