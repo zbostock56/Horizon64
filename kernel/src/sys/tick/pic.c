@@ -16,6 +16,7 @@
  */
 
 #include <sys/tick/pic.h>
+#include <common/kprint.h>
 
 static uint16_t g_pic_mask = 0xFFFF;
 static int g_auto_eoi = 1;

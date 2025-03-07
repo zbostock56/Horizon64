@@ -11,6 +11,7 @@
  */
 
 #include <sys/gdt/gdt.h>
+#include <common/kprint.h>
 
 /* Global descriptor table */
 static GDT_TABLE g_gdt[NUM_CPUS] = {0};
@@ -44,9 +45,9 @@ void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
  * @brief Initialization function for the GDT
  *
  */
-void gdt_init(/* CPU *cpu_info */) {
-    klogi("INIT GDT: starting...\n");
-    /* TODO: Must be done for each CPU */
+void gdt_init(CPU *cpu_info) {
+    klogs("INIT GDT: starting...\n");
+
     if (num_gdt + 1 > NUM_CPUS) {
         kloge("Trying to initialize a GDT for non-existance CPU!\n");
         halt();
@@ -110,17 +111,52 @@ void gdt_init(/* CPU *cpu_info */) {
         .offset = (uint64_t) gdt
     };
 
+    /* Call assembly to perform the lgdt instruction */
     gdt_load(&g);
-    klogi("GDT initialized for CPU: %d at %x\n", num_gdt - 1, gdt);
-    klogi("INIT GDT (CPU %d): finished...\n", num_gdt - 1);
+
+    if (cpu_info) {
+        klogi("INIT GDT: initialized gdt for CPU: %d at %x\n",
+              cpu_info->cpu_id, gdt);
+    }
+    klogs("INIT GDT: finished...\n");
 }
 
-/* TODO: Complete for each CPU */
-void gdt_init_tss(/* CPU *cpu_info */) {
-    // GDT_DESCRIPTOR gdtr;
-    // __asm__ volatile("sgdt %0"
-    //                  :
-    //                  : "m"(gdtr)
-    //                  : "memory");
-    // GDT_TABLE *gt = (GDT_TABLE *) (gdtr.offset);
+/**
+ * @brief Loads the Task State Segment in the GDT
+ *
+ * @param cpu_info CPU to load the TSS on
+ */
+void gdt_init_tss(CPU *cpu_info) {
+    klogs("INIT TSS: starting...\n");
+
+    GDT_DESCRIPTOR gdtr;
+    __asm__ volatile("sgdt %0"
+                     :
+                     : "m"(gdtr)
+                     : "memory");
+    GDT_TABLE *gt = (GDT_TABLE *) (gdtr.offset);
+    uint64_t base_addr = (uint64_t) (&cpu_info->tss);
+
+    gt->tss.segment_base_low = base_addr & 0xFFFF;
+    gt->tss.segment_base_mid = (base_addr >> 16) & 0xFF;
+    gt->tss.segment_base_mid_2 = (base_addr >> 24) & 0xFF;
+    gt->tss.segment_base_high = (base_addr >> 32) & 0xFFFFFFFF;
+    gt->tss.segment_limit_low = 0x67;
+    gt->tss.segment_present = 1;
+    gt->tss.segment_type = 0b1001;
+
+    klogd("INIT TSS: Load TSS with base address at %x\n", base_addr);
+
+    /* Load TSS at 0x48 since that is the next avaiable descriptor in GDT */
+    __asm__ volatile("ltr %%ax"
+                     :
+                     : "a"(0x48));
+
+    if (cpu_info) {
+        klogd("INIT TSS: Loaded TSS for CPU %d\n", cpu_info->cpu_id);
+    } else {
+        klogd("INIT TSS: Loaded TSS\n");
+    }
+
+    klogs("INIT TSS: finished...\n");
 }

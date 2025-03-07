@@ -9,6 +9,7 @@
  */
 
 #include <util/stack_walk.h>
+#include <common/kprint.h>
 
 /**
  * @brief Helper to print out the stack.

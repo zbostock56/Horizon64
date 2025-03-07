@@ -12,6 +12,8 @@
  * 
  */
 
+#include <common/time.h>
+
 #include <sys/cmos.h>
 
 #define CURRENT_YEAR        (2024)
@@ -19,7 +21,11 @@
 /* Ideally, set by the ACPI table parsing code if possible */
 int century_register = 0x0;
 
-static CMOS boot_time;
+static CMOS boot_time = {0};
+static STD_TIME std_time_boot_time = {0};
+static uint64_t boot_time_seconds = 0;
+
+extern int timer_enabled;
 
 /**
  * @brief Get the value of a register
@@ -103,13 +109,75 @@ static CMOS read_time() {
 }
 
 /**
+ * @brief Returns the time read from the CMOS initialization procedure
+ *
+ * @return CMOS Structure containing the boot time
+ */
+CMOS cmos_get_boot_time() {
+    return boot_time;
+}
+
+/**
+ * @brief Get the STD_TIME struct in terms of the boot time
+ *
+ * @return STD_TIME Structure with the boot time as a STD_TIME
+ */
+STD_TIME cmos_get_std_boot_time() {
+    if (std_time_boot_time.year == 0) {
+        std_time_boot_time.seconds = boot_time.seconds;
+        std_time_boot_time.minutes = boot_time.minutes;
+        std_time_boot_time.hours = boot_time.hours;
+        std_time_boot_time.month = boot_time.month;
+        std_time_boot_time.dow = day_of_week(boot_time.seconds);
+        std_time_boot_time.dom = boot_time.day;
+        std_time_boot_time.doy = day_month_year_to_year_day(boot_time.day, boot_time.month, boot_time.year);
+        /* TODO: Calculate daylight savings time */
+        std_time_boot_time.isdst = 0;
+    }
+
+    return std_time_boot_time;
+}
+
+/**
+ * @brief Helper to get the number of seconds in terms of the boot time
+ * (since the last epoch)
+ *
+ * @return uint64_t Seconds since last epoch based on boot time
+ */
+uint64_t cmos_get_boot_time_seconds() {
+    if (boot_time_seconds != 0) {
+        return boot_time_seconds;
+    }
+
+    if (boot_time.year) {
+        boot_time_seconds = sec_in_years(boot_time.year - 1) +
+                            sec_in_months(boot_time.month - 1, boot_time.year) +
+                            ((boot_time.day - 1) * 86400) +
+                            (boot_time.hours * 3600) +
+                            (boot_time.minutes * 60) +
+                            boot_time.seconds;
+    } else {
+        boot_time = read_time();
+        boot_time_seconds = sec_in_years(boot_time.year - 1) +
+                            sec_in_months(boot_time.month - 1, boot_time.year) +
+                            ((boot_time.day - 1) * 86400) +
+                            (boot_time.hours * 3600) +
+                            (boot_time.minutes * 60) +
+                            boot_time.seconds;
+    }
+    return boot_time_seconds;
+}
+
+/**
  * @brief Main CMOS/RTC initialization function
  */
 void cmos_init() {
-    klogi("INIT CMOS: starting...\n");
+    klogs("INIT CMOS: starting...\n");
     boot_time = read_time();
     klogi("Boot time: %d/%d/%d at %d:%d:%d\n",
            boot_time.month, boot_time.day, boot_time.year, boot_time.hours,
            boot_time.minutes, boot_time.seconds);
-    klogi("INIT CMOS: finished...\n");
+    klogd("Enabling timed logging\n");
+    timer_enabled = TRUE;
+    klogs("INIT CMOS: finished...\n");
 }

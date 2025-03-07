@@ -26,9 +26,9 @@ vector_new(PCI_DEVICE, device_list);
  * @param device Device to find description for
  * @return const char * Description for device
  */
-uint64_t find_device_desc(PCI_DEVICE *device) {
-    uint64_t size = sizeof(table) / sizeof(PCI_TABLE_ENTRY);
-    for (uint64_t i = 0; i < size; i++) {
+int64_t find_device_desc(PCI_DEVICE *device) {
+    int64_t size = sizeof(table) / sizeof(PCI_TABLE_ENTRY);
+    for (int64_t i = 0; i < size; i++) {
         if (table[i].vendor_id == device->vendor_id &&
             table[i].device_id == device->device_id) {
             return i;
@@ -147,7 +147,7 @@ static void scan_device(uint8_t bus, uint8_t device_id) {
                                            dev.info.func);
         dev.vendor_id = PCI_READ_VENDOR_ID(dev.info.bus, dev.info.device,
                                            dev.info.func);
-        PCI_DEV_INFO(dev, find_device_desc(&dev));
+        pci_dev_info(dev, find_device_desc(&dev));
         vector_append(&device_list, dev);
 
         if (dev.multifunction) {
@@ -166,7 +166,7 @@ static void scan_device(uint8_t bus, uint8_t device_id) {
                     dev_2.vendor_id = PCI_READ_VENDOR_ID(dev_2.info.bus,
                                                          dev_2.info.device,
                                                          dev_2.info.func);
-                    PCI_DEV_INFO(dev_2, find_device_desc(&dev_2));
+                    pci_dev_info(dev_2, find_device_desc(&dev_2));
                     vector_append(&device_list, dev_2);
                 }
             }
@@ -191,7 +191,7 @@ void pci_scan_bus(uint8_t bus) {
 void pci_list() {
     for (size_t i = 0; i < vector_len(&device_list); i++) {
         PCI_DEVICE dev = vector_at(&device_list, i);
-        PCI_DEV_INFO(dev, find_device_desc(&dev));
+        pci_dev_info(dev, find_device_desc(&dev));
     }
 }
 
@@ -203,7 +203,7 @@ void pci_list() {
  * device and another to continue scanning that bridge.
  */
 void pci_init() {
-    klogi("INIT PCI: starting...\n");
+    klogs("INIT PCI: starting...\n");
     for (size_t bus_id = 0; bus_id < MAX_BUS_NUM; bus_id++) {
         for (size_t device = 0; device < MAX_DEVICE_NUM; device++) {
             scan_device(bus_id, device);
@@ -212,5 +212,5 @@ void pci_init() {
 
     klogi("PCI: Device scan completed with (%d) devices found\n",
           vector_len(&device_list));
-    klogi("INIT PCI: finished...\n");
+    klogs("INIT PCI: finished...\n");
 }

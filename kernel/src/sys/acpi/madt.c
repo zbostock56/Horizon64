@@ -68,7 +68,7 @@ uint64_t madt_get_local_apic_base() {
  * @brief Main MADT initialization function
  */
 void madt_init() {
-    klogi("INIT MADT: starting...\n");
+    klogs("INIT MADT: starting...\n");
     madt = (MADT *) acpi_get_sdt("APIC");
 
     if (!madt) {
@@ -101,5 +101,5 @@ void madt_init() {
         i += record->length;
     }
 
-    klogi("INIT MADT: finished...\n");
+    klogs("INIT MADT: finished...\n");
 }

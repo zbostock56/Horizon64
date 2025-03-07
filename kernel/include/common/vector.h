@@ -84,7 +84,7 @@
  * @param vec Vector to operate on
  */
 #define vector_free(vec) {                                                  \
-    (vec)->len = 0;                                                         \
+    (vec)->length = 0;                                                      \
     (vec)->capacity = 0;                                                    \
     if ((vec)->data != NULL) {                                              \
         kfree((vec)->data);                                                 \

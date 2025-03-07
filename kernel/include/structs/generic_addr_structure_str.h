@@ -43,4 +43,4 @@ typedef struct {
     uint8_t bit_offset;
     uint8_t access_size;
     uint64_t address;
-} GENERIC_ADDR_STRUCT;
+} __attribute__((packed)) GENERIC_ADDR_STRUCT;

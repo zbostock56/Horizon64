@@ -63,7 +63,7 @@ int psf1_get_glyphs(LIMINE_FILE *file) {
  * @param path Path of the file in the system image
  */
 void psf1_font_init(struct limine_module_request req, const char *path) {
-    klogi("INIT PSF: Starting...\n");
+    klogs("INIT PSF: Starting...\n");
 
     if (!req.response) {
         kloge("psf1 file request is NULL!\n");
@@ -91,5 +91,5 @@ void psf1_font_init(struct limine_module_request req, const char *path) {
     }
 
     klogi("Successfully initialized %s\n", path);
-    klogi("INIT PSF: finished...\n");
+    klogs("INIT PSF: finished...\n");
 }

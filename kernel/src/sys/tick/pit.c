@@ -12,6 +12,7 @@
  */
 
 #include <sys/tick/pit.h>
+#include <common/kprint.h>
 
 /*
     Select which channel is to be configured. Must be valid

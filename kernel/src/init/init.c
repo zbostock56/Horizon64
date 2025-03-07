@@ -16,7 +16,26 @@
  *        are called.
  */
 void system_init() {
-    klogi("SYSTEM INIT: Starting...\n");
+    /* Intialize serial bus */
+    serial_init();
+
+    /* Initialize logging */
+    klog_init();
+
+    /* Initialize interrupt descriptor table */
+    idt_init();
+
+    /* Initialize interrupt service routines */
+    isr_init();
+
+    /* Initialize CPU specific features */
+    cpu_init(0);
+
+    /* Initialize global descriptor table */
+    gdt_init(NULL);
+
+    /* Initialize PIC, PIT */
+    irq_init();
 
     /* Initial Limine check */
     if (!LIMINE_BASE_REVISION_SUPPORTED) {
@@ -35,30 +54,26 @@ void system_init() {
       hhdm_request.response->offset, hhdm_request.response->revision);
     }
 
-    /* Intialize serial bus */
-    if (serial_init() == SYS_ERR) {
-        kloge("SYSTEM INIT: Serial initialization failed or serial faulty!\n");
-    }
-
-    /* Initialize global descriptor table */
-    gdt_init();
-
-    /* Initialize interrupt descriptor table */
-    idt_init();
-
-    /* Initialize CPU specific features */
-    cpu_init(0);
-
-    /* Initialize interrupt service routines */
-    isr_init();
-
     /* Memory initialization */
     pm_init(mem_req);
     vm_init(mem_req, kernel_addr_request);
 
     /* Indicate the memory usage after virtual memory has been initialized */
-    klogi("SYSTEM INIT: Memory used after initial mapping\n");
+    klogd("SYSTEM INIT: Memory used after initial mapping\n");
     pm_used();
+
+    /* Set up .psf1 font */
+    psf1_font_init(file_request, "zap-vga16.psf");
+
+    /* Initialize terminal */
+    if (!framebuffer_req.response) {
+        halt();
+    }
+    struct limine_framebuffer *fb = framebuffer_req.response->framebuffers[0];
+    init_terminal(fb);
+
+    /* Initialize keyboard driver */
+    keyboard_init();
 
     /* ACPI (and MADT) initialization */
     acpi_init(rsdp_request);
@@ -72,23 +87,23 @@ void system_init() {
     /* Intialize PCI device list */
     pci_init();
 
-    /* Initialize framebuffer */
-    fb_init(framebuffer_req);
-
-    /* Set up .psf1 font */
-    psf1_font_init(psf_file_request, "zap-vga16.psf");
-
     /* Initialize terminal */
-    init_terminal(initial_fb);
-
-    /* Initialize PIC, PIT */
-    irq_init();
+    terminal_start();
     
-    /* Initialize keyboard driver */
-    keyboard_init();
-
     /* Initialize Advanced Programmable Interrupt Controller */
     apic_init();
 
-    klogi("SYSTEM INIT: System initialized successfully...\n");
+    /* Initalize Symmetric Multi-Processing */
+    smp_init();
+
+    /* Initalize system calls for the Bootstrap Processor (BSP) */
+    system_calls_init();
+
+    /* Initialize virtual filesystem */
+    vfs_init();
+
+    /* Load and initialize Initial Ram Disk */
+    initrd_init(file_request);
+
+    klogs("SYSTEM INIT: System initialized successfully...\n");
 }

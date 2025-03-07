@@ -65,7 +65,7 @@ typedef struct {
     GDT_ENTRY kernel_data_64_bit;
     GDT_ENTRY user_code_64_bit;
     GDT_ENTRY user_data_64_bit;
-    //SYSTEM_SEGMENT_SELECTOR tss;
+    SYSTEM_SEGMENT_SELECTOR tss;
 } __attribute__((packed)) GDT_TABLE;
 
 typedef enum {

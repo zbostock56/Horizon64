@@ -31,12 +31,32 @@ all: $(IMAGE_NAME).iso
 
 all-hdd: $(IMAGE_NAME).hdd
 
+# Normal run
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64 -enable-kvm -debugcon stdio -M q35 -m $(MEMORY) $(TIME) -cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on
+	qemu-system-x86_64							\
+	-debugcon stdio -M q35,smm=off -m $(MEMORY) $(TIME) 				\
+	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
 
+# Run with debug output
+rund: $(IMAGE_NAME).iso
+	qemu-system-x86_64 -M q35,smm=off									\
+	-m $(MEMORY) $(TIME) -no-reboot 									\
+	-cdrom $(IMAGE_NAME).iso -boot d -display curses  \
+	-d in_asm -nographic
+
+# Run with multiple cores
+runmc: $(IMAGE_NAME).iso
+	qemu-system-x86_64 -enable-kvm -cpu host -smp 4,sockets=1,cores=2	\
+	-debugcon stdio -M q35,smm=off -m $(MEMORY) $(TIME) 				\
+	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
+
+# Debug with GDB
 debug: $(IMAGE_NAME).iso
 	./scripts/remove_from_port.sh
-	qemu-system-x86_64 -S -s -M q35 -m $(MEMORY) $(TIME) -cdrom $(IMAGE_NAME).iso -boot d -curses -nographic
+	qemu-system-x86_64 -S -s -M q35,smm=off					 \
+	-m $(MEMORY) $(TIME) -no-reboot 								 \
+	-cdrom $(IMAGE_NAME).iso -boot d -display curses \
+	-d in_asm -nographic
 
 run-uefi: ovmf $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd $(TIME) -cdrom $(IMAGE_NAME).iso -boot d
@@ -67,29 +87,53 @@ limine:
 kernel:
 	$(MAKE) -C kernel
 
-$(IMAGE_NAME).iso: ./ext limine kernel
+us:
+	$(MAKE) -C userspace all
+
+libc:
+	$(MAKE) -C h64libc all
+
+$(IMAGE_NAME).iso: ./ext limine libc us kernel
 	@echo "Creating horizon.iso..."
-	@rm -rf iso_root
-	@mkdir -p iso_root/boot
-	@mkdir -p iso_root/boot/limine
-	@mkdir -p iso_root/EFI/BOOT
+	@$(shell build_helpers/generate_sysroot.sh)
+	@rm -rf iso_root initrd.tar
+	@mkdir -p iso_root/boot											\
+		iso_root/boot/limine 										\
+		iso_root/EFI/BOOT											\
+		iso_root/modules
+	@mkdir -p initrd/etc											\
+		initrd/usr													\
+		initrd/root
+	@cp -rf sysroot/* initrd
+	@tar -cvpf initrd.tar -C $(shell pwd)/initrd bin etc root
 	@cp -v kernel/bin/kernel iso_root/boot/
-	@cp -v ext/* iso_root
+	@cp -v ext/* initrd.tar iso_root/modules
 	@mv iso_root/boot/kernel iso_root/boot/horizon
-	@cp -v limine.cfg limine/limine-bios.sys limine/limine-bios-cd.bin \
-		limine/limine-uefi-cd.bin iso_root/boot/limine/
-	@cp -v limine/BOOTX64.EFI limine/BOOTIA32.EFI iso_root/EFI/BOOT/
-	@xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin \
-		-no-emul-boot -boot-load-size 4 -boot-info-table \
-		--efi-boot boot/limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
+	@cp -v limine.cfg 												\
+		limine/limine-bios.sys 										\
+		limine/limine-bios-cd.bin 									\
+		limine/limine-uefi-cd.bin 									\
+		iso_root/boot/limine/
+	@cp -v limine/BOOTX64.EFI										\
+	 	limine/BOOTIA32.EFI 										\
+		iso_root/EFI/BOOT/
+	@xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin 			\
+		-no-emul-boot -boot-load-size 4 -boot-info-table 			\
+		--efi-boot boot/limine/limine-uefi-cd.bin 					\
+		-efi-boot-part --efi-boot-image --protective-msdos-label 	\
 		iso_root -o $(IMAGE_NAME).iso
 	@./limine/limine bios-install $(IMAGE_NAME).iso
 	@rm -rf iso_root
 
-$(IMAGE_NAME).hdd: limine kernel
+$(IMAGE_NAME).hdd: limine kernel libc us
 	@echo "Creating horizon.hdd..."
-	@rm -f $(IMAGE_NAME).hdd
+	@rm -f $(IMAGE_NAME).hdd initrd.tar
+	@$(shell build_helpers/generate_sysroot.sh)
+	@mkdir -p initrd/etc											\
+		initrd/usr													\
+		initrd/root
+	@cp -rf sysroot/* initrd
+	@tar -cvpf initrd.tar -C $(shell pwd)/initrd bin etc root
 	@dd if=/dev/zero bs=1M count=0 seek=64 of=$(IMAGE_NAME).hdd
 	@sgdisk $(IMAGE_NAME).hdd -n 1:2048 -t 1:ef00
 	@./limine/limine bios-install $(IMAGE_NAME).hdd
@@ -99,15 +143,20 @@ $(IMAGE_NAME).hdd: limine kernel
 	@mcopy -i $(IMAGE_NAME).hdd@@1M limine.cfg limine/limine-bios.sys ::/boot/limine
 	@mcopy -i $(IMAGE_NAME).hdd@@1M limine/BOOTX64.EFI ::/EFI/BOOT
 	@mcopy -i $(IMAGE_NAME).hdd@@1M limine/BOOTIA32.EFI ::/EFI/BOOT
+	@mcopy -i $(IMAGE_NAME).hdd@@1M initrd.tar ext/* ::/
 
 
 clean:
-	rm -rf iso_root $(IMAGE_NAME).iso $(IMAGE_NAME).hdd
+	rm -rf iso_root $(IMAGE_NAME).iso $(IMAGE_NAME).hdd initrd.tar initrd sysroot
 	$(MAKE) -C kernel clean
+	$(MAKE) -C userspace clean
+	$(MAKE) -C h64libc clean
 
 distclean: clean
 	rm -rf limine ovmf ext
 	$(MAKE) -C kernel distclean
+	$(MAKE) -C userspace clean
+	$(MAKE) -C h64libc clean
 
 
 #
@@ -145,7 +194,7 @@ toolchain_binutils: $(BINUTILS_SRC).tar.xz
 	$(MAKE) -C $(BINUTILS_BUILD) install
 
 $(BINUTILS_SRC).tar.xz:
-	mkdir -p $(TOOLCHAIN_DIR) 
+	mkdir -p $(TOOLCHAIN_DIR)
 	cd $(TOOLCHAIN_DIR) && wget $(BINUTILS_URL)
 
 
@@ -163,7 +212,7 @@ toolchain_gcc: toolchain_binutils $(GCC_SRC).tar.xz
 		--without-headers
 	$(MAKE) -j4 -C $(GCC_BUILD) all-gcc all-target-libgcc
 	$(MAKE) -C $(GCC_BUILD) install-gcc install-target-libgcc
-	
+
 $(GCC_SRC).tar.xz:
 	mkdir -p $(TOOLCHAIN_DIR)
 	cd $(TOOLCHAIN_DIR) && wget $(GCC_URL)

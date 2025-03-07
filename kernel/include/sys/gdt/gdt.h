@@ -16,6 +16,7 @@
 #include <common/memory.h>
 
 #include <sys/asm.h>
+#include <sys/smp.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* Locations within the GDT to specfic segments */
@@ -42,7 +43,8 @@
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
                            uint8_t access, uint8_t flags);
-void gdt_init(/* CPU *cpu_info */);
+void gdt_init(CPU *cpu_info);
+void gdt_init_tss(CPU *cpu_info);
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
 void gdt_load(GDT_DESCRIPTOR *descriptor);

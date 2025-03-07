@@ -1,15 +1,15 @@
 /**
  * @file cmos.h
  * @author Zack Bostock
- * @brief Information pertaining to CMOS and RTC (Real-Time Clock) 
- * @verbatim 
+ * @brief Information pertaining to CMOS and RTC (Real-Time Clock)
+ * @verbatim
  * "CMOS" is a tiny bit of very low power static memory that lives on the
  * same chip as the Real-Time Clock (RTC). It was introduced to IBM PC AT in
  * 1984 which used Motorola MC146818A RTC.
- * @ref https://wiki.osdev.org/CMOS 
- * 
+ * @ref https://wiki.osdev.org/CMOS
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -76,7 +76,10 @@
 /**
  * @brief Helper macro to convert BCD to binary
  */
-#define TO_BINARY(val) ((val & 0xF) + ((val / 16) * 10)) 
+#define TO_BINARY(val) ((val & 0xF) + ((val / 16) * 10))
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void cmos_init();
+uint64_t cmos_get_boot_time_seconds();
+CMOS cmos_get_boot_time();
+STD_TIME cmos_get_std_boot_time();

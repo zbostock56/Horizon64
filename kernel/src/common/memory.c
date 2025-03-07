@@ -52,8 +52,8 @@ void *memset(void *ptr, int value, size_t num) {
  * @return int 1 if different, 0 if not
  */
 int memcmp(const void *ptr1, const void *ptr2, size_t num) {
-  const uint8_t *u8Ptr1 = (const uint8_t *)ptr1;
-  const uint8_t *u8Ptr2 = (const uint8_t *)ptr2;
+  register const uint8_t *u8Ptr1 = (const uint8_t *)ptr1;
+  register const uint8_t *u8Ptr2 = (const uint8_t *)ptr2;
 
   for (size_t i = 0; i < num; i++) {
     if (u8Ptr1[i] != u8Ptr2[i]) {

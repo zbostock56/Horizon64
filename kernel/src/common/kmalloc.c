@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 
+#include <globals.h>
 #include <common/kmalloc.h>
 #include <common/kprint.h>
 #include <common/string.h>
@@ -109,4 +110,23 @@ void *krealloc_impl(void *address, size_t new_size, const char *func,
 
     kfree_impl(address, func, line);
     return new_base;
+}
+
+/**
+ * @brief Doubles the given buffer
+ *
+ * @param buffer Pointer to the buffer
+ * @param size Pointer to the element which stores the size of the buffer
+ * @param unit_size size (in bytes) of each element
+ * @return STATUS SYS_OK if success, SYS_ERR if failure
+ */
+STATUS double_buffer_impl(void **buffer, size_t *size, size_t unit_size,
+                          const char *func, size_t line) {
+    void *new_buff = krealloc_impl(*buffer, 2 * (*size) * unit_size, func, line);
+    if (!new_buff) {
+        return SYS_ERR;
+    }
+    (*buffer) = new_buff;
+    *size = 2 * (*size);
+    return SYS_OK;
 }

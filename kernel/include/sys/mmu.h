@@ -17,7 +17,6 @@
 
 #include <common/vector.h>
 #include <common/memory.h>
-#include <common/lock.h>
 #include <common/limine_typedefs.h>
 
 #include <sys/asm.h>
@@ -26,6 +25,7 @@
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define PAGES_PER_BYTE      (8)
 #define PAGE_SIZE           (4096)
+#define STACK_SIZE          (64 * PAGE_SIZE)
 
 /* Determed from the HHDM offset input from bootloader */
 #define MEM_VIRT_OFFSET     (0xFFFF800000000000)
@@ -69,41 +69,41 @@ extern ADDR_SPACE kernel_addr_space;
 #define ENTRY_INFO(entry) {                                     \
   switch (entry->type) {                                        \
     case LIMINE_MEMMAP_USABLE:                                  \
-      klogi("Type: LIMINE_MEMMAP_USABLE\n");                    \
+      klogt("Type: LIMINE_MEMMAP_USABLE\n");                    \
       break;                                                    \
     case LIMINE_MEMMAP_RESERVED:                                \
-      klogi("Type: LIMINE_MEMMAP_RESERVED\n");                  \
+      klogt("Type: LIMINE_MEMMAP_RESERVED\n");                  \
       break;                                                    \
     case LIMINE_MEMMAP_ACPI_RECLAIMABLE:                        \
-      klogi(                                                    \
+      klogt(                                                    \
         "Type: LIMINE_MEMMAP_ACPI_RECLAIMABLE\n");              \
       break;                                                    \
     case LIMINE_MEMMAP_ACPI_NVS:                                \
-        klogi(                                                  \
+        klogt(                                                  \
           "Type: LIMINE_MEMMAP_ACPI_NVS\n");                    \
         break;                                                  \
     case LIMINE_MEMMAP_BAD_MEMORY:                              \
-        klogi(                                                  \
+        klogt(                                                  \
           "Type: LIMINE_MEMMAP_BAD_MEMORY\n");                  \
         break;                                                  \
     case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:                  \
-      klogi(                                                    \
+      klogt(                                                    \
         "Type: LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE\n");        \
       break;                                                    \
     case LIMINE_MEMMAP_KERNEL_AND_MODULES:                      \
-      klogi(                                                    \
+      klogt(                                                    \
         "Type: LIMINE_MEMMAP_KERNEL_AND_MODULES\n");            \
       break;                                                    \
     case LIMINE_MEMMAP_FRAMEBUFFER:                             \
-      klogi(                                                    \
+      klogt(                                                    \
         "Type: LIMINE_MEMMAP_FRAMEBUFFER\n");                   \
       break;                                                    \
   }                                                             \
 }
 
 #define PRINT_MEM_ENTRY_INFO(entry) {                           \
-  klogi("Memory entry at range %x - %x\n"                       \
-        "\t(Length: %d (%d KB))\n\t",                           \
+  klogt("Memory entry at range %x - %x\n"                       \
+        "\t(Length: %d (%d KB))\n",                             \
         entry->base, entry->base + entry->length,               \
         entry->length, entry->length / 1024);                   \
   ENTRY_INFO(entry)                                             \
