@@ -17,20 +17,15 @@
  * @return uint8_t SYS_OK if success, SYS_ERR if failure.
  */
 static uint8_t psf1_font_mode() {
-    font.glyph_buffer = (void *)(kmalloc(256));
+    size_t num_glyphs = (font.header->font_mode & PSF1_MODE512) ? 512 : 256;
+    size_t buffer_size = num_glyphs * font.header->character_size;
 
-    /* TODO: Find a better way of dealing with how big font buffers need to be */
-    #if 0
-    if (font.header->font_mode & PSF1_MODE512) {
-        if (!font.glyph_buffer) {
-            kloge("INIT PSF: PSF1 glyph buffer alloc is NULL!\n");
-            return SYS_ERR;
-        }
-        return SYS_OK;
+    font.glyph_buffer = (void *)(kmalloc(buffer_size));
+    if (!font.glyph_buffer) {
+        kloge("INIT PSF: PSF1 glyph buffer alloc is NULL!\n");
+        return SYS_ERR;
     }
-    kloge("INIT PSF: PSF1 font mode not supported!\n");
-    return SYS_ERR;
-    #endif
+
     return SYS_OK;
 }
 
@@ -42,18 +37,36 @@ static uint8_t psf1_font_mode() {
  */
 int psf1_get_glyphs(LIMINE_FILE *file) {
     PSF1_HEADER *h = (PSF1_HEADER *) file->address;
+
+    /* Ensure font.header is allocated before use */
+    if (!font.header) {
+        font.header = (PSF1_HEADER *)(kmalloc(sizeof(PSF1_HEADER)));
+        if (!font.header) {
+            kloge("INIT PSF: Failed to allocate PSF1 header!\n");
+            return PSF1_FAIL;
+        }
+    }
+
     font.header->magic = h->magic;
     font.header->font_mode = h->font_mode;
     font.header->character_size = h->character_size;
+
     if (!PSF1_MAGIC_CHECK(font.header->magic)) {
         return NOT_PSF1;
     }
+
     /* Set up the glyph buffer */
     if (psf1_font_mode() == SYS_ERR) {
         return PSF1_FAIL;
     }
+
+    size_t num_glyphs = (font.header->font_mode & PSF1_MODE512) ? 512 : 256;
+    size_t buffer_size = num_glyphs * font.header->character_size;
+
     memcpy(font.glyph_buffer,
-           (void *)((uint64_t)file->address + sizeof(PSF1_HEADER)), 256);
+           (void *)((uint64_t)file->address + sizeof(PSF1_HEADER)),
+           buffer_size);
+
     return PSF1_SUCCESS;
 }
 
@@ -71,7 +84,7 @@ void psf1_font_init(struct limine_module_request req, const char *path) {
         halt();
     }
 
-    /* initialize font file buffer */
+    /* Initialize font file buffer */
     font.header = (PSF1_HEADER *)(kmalloc(sizeof(PSF1_HEADER)));
     if (!font.header) {
         kloge("INIT PSF: PSF1 font header alloc is NULL!\n");
