@@ -16,30 +16,28 @@
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define KLOG_LVL_VERBOSE    (0)
-#define KLOG_LVL_DEBUG      (1)
-#define KLOG_LVL_INFO       (2)
-#define KLOG_LVL_WARN       (3)
-#define KLOG_LVL_ERROR      (4)
-#define KLOG_LVL_TAB        (5)
-#define KLOG_LVL_NONE       (6)
+#define KLOG_LVL_TAB        (1)
+#define KLOG_LVL_NONE       (2)
+#define KLOG_LVL_DEBUG      (3)
+#define KLOG_LVL_INFO       (4)
+#define KLOG_LVL_WARN       (5)
+#define KLOG_LVL_ERROR      (6)
 #define KLOG_LVL_SRTUP      (7)
 #define KLOG_LVL_UNKNOWN    (8)
 
-#define KLOG_BUFFER_SIZE    (UINT16_MAX + 1)
+#define KLOG_BUFFER_SIZE    (0x10000UL)
 
 typedef struct {
-  uint8_t buffer[UINT16_MAX];
-  int start;
-  int end;
-  TERM_MODE mode;
+  uint8_t buffer[KLOG_BUFFER_SIZE];
+  unsigned long start;
+  unsigned long end;
+  TERMINAL *term;
 } KLOG;
 
 /* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void klog_init();
-void kputc(TERM_MODE mode, uint8_t c);
-void kputs(TERM_MODE mode, const char *s, int width);
 void klog_refresh(TERM_MODE mode);
 void klog_vprintf(uint8_t level, const char *s, ...);
 void kprintf(const char *format, ...);

@@ -27,7 +27,6 @@ echo "Running cppcheck on directory: $KERNEL_DIR"
 cppcheck --enable=all \
          --std=c11 \
          --max-ctu-depth=16 \
-         -j4 \
          --inconclusive \
          --force \
          "$KERNEL_DIR"

@@ -18,6 +18,7 @@
 #include <fs/pipefs.h>
 
 #include <dev/storage/ata.h>
+#include <dev/terminal.h>
 
 #include <sys/smp.h>
 
@@ -30,7 +31,8 @@ __attribute__((noreturn)) void kshell(PROC_ID id) {
     init_pipefs();
     init_ata();
 
-    kprintf("Executing /bin/init...");
+    terminal_enable_character_printing();
+    kprintf("Executing /bin/init...\n");
 
     sched_execve("/bin/init", NULL, NULL, "/root");
 
@@ -77,20 +79,6 @@ void _start() {
 
     /* Sets vital system settings */
     system_init();
-
-    #if CLI
-    klogd("Kernel: Clearing the terminal\n");
-    terminal_clear(TERM_MODE_TERM);
-
-    klogd("Kernel: printing Horizon64 logo\n");
-    terminal_puts(TERM_MODE_TERM,
-    "                     _                     __    _  _   \n"
-    "  /\\  /\\ ___   _ __ (_) ____ ___   _ __   / /_  | || |  \n"
-    " / /_/ // _ \\ | '__|| ||_  // _ \\ | '_ \\ | '_ \\ | || |_ \n"
-    "/ __  /| (_) || |   | | / /| (_) || | | || (_) ||__   _|\n"
-    "\\/ /_/  \\___/ |_|   |_|/___|\\___/ |_| |_| \\___/    |_|  \n"
-    "                                                        \n");
-    #endif
 
     /* Add the cursor process */
     klogi("Kernel: Adding the kcursor process...\n");

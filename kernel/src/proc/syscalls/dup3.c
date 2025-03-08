@@ -39,7 +39,7 @@ int64_t sys_dup3(int64_t fh, int64_t newfh, int64_t flags) {
 
     PROCESS *pcurr = sched_get_curr_proc();
 
-    if (pcurr) {
+    if (!pcurr) {
         cpu_set_errno(ENOSYS);
         return -1;
     }

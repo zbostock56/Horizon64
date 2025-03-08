@@ -7,11 +7,12 @@
  * @copyright Copyright (c) 2024
  *
  */
-
 #include <kconfig.h>
 
 #include <common/kprint.h>
 #include <common/lock.h>
+
+#include <dev/serial.h>
 
 #include <sys/smp.h>
 #include <sys/acpi/hpet.h>
@@ -49,16 +50,20 @@ void klog_init() {
 
     klog_info.start = 0;
     klog_info.end = 0;
-
     klog_cli.start = 0;
     klog_cli.end = 0;
 
     UNLOCK_LOCK(&klog_info_lock);
 }
 
+void klog_print_debug_stats() {
+    klogd("Clear times: %d\n", klog_clear_times);
+    klogd("Refresh times: %d\n", klog_refresh_times);
+    klogd("Putc times: %d\n", klog_putchar_times);
+}
+
 /**
  * @brief Used externally to lock the klog lock
- *
  */
 void klog_lock() {
     LOCK_LOCK(&klog_info_lock);
@@ -72,162 +77,137 @@ void klog_unlock() {
 }
 
 /**
- * @brief Dumps character to 0xE9 COM port
+ * @brief Dumps a character to the log buffer.
  *
- * @param mode Terminal mode
+ * @param k Kernel log to write to
  * @param c Character to dump
  */
-void kputc(TERM_MODE mode, uint8_t c) {
-    __asm__ __volatile__("outb %0, %1" ::"a"(c), "Nd"(0xe9) : "memory");
-    KLOG *k = ((mode == TERM_MODE_INFO)) ? &klog_info : &klog_cli;
-
+static inline void kputc(KLOG *k, uint8_t c) {
     k->buffer[k->end] = c;
-    k->end++;
-    if (k->end >= KLOG_BUFFER_SIZE) {
-        k->end = 0;
-    }
-
+    k->end = (k->end + 1) % KLOG_BUFFER_SIZE;
     if (k->end == k->start) {
-        k->start++;
+        k->start = (k->start + 1) % KLOG_BUFFER_SIZE;
     }
-
-    if (k->start >= KLOG_BUFFER_SIZE) {
-        k->start = 0;
-    }
-
-    terminal_putc(mode, c);
-    klog_putchar_times++;
-
 }
 
 /**
  * @brief Calls kputc for an entire string
  *
- * @param mode Terminal mode
+ * @param k Kernel log to write to
  * @param s String to print
- * @param width Number of characters to print
+ * @param width Number of characters to print (if > 0, pads with spaces)
  */
-void kputs(TERM_MODE mode, const char *s, int width) {
+static inline void kputs(KLOG *k, const char *s, int width) {
     int i = 0;
-    for (; s[i] != '\0'; i++) {
-        kputc(mode, s[i]);
+    while (s[i] != '\0') {
+        kputc(k, s[i]);
+        i++;
     }
-
-    /* If width is specified and the number of characters printed is less than */
-    /* the width requested, continue printing spaces until the request is met  */
-    if (width > 0) {
-        for (; i < width; i++) {
-            kputc(mode, ' ');
-        }
+    /* Pad with spaces if needed */
+    for (; i < width; i++) {
+        kputc(k, ' ');
     }
 }
 
 /**
- * @brief Helper to clear the terminal related to the current log
+ * @brief Helper to refresh the terminal for the current log
+ *
+ * This version computes the number of characters to print and then uses two
+ * loops if the buffer wraps around.
  *
  * @param mode Terminal mode
  */
 void klog_refresh(TERM_MODE mode) {
     if (terminal_need_redraw()) {
-        KLOG *k = ((mode == TERM_MODE_INFO)) ? &klog_info : &klog_cli;
-
+        KLOG *k = (mode == TERM_MODE_INFO) ? &klog_info : &klog_cli;
         terminal_clear(mode);
 
-        /* Note that the string ends at k->end - 1 */
-        int i = k->start;
-        while (TRUE) {
-            if (i >= KLOG_BUFFER_SIZE) {
-                i = 0;
-            }
-            if (k->end >= k->start) {
-                if (i >= k->end) {
-                    break;
-                }
-            } else {
-                if (i >= k->end && i < k->start) {
-                    break;
-                }
-            }
+        /* Compute the total number of characters in the buffer */
+        unsigned long count;
+        if (k->end >= k->start) {
+            count = k->end - k->start;
+        } else {
+            count = (KLOG_BUFFER_SIZE - k->start) + k->end;
+        }
 
+        /* Print first segment from k->start to end-of-buffer */
+        unsigned long i = k->start;
+        unsigned long printed = 0;
+        while (printed < count) {
             terminal_putc(mode, k->buffer[i]);
             klog_putchar_times++;
-            i++;
+            printed++;
+            i = (i + 1) % KLOG_BUFFER_SIZE;
         }
         klog_clear_times++;
         terminal_set_redraw(FALSE);
     }
-
     terminal_refresh(mode);
     klog_refresh_times++;
 }
 
 /**
- * @brief Internal helper function to print numbers.
+ * @brief Internal helper function to print numbers in hexadecimal
  *
- * @param mode Terminal mode
- * @param num number to print as hex to the screen.
+ * @param k Kernel log to write to
+ * @param num Number to print as hex
  * @param width Number of characters to print
  */
-static void kprint_hex(TERM_MODE mode, uint64_t num, uint32_t width) {
+static void kprint_hex(KLOG *k, uint64_t num, uint32_t width) {
     if (!num) {
-        kputs(mode, "0x0", width);
+        kputs(k, "0x0", width);
         return;
     }
 
-    kputs(mode, "0x", 0);
-    int k = 0;
+    kputs(k, "0x", 0);
+    int j = 0;
     for (int i = 60; i >= 0; i -= 4) {
-        k++;
-        if (width > 0 && (k + width) <= 16) {
+        j++;
+        if (width > 0 && (j + width) <= 16) {
             continue;
         }
-
         uint64_t digit = (num >> i) & 0xF;
-        kputc(mode, (digit <= 9) ? (digit + '0') : (digit - 10 + 'A'));
+        kputc(k, (digit <= 9) ? (digit + '0') : (digit - 10 + 'A'));
     }
 }
 
 /**
- * @brief Helper for printing binary to the screen
+ * @brief Helper for printing a number in binary
  *
- * @param mode Terminal mode
+ * @param k Kernel log to write to
  * @param num Number to print in binary
  * @param width Output width
- * @param mid_blank Do we want binaries to be separated by four digits?
+ * @param mid_blank Whether to insert a blank between every 4 bits
  */
-static void kprint_bin(TERM_MODE mode, uint64_t num, uint32_t width, uint8_t mid_blank) {
+static void kprint_bin(KLOG *k, uint64_t num, uint32_t width, uint8_t mid_blank) {
     if (!num) {
-        kputs(mode, "0b0", width);
+        kputs(k, "0b0", width);
         return;
     }
 
-    kputs(mode, "0b", 0);
-    int k = 0;
+    kputs(k, "0b", 0);
     for (int i = 63; i >= 0; i--) {
-        k++;
+        /* Optionally skip leading zeros if width is specified */
         if (width > 0 && (i + width) <= 64) {
             continue;
         }
-
         uint64_t digit = (num >> i) & 0x1;
-        kputc(mode, (digit == 0) ? '0' : '1');
-        /* If we want to have spaces between each set of four in binary */
+        kputc(k, (digit == 0) ? '0' : '1');
         if ((i % 4 == 0) && i > 0 && mid_blank) {
-            kputc(mode, ' ');
+            kputc(k, ' ');
         }
     }
 }
 
 /**
- * @brief Helper method to print out integers
+ * @brief Helper method to print out an integer
  *
- * @param mode Terminal mode
+ * @param k Kernel log to write to
  * @param num Number to print
  * @param width Width of characters to print
  * @param zero_filling TRUE to zero fill, FALSE otherwise
  */
-static void kprint_int(TERM_MODE mode, int64_t num, uint32_t width,
-                       uint8_t zero_filling) {
+static void kprint_int(KLOG *k, int64_t num, uint32_t width, uint8_t zero_filling) {
     int64_t val = num;
     uint32_t val_width = 1;
     uint32_t zero_width = 0;
@@ -237,25 +217,26 @@ static void kprint_int(TERM_MODE mode, int64_t num, uint32_t width,
         val = -val;
     }
 
-    while (val > (int64_t) i && i < UINT64_MAX) {
-        val_width += 1;
+    while (val > (int64_t)i && i < UINT64_MAX) {
+        val_width++;
         i *= 10;
         i += 9;
     }
 
     if (num < 0) {
-        val_width -= 1;
-        kputc(mode, '-');
+        val_width--;
+        kputc(k, '-');
         num = -num;
     }
 
     while (zero_width + val_width < width) {
-        kputc(mode, zero_filling ? '0' : ' ');
+        kputc(k, zero_filling ? '0' : ' ');
         zero_width++;
     }
 
     if (num == 0) {
-        kputc(mode, '0');
+        kputc(k, '0');
+        return;
     }
 
     size_t div = 1;
@@ -268,82 +249,128 @@ static void kprint_int(TERM_MODE mode, int64_t num, uint32_t width,
     while (div >= 10) {
         uint8_t digit = ((num % div) - (num % (div / 10))) / (div / 10);
         div /= 10;
-        kputc (mode, digit + '0');
+        kputc(k, digit + '0');
     }
 }
 
 /**
- * @brief Main core klog system
+ * @brief Core function for formatted printing using variadic arguments
  *
- * @param mode Terminal mode
- * @param s String to print
- * @param args Variadic arguments
+ * @param k Kernel log to write to
+ * @param s Format string
+ * @param args Variadic argument list
  */
-static void klog_vprintf_core(TERM_MODE mode, const char *s, va_list args) {
+static void klog_vprintf_core(KLOG *k, const char *s, va_list args) {
     for (size_t i = 0; s[i] != '\0'; i++) {
-        switch (s[i]) {
-            case '%': {
-                uint32_t arg_width = 0;
-                uint8_t zero_filling = FALSE;
-                if (s[i + 1] == '0') {
-                    zero_filling = TRUE;
-                }
-                while (s[i + 1] >= '0' && s[i + 1] <= '9') {
-                    arg_width *= 10;
-                    arg_width += s[i + 1] - '0';
-                    i++;
-                }
-                switch (s[i + 1]) {
-                    case '%':
-                        kputc(mode, '%');
-                        break;
-                    case 'd':
-                        kprint_int(mode, va_arg(args, int64_t), arg_width, zero_filling);
-                        break;
-                    case 'x':
-                        kprint_hex(mode, va_arg(args, uint64_t), arg_width);
-                        break;
-                    case 'b':
-                        kprint_bin(mode, va_arg(args, uint64_t), arg_width, !zero_filling);
-                        break;
-                    case 's':
-                        kputs(mode, va_arg(args, const char *), arg_width);
-                        break;
-                    case 'c':
-                        kputc(mode, va_arg(args, int));
-                        break;
-                    case 't':
-                        kputs(mode, va_arg(args, int) ? "true" : "false", 0);
-                        break;
-                }
+        if (s[i] == '%') {
+            uint32_t arg_width = 0;
+            uint8_t zero_filling = 0;
+            i++;
+            if (s[i] == '0') {
+                zero_filling = 1;
                 i++;
             }
-            break;
-            default:
-                kputc(mode, s[i]);
+            while (s[i] >= '0' && s[i] <= '9') {
+                arg_width = arg_width * 10 + (s[i] - '0');
+                i++;
+            }
+            switch (s[i]) {
+                case '%':
+                    kputc(k, '%');
+                    break;
+                case 'd':
+                    kprint_int(k, va_arg(args, int64_t), arg_width, zero_filling);
+                    break;
+                case 'x':
+                    kprint_hex(k, va_arg(args, uint64_t), arg_width);
+                    break;
+                case 'b':
+                    kprint_bin(k, va_arg(args, uint64_t), arg_width, !zero_filling);
+                    break;
+                case 's':
+                    kputs(k, va_arg(args, const char *), arg_width);
+                    break;
+                case 'c':
+                    kputc(k, (uint8_t)va_arg(args, int));
+                    break;
+                case 't':
+                    kputs(k, va_arg(args, int) ? "true" : "false", 0);
+                    break;
+                default:
+                    /* Unsupported format; print it literally. */
+                    kputc(k, s[i]);
+            }
+        } else {
+            kputc(k, s[i]);
         }
     }
 }
 
 /**
- * @brief Wrapper around the core printing functionailty
+ * @brief Wrapper around the core printing function.
  *
- * @param mode Terminal mode
- * @param s String to print
+ * @param k Kernel log to write to
+ * @param s Format string
  * @param ... Variadic arguments
  */
-static void klog_vprintf_wrapper(TERM_MODE mode, const char *s, ...) {
+static void klog_vprintf_wrapper(KLOG *k, const char *s, ...) {
     va_list args;
     va_start(args, s);
-    klog_vprintf_core(mode, s, args);
+    klog_vprintf_core(k, s, args);
     va_end(args);
 }
 
 /**
- * @brief Virtual printf wrapper
+ * @brief Sends the klog buffered input to its output destination
+ *
+ * Computes the total number of characters in the log buffer and
+ * then uses two loops if the buffer wraps around.
+ *
+ * @param k Kernel log to read from
+ * @param kprintf Determines whether to send to terminal with extra formatting\n
+ */
+static void klog_send(KLOG *k, uint8_t kprintf) {
+    LOCK_LOCK(&klog_info_lock);
+
+    /* Determine number of characters in the log */
+    unsigned long count;
+    if (k->end >= k->start) {
+        count = k->end - k->start;
+    } else {
+        count = (KLOG_BUFFER_SIZE - k->start) + k->end;
+    }
+
+    /* Process and output characters from the log */
+    unsigned long i = k->start;
+    for (unsigned long printed = 0; printed < count; printed++) {
+        /* Copy log entry into CLI buffer (circular buffer update) */
+        klog_cli.buffer[klog_cli.end] = k->buffer[i];
+        klog_cli.end = (klog_cli.end + 1) % KLOG_BUFFER_SIZE;
+        if (klog_cli.end == klog_cli.start) {
+            klog_cli.start = (klog_cli.start + 1) % KLOG_BUFFER_SIZE;
+        }
+
+        if (kprintf) {
+            #if CLI
+            terminal_putc(TERM_MODE_TERM, k->buffer[i]);
+            #endif
+        } else {
+            terminal_putc(TERM_MODE_TERM, k->buffer[i]);
+        }
+
+        klog_putchar_times++;
+        i = (i + 1) % KLOG_BUFFER_SIZE;
+    }
+
+    klog_refresh(TERM_MODE_TERM);
+    UNLOCK_LOCK(&klog_info_lock);
+}
+
+/**
+ * @brief Virtual printf wrapper.
  *
  * @param level Printing level
- * @param s String to print
+ * @param s Format string
  * @param ... Variadic arguments
  */
 void klog_vprintf(uint8_t level, const char *s, ...) {
@@ -357,8 +384,12 @@ void klog_vprintf(uint8_t level, const char *s, ...) {
     }
     #endif
 
+    KLOG out;
+    out.start = 0;
+    out.end = 0;
+    out.term = NULL;
+
     if (level < KLOG_LVL_UNKNOWN) {
-        LOCK_LOCK(&klog_info_lock);
         if (timer_enabled && level != KLOG_LVL_NONE) {
             CPU *cpu = smp_get_curr_cpu(NO_FORCE_GET_CPU);
             uint64_t nanos = hpet_get_nanos();
@@ -369,48 +400,46 @@ void klog_vprintf(uint8_t level, const char *s, ...) {
             STD_TIME t = {0};
             seconds_to_std_time(bootsecs + nsecs, &t);
 
-            /* TODO: Change all this to sprintf to save calls to vprintf */
-
-            klog_vprintf_wrapper(TERM_MODE_INFO, "%04d-%02d-%02d %02d:%02d:%02d %03d ",
+            klog_vprintf_wrapper(&out, "%04d-%02d-%02d %02d:%02d:%02d %03d ",
                                 1900 + t.year, t.month + 1, t.dom, t.hours, t.minutes,
                                 t.seconds, nms);
             if (cpu) {
-                klog_vprintf_wrapper(TERM_MODE_INFO, "%02d", cpu->cpu_id);
+                klog_vprintf_wrapper(&out, "%02d", cpu->cpu_id);
             } else {
-                klog_vprintf_wrapper(TERM_MODE_INFO, "--");
+                klog_vprintf_wrapper(&out, "--");
             }
 
             PROCESS *pcurr = sched_get_curr_proc();
             if (pcurr) {
-                klog_vprintf_wrapper(TERM_MODE_INFO, "-%03d ", pcurr->id);
+                klog_vprintf_wrapper(&out, "-%03d ", pcurr->id);
             } else {
-                klog_vprintf_wrapper(TERM_MODE_INFO, "---- ");
+                klog_vprintf_wrapper(&out, "---- ");
             }
         } else if (level != KLOG_LVL_NONE) {
-            klog_vprintf_wrapper(TERM_MODE_INFO, "0000-00-00 00:00:00 000 ------ ");
+            klog_vprintf_wrapper(&out, "0000-00-00 00:00:00 000 ------ ");
         }
 
         switch (level) {
             case KLOG_LVL_VERBOSE:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\e[34m[VERBOSE] \e[0m ");
+                klog_vprintf_wrapper(&out, "\e[34m[VERBOSE]\e[0m ");
                 break;
             case KLOG_LVL_DEBUG:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\e[34m[DEBUG]\e[0m ");
+                klog_vprintf_wrapper(&out, "\e[34m[DEBUG]\e[0m ");
                 break;
             case KLOG_LVL_INFO:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\e[32m[INFO ]\e[0m ");
+                klog_vprintf_wrapper(&out, "\e[32m[INFO ]\e[0m ");
                 break;
             case KLOG_LVL_WARN:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\e[33m[WARN ]\e[0m ");
+                klog_vprintf_wrapper(&out, "\e[33m[WARN ]\e[0m ");
                 break;
             case KLOG_LVL_ERROR:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\e[31m[ERROR]\e[0m ");
+                klog_vprintf_wrapper(&out, "\e[31m[ERROR]\e[0m ");
                 break;
             case KLOG_LVL_TAB:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\t");
+                klog_vprintf_wrapper(&out, "\t");
                 break;
             case KLOG_LVL_SRTUP:
-                klog_vprintf_wrapper(TERM_MODE_INFO, "\e[93m[SRTUP]\e[0m ");
+                klog_vprintf_wrapper(&out, "\e[93m[SRTUP]\e[0m ");
                 break;
             case KLOG_LVL_NONE:
             default:
@@ -419,30 +448,29 @@ void klog_vprintf(uint8_t level, const char *s, ...) {
 
         va_list args;
         va_start(args, s);
-        klog_vprintf_core(TERM_MODE_INFO, s, args);
+        klog_vprintf_core(&out, s, args);
         va_end(args);
 
-        klog_refresh(TERM_MODE_INFO);
-        if (level < KLOG_LVL_UNKNOWN) {
-            UNLOCK_LOCK(&klog_info_lock);
-        }
+        klog_send(&out, 0);
     }
 }
 
 /**
- * @brief Main kernel printing function
+ * @brief Main kernel printing function.
  *
  * @param s Format string
  * @param ... Variadic arguments
  */
 void kprintf(const char *s, ...) {
-    LOCK_LOCK(&klog_info_lock);
+    KLOG out;
+    out.start = 0;
+    out.end = 0;
+    out.term = NULL;
 
     va_list args;
     va_start(args, s);
-    klog_vprintf_core(TERM_MODE_TERM, s, args);
+    klog_vprintf_core(&out, s, args);
     va_end(args);
 
-    klog_refresh(TERM_MODE_TERM);
-    UNLOCK_LOCK(&klog_info_lock);
+    klog_send(&out, 1);
 }

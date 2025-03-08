@@ -48,6 +48,7 @@ static TERM_MODE term_mode = TERM_MODE_UNSET;
 static uint8_t term_need_redrawn = FALSE;
 static TERMINAL term_info = {0};
 static TERMINAL term_cli = {0};
+static uint8_t term_char_print = 0;
 
 TERM_CURSOR_STATUS cursor_visible = 0;
 
@@ -119,6 +120,22 @@ void terminal_start() {
     #endif
 
     term_need_redrawn = TRUE;
+}
+
+/**
+ * @brief Helper to enable character printing to framebuffer
+ *
+ */
+void terminal_enable_character_printing() {
+    term_char_print = 1;
+}
+
+/**
+ * @brief Helper to disable character printing to framebuffer
+ *
+ */
+void terminal_disable_character_printing() {
+    term_char_print = 0;
 }
 
 /**
@@ -228,128 +245,127 @@ STATUS terminal_refresh(TERM_MODE mode) {
 }
 
 void terminal_print(TERM_MODE mode, uint8_t c) {
-    #ifdef CLI
-    if (term_mode != TERM_MODE_UNSET) {
-        serial_write(c);
-    }
+    #if CLI
+    serial_write(c);
 
     if (mode == TERM_MODE_INFO && terminal_get_mode() != TERM_MODE_INFO) {
         return;
     }
     #endif
 
-    TERMINAL *curr;
+    if (term_char_print) {
+        TERMINAL *curr;
 
-    if (mode == TERM_MODE_INFO) {
-        curr = &term_info;
-    } else if (mode == TERM_MODE_TERM) {
-        curr = &term_cli;
-    } else {
-        kloge("TERMINAL PRINT: Trying to print to a terminal which is unknown!\n");
-        return;
-    }
-
-    if (c == '\b') {
-        terminal_print(mode, ' ');
-        if (curr->cursor_pos.x > 0) {
-            curr->cursor_pos.x--;
-        }
-        if (curr->cursor_pos.x > 0) {
-            curr->cursor_pos.x--;
-        }
-        return;
-    }
-
-    if (curr->cursor_pos.y == (int)curr->height && c != '\0') {
-        terminal_scroll(curr);
-        curr->cursor_pos.y--;
-    }
-
-    switch (c) {
-        case '\0':
-            /* Nul byte */
+        if (mode == TERM_MODE_INFO) {
+            curr = &term_info;
+        } else if (mode == TERM_MODE_TERM) {
+            curr = &term_cli;
+        } else {
+            kloge("TERMINAL PRINT: Trying to print to a terminal which is unknown!\n");
             return;
-        case '\n':
-            /* New line character */
-            cursor_visible = ' ';
-            terminal_refresh(mode);
-            curr->cursor_pos.x = 0;
-            curr->cursor_pos.y++;
-            break;
-        case '\t':
-            /* Tab character */
-            curr->cursor_pos.x += (curr->cursor_pos.x % 8 == 0) ? 8 : (8 - curr->cursor_pos.x % 8);
-            if (curr->cursor_pos.x > (int)curr->width) {
-                curr->cursor_pos.x -= curr->width;
-                curr->cursor_pos.y++;
-            }
-            break;
-        default:
-            /* Any other character */
-            if (c <= 0xA0 || (c > 0xA0 && curr->last_char == 0)) {
-                /* CRLF, if needed */
-                if (curr->cursor_pos.x >= (int)curr->width) {
-                    curr->cursor_pos.x = 0;
-                    curr->cursor_pos.y++;
-                }
-
-                /* Check if we need to scroll the screen */
-                if (curr->cursor_pos.y >= (int)curr->height) {
-                    terminal_scroll(curr);
-                    curr->cursor_pos.y--;
-                }
-
-                fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
-                        curr->cursor_pos.y * font.header->character_size,
-                        curr->foreground_color, curr->background_color,
-                        c, curr->is_bold);
-
-                /* Push cursor position */
-                curr->cursor_pos.x++;
-            } else {
-                /* CRLF, if needed */
-                if (curr->cursor_pos.x >= (int)(curr->width - 1)) {
-                    curr->cursor_pos.x = 0;
-                    curr->cursor_pos.y++;
-                }
-
-                /* Check if we need to scroll the screen */
-                if (curr->cursor_pos.y >= (int)curr->height) {
-                    terminal_scroll(curr);
-                    curr->cursor_pos.y--;
-                }
-
-                curr->last_char = 0;
-
-                /* Unknown character, print out question marks */
-                fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
-                        curr->cursor_pos.y * font.header->character_size,
-                        curr->foreground_color, curr->background_color,
-                        '?', FALSE);
-                curr->cursor_pos.x++;
-                fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
-                        curr->cursor_pos.y * font.header->character_size,
-                        curr->foreground_color, curr->background_color,
-                        '?', FALSE);
-                curr->cursor_pos.x++;
-            }
-            break;
-    }
-
-    /* Make sure the cursor is in the correct position */
-    while (TRUE) {
-        if (curr->cursor_pos.x >= (int)curr->width) {
-            curr->cursor_pos.x = 0;
-            curr->cursor_pos.y++;
         }
 
-        if (curr->cursor_pos.y >= (int)curr->height &&
-            !(curr->cursor_pos.y == (int)curr->height &&
-            curr->cursor_pos.x == 0)) {
+        if (c == '\b') {
+            terminal_print(mode, ' ');
+            if (curr->cursor_pos.x > 0) {
+                curr->cursor_pos.x--;
+            }
+            if (curr->cursor_pos.x > 0) {
+                curr->cursor_pos.x--;
+            }
+            return;
+        }
+
+        if (curr->cursor_pos.y == (int)curr->height && c != '\0') {
             terminal_scroll(curr);
             curr->cursor_pos.y--;
-        } else {
-            break;
+        }
+
+        switch (c) {
+            case '\0':
+                /* Nul byte */
+                return;
+            case '\n':
+                /* New line character */
+                cursor_visible = ' ';
+                terminal_refresh(mode);
+                curr->cursor_pos.x = 0;
+                curr->cursor_pos.y++;
+                break;
+            case '\t':
+                /* Tab character */
+                curr->cursor_pos.x += (curr->cursor_pos.x % 8 == 0) ? 8 : (8 - curr->cursor_pos.x % 8);
+                if (curr->cursor_pos.x > (int)curr->width) {
+                    curr->cursor_pos.x -= curr->width;
+                    curr->cursor_pos.y++;
+                }
+                break;
+            default:
+                /* Any other character */
+                if (c <= 0xA0 || (c > 0xA0 && curr->last_char == 0)) {
+                    /* CRLF, if needed */
+                    if (curr->cursor_pos.x >= (int)curr->width) {
+                        curr->cursor_pos.x = 0;
+                        curr->cursor_pos.y++;
+                    }
+
+                    /* Check if we need to scroll the screen */
+                    if (curr->cursor_pos.y >= (int)curr->height) {
+                        terminal_scroll(curr);
+                        curr->cursor_pos.y--;
+                    }
+                    fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                            curr->cursor_pos.y * font.header->character_size,
+                            curr->foreground_color, curr->background_color,
+                            c, curr->is_bold);
+
+                    /* Push cursor position */
+                    curr->cursor_pos.x++;
+                } else {
+                    /* CRLF, if needed */
+                    if (curr->cursor_pos.x >= (int)(curr->width - 1)) {
+                        curr->cursor_pos.x = 0;
+                        curr->cursor_pos.y++;
+                    }
+
+                    /* Check if we need to scroll the screen */
+                    if (curr->cursor_pos.y >= (int)curr->height) {
+                        terminal_scroll(curr);
+                        curr->cursor_pos.y--;
+                    }
+
+                    curr->last_char = 0;
+
+                    /* Unknown character, print out question marks */
+                    fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                            curr->cursor_pos.y * font.header->character_size,
+                            curr->foreground_color, curr->background_color,
+                            '?', FALSE);
+                    curr->cursor_pos.x++;
+                    fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                            curr->cursor_pos.y * font.header->character_size,
+                            curr->foreground_color, curr->background_color,
+                            '?', FALSE);
+                    curr->cursor_pos.x++;
+                }
+                break;
+        }
+
+        /* Make sure the cursor is in the correct position */
+        while (TRUE) {
+            if (curr->cursor_pos.x >= (int)curr->width) {
+                curr->cursor_pos.x = 0;
+                curr->cursor_pos.y++;
+            }
+
+            if (curr->cursor_pos.y >= (int)curr->height &&
+                !(curr->cursor_pos.y == (int)curr->height &&
+                curr->cursor_pos.x == 0)) {
+                terminal_scroll(curr);
+                curr->cursor_pos.y--;
+            } else {
+                break;
+            }
         }
     }
 }

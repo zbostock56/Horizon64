@@ -161,7 +161,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
     p->state = PROC_READY;
 
     strncpy(p->cwd, "/", sizeof("/"));
-    strncpy(p->name, name, sizeof(name));
+    strncpy(p->name, name, strlen(name));
 
     hash_init(&p->open_files);
 

@@ -11,6 +11,8 @@
 
 #include <init/init.h>
 
+void klog_print_debug_stats();
+
 /**
  * @brief Main system initialization function where high level handlers
  *        are called.
@@ -58,9 +60,6 @@ void system_init() {
     pm_init(mem_req);
     vm_init(mem_req, kernel_addr_request);
 
-    /* Indicate the memory usage after virtual memory has been initialized */
-    klogd("SYSTEM INIT: Memory used after initial mapping\n");
-    pm_used();
 
     /* Set up .psf1 font */
     psf1_font_init(file_request, "zap-vga16.psf");
@@ -71,6 +70,13 @@ void system_init() {
     }
     struct limine_framebuffer *fb = framebuffer_req.response->framebuffers[0];
     init_terminal(fb);
+
+    /* Initialize terminal */
+    terminal_start();
+
+    /* Indicate the memory usage after virtual memory has been initialized */
+    klogd("SYSTEM INIT: Memory used after initial mapping\n");
+    pm_used();
 
     /* Initialize keyboard driver */
     keyboard_init();
@@ -86,9 +92,6 @@ void system_init() {
 
     /* Intialize PCI device list */
     pci_init();
-
-    /* Initialize terminal */
-    terminal_start();
     
     /* Initialize Advanced Programmable Interrupt Controller */
     apic_init();
@@ -106,4 +109,5 @@ void system_init() {
     initrd_init(file_request);
 
     klogs("SYSTEM INIT: System initialized successfully...\n");
+    klog_print_debug_stats();
 }

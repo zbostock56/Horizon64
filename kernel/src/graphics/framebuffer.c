@@ -60,6 +60,20 @@ void fb_init(FRAMEBUFFER *fb, struct limine_framebuffer *f) {
 }
 
 /**
+ * @brief Faster putpixel implementation for 32-bits at a time
+ *
+ * @param backbuffer backbuffer of current framebuffer
+ * @param pitch Pitch of the framebuffer
+ * @param x X-coordinate on the screen
+ * @param y Y-coordinate on the screen
+ * @param color Color to change to
+ */
+static inline void fast_putpixel(uint8_t *backbuffer, uint32_t pitch,
+                                 uint32_t x, uint32_t y, uint32_t color) {
+    ((uint32_t *)(backbuffer + (pitch * y)))[x] = color;
+}
+
+/**
  * @brief Helper for changing the color of a pixel on the screen.
  *
  * @param fb Framebuffer to change
@@ -68,13 +82,10 @@ void fb_init(FRAMEBUFFER *fb, struct limine_framebuffer *f) {
  * @param color Color to change to
  */
 void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color) {
-    if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
+    if ((uint64_t)fb->base == (uint64_t)fb->backbuffer) {
         return;
     }
-
-    if ((fb->pitch * y + x * 4) < fb->pitch * fb->height) {
-        ((uint32_t *)(fb->backbuffer + (fb->pitch * y)))[x] = color;
-    }
+    fast_putpixel(fb->backbuffer, fb->pitch, x, y, color);
 }
 
 /**
@@ -86,48 +97,33 @@ void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color) {
  * @return uint32_t Color value of the pixel
  */
 uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y) {
-    if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
+    if ((uint64_t)fb->base == (uint64_t)fb->backbuffer) {
         return 0;
     }
-
-    if ((fb->pitch * y + x * 4) < fb->pitch * fb->height) {
-        return ((uint32_t *)(fb->backbuffer + (fb->pitch * y)))[x];
-    } else {
-        return 0;
-    }
+    return ((uint32_t *)(fb->backbuffer + (fb->pitch * y)))[x];
 }
 
 void fb_draw_characters(FRAMEBUFFER *fb, uint32_t fg, uint32_t bg,
                         const char *str) {
-    if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
+    if ((uint64_t)fb->base == (uint64_t)fb->backbuffer) {
         return;
     }
 
     size_t str_len = strlen(str);
     uint32_t x = (fb->width - str_len * 8 * 6) / 2;
     uint32_t y = (fb->height - 16 * 6) / 2;
-    static const uint8_t masks[8] = { 128, 64, 32, 16, 8, 4, 2, 1};
+    static const uint8_t masks[8] = { 128, 64, 32, 16, 8, 4, 2, 1 };
 
     for (size_t i = 0; i < str_len; i++) {
-        uint32_t offset = ((uint32_t) str[i]) * font.header->character_size;
+        uint32_t offset = ((uint32_t)str[i]) * font.header->character_size;
         for (size_t j = 0; j < font.header->character_size; j++) {
+            uint8_t glyph_row = ((uint8_t *)font.glyph_buffer)[offset + j];
             for (size_t k = 0; k < 8; k++) {
-                for (size_t m = 1; m < 6; m++) {
-                    for (size_t n = 1; n < 6; n++) {
-                        uint32_t bg_color = bg;
-                        if (fb->background_buffer) {
-                            bg = ((uint32_t *)(fb->background_buffer + fb->pitch *
-                                              y + x * 4))[0];
-                        }
-                        uint32_t color = (((uint8_t *) font.glyph_buffer)[offset + j] & masks[k]) ?
-                                        fg : bg_color;
-                        fb_putpixel(fb, x + (i * 8 + k) * 6 + m, y + j * 6 + n, color);
-                    }
-                }
+                uint32_t color = (glyph_row & masks[k]) ? fg : bg;
+                fast_putpixel(fb->backbuffer, fb->pitch, x + i * 8 + k, y + j, color);
             }
         }
     }
-
 }
 
 /**
@@ -142,26 +138,22 @@ void fb_draw_characters(FRAMEBUFFER *fb, uint32_t fg, uint32_t bg,
  * @param is_bold Denotes whether character should be bold or not
  */
 void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,
-              uint32_t bgcolor, uint8_t ch, uint8_t is_bold) {
-  if ((uint64_t) fb->base == (uint64_t) fb->backbuffer) {
-      return;
-  }
-
-  /* TODO: Update to use bold fonts */
-  (void) is_bold;
-
-  uint32_t offset = ((uint32_t)ch) * font.header->character_size;
-  static const uint8_t masks[8] = {128, 64, 32, 16, 8, 4, 2, 1};
-  for (size_t i = 0; i < font.header->character_size; i++) {
-    for (size_t k = 0; k < 8; k++) {
-      if (i < font.header->character_size &&
-          ((((uint8_t *)font.glyph_buffer)[offset + i]) & masks[k])) {
-        fb_putpixel(fb, x + k, y + i, fgcolor);
-      } else {
-        fb_putpixel(fb, x + k, y + i, bgcolor);
-      }
+             uint32_t bgcolor, uint8_t ch, uint8_t is_bold) {
+    if ((uint64_t)fb->base == (uint64_t)fb->backbuffer) {
+        return;
     }
-  }
+
+    (void)is_bold;
+
+    uint32_t offset = ((uint32_t)ch) * font.header->character_size;
+    static const uint8_t masks[8] = { 128, 64, 32, 16, 8, 4, 2, 1 };
+    for (size_t i = 0; i < font.header->character_size; i++) {
+        uint8_t glyph_row = ((uint8_t *)font.glyph_buffer)[offset + i];
+        for (size_t k = 0; k < 8; k++) {
+            uint32_t color = (glyph_row & masks[k]) ? fgcolor : bgcolor;
+            fast_putpixel(fb->backbuffer, fb->pitch, x + k, y + i, color);
+        }
+    }
 }
 
 /**
@@ -171,22 +163,6 @@ void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,
  */
 void fb_refresh(FRAMEBUFFER *fb) {
     if ((uint64_t)fb->base != (uint64_t)fb->backbuffer) {
-        uint64_t len = fb->backbuffer_length;
-        if (fb->background_buffer) {
-            /* Copy back buffer into swap buffer */
-            memcpy(fb->swapbuffer, fb->backbuffer, len);
-            uint32_t *src = (uint32_t *)fb->backbuffer;
-            uint32_t *dst = (uint32_t *)fb->swapbuffer;
-            size_t pt_num = len / 4;
-            for (size_t i = 0; i < pt_num; i++) {
-                if (src[i] != DEFAULT_BG) {
-                    dst[i] = src[i];
-                }
-            }
-            /* Copy back from swap buffer into front buffer */
-            memcpy(fb->base, fb->swapbuffer, len);
-        } else {
-            memcpy(fb->base, fb->backbuffer, len);
-        }
+        memcpy(fb->base, fb->backbuffer, fb->backbuffer_length);
     }
 }

@@ -32,7 +32,14 @@ int64_t sys_waitpid(int64_t pid, int32_t *status, int32_t flags) {
         *status = 0;
     }
 
-    if (pid == -1 && pcurr) {
+    /* Fix the potential possibility that the CPU structure is null */
+    /* and we get back a NULL value from sched_get_curr_proc()      */
+    if (!pcurr) {
+        cpu_set_errno(ENOSYS);
+        return -1;
+    }
+
+    if (pid == -1) {
         uint8_t all_dead = TRUE;
         for (size_t i = 0; i < vector_len(&(pcurr->child_list)); i++) {
             PROC_ID pchild_id = vector_at(&(pcurr->child_list), i);

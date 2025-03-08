@@ -33,36 +33,36 @@ all-hdd: $(IMAGE_NAME).hdd
 
 # Normal run
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64							\
-	-debugcon stdio -M q35,smm=off -m $(MEMORY) $(TIME) 				\
+	qemu-system-x86_64									\
+	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 			    	\
 	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
 
 # Run with debug output
 rund: $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35,smm=off									\
 	-m $(MEMORY) $(TIME) -no-reboot 									\
-	-cdrom $(IMAGE_NAME).iso -boot d -display curses  \
+	-cdrom $(IMAGE_NAME).iso -boot d -display curses  					\
 	-d in_asm -nographic
 
 # Run with multiple cores
 runmc: $(IMAGE_NAME).iso
 	qemu-system-x86_64 -enable-kvm -cpu host -smp 4,sockets=1,cores=2	\
-	-debugcon stdio -M q35,smm=off -m $(MEMORY) $(TIME) 				\
+	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 		      		\
 	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
 
 # Debug with GDB
 debug: $(IMAGE_NAME).iso
 	./scripts/remove_from_port.sh
-	qemu-system-x86_64 -S -s -M q35,smm=off					 \
-	-m $(MEMORY) $(TIME) -no-reboot 								 \
-	-cdrom $(IMAGE_NAME).iso -boot d -display curses \
-	-d in_asm -nographic
+	qemu-system-x86_64 -S -s -M q35,smm=off					 			\
+	-m $(MEMORY) $(TIME) -no-reboot 								 	\
+	-cdrom $(IMAGE_NAME).iso -boot d  									\
+	-d in_asm -serial studio
 
 run-uefi: ovmf $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd $(TIME) -cdrom $(IMAGE_NAME).iso -boot d
 
 run-hdd: $(IMAGE_NAME).hdd
-	qemu-system-x86_64 -M q35 -m $(MEMORY) -debugcon stdio $(TIME) -hda $(IMAGE_NAME).hdd
+	qemu-system-x86_64 -M q35 -m $(MEMORY) -serial stdio $(TIME) -hda $(IMAGE_NAME).hdd
 
 run-hdd-uefi: ovmf $(IMAGE_NAME).hdd
 	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd $(TIME) -debugcon stdio -hda $(IMAGE_NAME).hdd

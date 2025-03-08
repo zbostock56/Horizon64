@@ -42,3 +42,5 @@ STATUS terminal_set_winsize(WINDOW_SIZE *ws);
 STATUS terminal_refresh(TERM_MODE mode);
 uint8_t terminal_need_redraw();
 void terminal_set_redraw(uint8_t a);
+void terminal_enable_character_printing();
+void terminal_disable_character_printing();

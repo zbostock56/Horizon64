@@ -228,6 +228,7 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
     VFS_TNODE *curr = &vfs_root;
 
     /* NOTE: only works with absolute paths */
+    /* TODO: Check for NULL pointer deferences here - potentially refactor */
     if (path_name[0] != '/') {
         if (sys_get_full_path(VFS_FW_CWD, path_name, temp_buff) == SYSCALL_FAIL) {
             kloge("'%s' is not a vaild path!\n", path_name);
@@ -752,7 +753,8 @@ int64_t vfs_seek(VFS_HANDLE h, size_t offset, int whence) {
     }
 
     int64_t ret = -1;
-    if (pos >= 0 && pos <= (int64_t)fd->inode->size) {
+    /* pos could never be <= to zero due to the check above here */
+    if (pos > 0 && pos <= (int64_t)fd->inode->size) {
         fd->seek_position = pos;
         ret = pos;
     }

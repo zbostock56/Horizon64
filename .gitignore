@@ -27,3 +27,5 @@ scripts/memory_plotter/__pycache__
 scripts/memory_plotter/mem_map.txt
 .gdb
 texts
+initrd*
+sysroot

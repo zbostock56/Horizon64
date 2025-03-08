@@ -84,9 +84,9 @@ static TTYFS_IDENT *create_ident() {
  * @brief Does nothing in current form
  */
 void init_ttyfs() {
-    klogi("INIT TTYFS: starting...\n");
+    klogs("INIT TTYFS: starting...\n");
     /* Nothing */
-    klogi("INIT TTYFS: finished...\n");
+    klogs("INIT TTYFS: finished...\n");
 }
 
 /**

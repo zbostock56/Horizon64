@@ -26,3 +26,9 @@
  *
  */
 #define ENABLE_KLOG_DEBUG   (1)
+
+/**
+ * @brief Prints kernel logs to the framebuffer
+ *
+ */
+#define FRAMEBUFFER_LOGGING (0)

@@ -33,7 +33,7 @@ static uint8_t serial_enabled = NO_ERROR;
  * @return STATUS SYS_OK if normal, SYS_ERR if faulty
  */
 STATUS serial_init() {
-    //klogi("INIT SERIAL: starting...\n");
+    klogi("INIT SERIAL: starting...\n");
     /* Step 1 */
     outb(COM1 + 1, 0x00);
     /* Step 2 */
@@ -60,7 +60,7 @@ STATUS serial_init() {
     }
     /* Set in normal operation mode */
     outb(COM1 + 4, 0x0F);
-    //klogi("INIT SERIAL: finished...\n");
+    klogi("INIT SERIAL: starting...\n");
     return SYS_OK;
 }
 

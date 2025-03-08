@@ -62,9 +62,9 @@ static PIPEFS_IDENT *create_ident() {
  * @brief Stub function to ensure compatibility
  */
 void init_pipefs() {
-    klogi("INIT PIPEFS: starting...\n");
+    klogs("INIT PIPEFS: starting...\n");
     /* Nothing */
-    klogi("INIT PIPEFS: finished...\n");
+    klogs("INIT PIPEFS: finished...\n");
 }
 
 /**
