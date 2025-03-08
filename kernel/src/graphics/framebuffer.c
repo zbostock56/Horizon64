@@ -103,6 +103,14 @@ uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y) {
     return ((uint32_t *)(fb->backbuffer + (fb->pitch * y)))[x];
 }
 
+/**
+ * @brief Draws characters to the framebuffer
+ *
+ * @param fb Framebuffer to write to
+ * @param fg Forground color
+ * @param bg Background color
+ * @param str String to write
+ */
 void fb_draw_characters(FRAMEBUFFER *fb, uint32_t fg, uint32_t bg,
                         const char *str) {
     if ((uint64_t)fb->base == (uint64_t)fb->backbuffer) {

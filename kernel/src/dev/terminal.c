@@ -48,7 +48,11 @@ static TERM_MODE term_mode = TERM_MODE_UNSET;
 static uint8_t term_need_redrawn = FALSE;
 static TERMINAL term_info = {0};
 static TERMINAL term_cli = {0};
+#if FRAMEBUFFER_LOGGING
+static uint8_t term_char_print = 1;
+#else
 static uint8_t term_char_print = 0;
+#endif
 
 TERM_CURSOR_STATUS cursor_visible = 0;
 
