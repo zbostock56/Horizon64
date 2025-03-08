@@ -54,11 +54,8 @@ __attribute__((noreturn)) void kshell(PROC_ID id) {
  */
 __attribute__((noreturn)) void kcursor(PROC_ID id) {
     (void) id;
-    klogd("%s-%d: started kcursor\n", __func__, id);
     while (TRUE) {
-        klogd("%s-%d: going to sleep...\n", __func__, id);
         sched_sleep(500);
-        klogd("%s-%d: woke up...\n", __func__, id);
         if (cursor_visible == TERM_CURSOR_INVISIBLE) {
             terminal_set_cursor(219);
             cursor_visible = TERM_CURSOR_VISIBLE;

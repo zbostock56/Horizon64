@@ -834,7 +834,9 @@ void terminal_scroll(TERMINAL *t) {
  * @param c Character to set the cursor to
  */
 void terminal_set_cursor(uint8_t c) {
+    LOCK_LOCK(&term_lock);
     cursor_visible = c;
+    UNLOCK_LOCK(&term_lock);
 }
 
 

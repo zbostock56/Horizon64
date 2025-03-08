@@ -33,7 +33,7 @@ all-hdd: $(IMAGE_NAME).hdd
 
 # Normal run
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64									\
+	qemu-system-x86_64													\
 	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 			    	\
 	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
 
@@ -56,7 +56,7 @@ debug: $(IMAGE_NAME).iso
 	qemu-system-x86_64 -S -s -M q35,smm=off					 			\
 	-m $(MEMORY) $(TIME) -no-reboot 								 	\
 	-cdrom $(IMAGE_NAME).iso -boot d  									\
-	-d in_asm -serial studio
+	-d in_asm -nographic
 
 run-uefi: ovmf $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd $(TIME) -cdrom $(IMAGE_NAME).iso -boot d

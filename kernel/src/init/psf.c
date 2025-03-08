@@ -52,7 +52,8 @@ int psf1_get_glyphs(LIMINE_FILE *file) {
     if (psf1_font_mode() == SYS_ERR) {
         return PSF1_FAIL;
     }
-    font.glyph_buffer = (void *)((uint64_t)file->address + sizeof(PSF1_HEADER));
+    memcpy(font.glyph_buffer,
+           (void *)((uint64_t)file->address + sizeof(PSF1_HEADER)), 256);
     return PSF1_SUCCESS;
 }
 
