@@ -68,6 +68,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
     ADDR_SPACE *vaddr_space = NULL;
 
     if (mode == PROC_UMODE) {
+        /* TODO: here is the speed culprit */
         vaddr_space = create_address_space();
 
         /* Allocate the kernel stack */

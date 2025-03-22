@@ -101,7 +101,7 @@ void pm_used() {
 }
 
 /**
- * @brief Optimized: Sets bits in the physical memory bitmap to mark pages
+ * @brief Sets bits in the physical memory bitmap to mark pages
  *        as used
  *
  * @param address Starting address
@@ -201,6 +201,33 @@ uint64_t pm_get(uint64_t num_pages, uint64_t address, const char *func,
 }
 
 /**
+ * @brief Inline helper to allocate and initialize a paging table if not present
+ *
+ * @param table_entry Pointer to the table entry (e.g. in PML4, PDPT, or PD)
+ * @param addr_space The current address space structure
+ * @param table_type An integer representing the table type (for logging)
+ * @return uint64_t* Pointer to the allocated table
+ */
+static inline uint64_t *alloc_table(uint64_t *table_entry, ADDR_SPACE *addr_space,
+                                    int table_type) {
+    uint64_t entry_val = *table_entry;
+    if (__builtin_expect(CHECK_NOT_PRESENT(entry_val), 0)) {
+        void *buffer = (void *)(pm_get(DEFAULT_PAGES, 0x0, __func__, __LINE__));
+        if (__builtin_expect(!buffer, 0)) {
+            kloge("VM: Out of memory for table type %d for PML4 %p\n", table_type,
+                   addr_space->pml4);
+            halt();
+        }
+        uint64_t *table = (uint64_t *)PHYS_TO_VIRT((uint64_t)buffer);
+        memset(table, 0, PAGE_SIZE * DEFAULT_PAGES);
+        *table_entry = MAKE_TABLE_ENTRY(VIRT_TO_PHYS(table), VM_USERMODE);
+        vector_append(&addr_space->memory_list, VIRT_TO_PHYS(table));
+        return table;
+    }
+    return (uint64_t *)PHYS_TO_VIRT(entry_val & ~(0xFFF));
+}
+
+/**
  * @brief Maps a page entry into an address space
  *
  * @param address_space Address space to map the entry into
@@ -210,71 +237,26 @@ uint64_t pm_get(uint64_t num_pages, uint64_t address, const char *func,
  */
 static void map_page_entry(ADDR_SPACE *address_space, uint64_t virt_addr,
                            uint64_t phys_addr, uint64_t flags) {
+    /* Convert abstract address space pionter to internal representation */
     ADDR_SPACE *addr_space = CONVERT_ADDR_SPACE(address_space);
-    uint16_t pte = (virt_addr >> 12) & 0x1FF;
-    uint16_t pde = (virt_addr >> 21) & 0x1FF;
-    uint16_t pdpe = (virt_addr >> 30) & 0x1FF;
+
+    uint16_t pte   = (virt_addr >> 12) & 0x1FF;
+    uint16_t pde   = (virt_addr >> 21) & 0x1FF;
+    uint16_t pdpe  = (virt_addr >> 30) & 0x1FF;
     uint16_t pml4e = (virt_addr >> 39) & 0x1FF;
 
     uint64_t *pml4 = addr_space->pml4;
-    uint64_t entry_val = pml4[pml4e];
-    uint64_t *pdpt, *pd, *pt;
 
-    /* PDPT Setup */
-    if (CHECK_NOT_PRESENT(entry_val)) {
-        void *buffer = (void *)pm_get(DEFAULT_PAGES, 0x0, __func__,
-                                        __LINE__);
-        if (!buffer) {
-            klogi("VM: Out of memory for PDPT of PML4 %x\n", pml4);
-            halt();
-        }
-        pdpt = (uint64_t *)PHYS_TO_VIRT(buffer);
-        memset(pdpt, 0, PAGE_SIZE * DEFAULT_PAGES);
-        pml4[pml4e] = MAKE_TABLE_ENTRY(VIRT_TO_PHYS(pdpt), VM_USERMODE);
-        vector_append(&addr_space->memory_list, VIRT_TO_PHYS(pdpt));
-    } else {
-        pdpt = (uint64_t *)PHYS_TO_VIRT(pml4[pml4e] & ~(0xFFF));
-    }
+    uint64_t *pdpt = alloc_table(&pml4[pml4e], addr_space, 1);
+    uint64_t *pd   = alloc_table(&pdpt[pdpe], addr_space, 2);
+    uint64_t *pt   = alloc_table(&pd[pde], addr_space, 3);
 
-    /* PD Setup */
-    entry_val = pdpt[pdpe];
-    if (CHECK_NOT_PRESENT(entry_val)) {
-        void *buffer = (void *)pm_get(DEFAULT_PAGES, 0x0, __func__,
-                                        __LINE__);
-        if (!buffer) {
-            klogi("VM: Out of memory for PD of PML4 %x\n", pml4);
-            halt();
-        }
-        pd = (uint64_t *)PHYS_TO_VIRT(buffer);
-        memset(pd, 0, PAGE_SIZE * DEFAULT_PAGES);
-        pdpt[pdpe] = MAKE_TABLE_ENTRY(VIRT_TO_PHYS(pd), VM_USERMODE);
-        vector_append(&addr_space->memory_list, VIRT_TO_PHYS(pd));
-    } else {
-        pd = (uint64_t *)PHYS_TO_VIRT(pdpt[pdpe] & ~(0xFFF));
-    }
-
-    /* PT Setup */
-    entry_val = pd[pde];
-    if (CHECK_NOT_PRESENT(entry_val)) {
-        void *buffer = (void *)pm_get(DEFAULT_PAGES, 0x0, __func__,
-                                        __LINE__);
-        if (!buffer) {
-            klogi("VM: Out of memory for PT of PML4 %x\n", pml4);
-            halt();
-        }
-        pt = (uint64_t *)PHYS_TO_VIRT(buffer);
-        memset(pt, 0, PAGE_SIZE * DEFAULT_PAGES);
-        pd[pde] = MAKE_TABLE_ENTRY(VIRT_TO_PHYS(pt), VM_USERMODE);
-        vector_append(&addr_space->memory_list, VIRT_TO_PHYS(pt));
-    } else {
-        pt = (uint64_t *)PHYS_TO_VIRT(pd[pde] & ~(0xFFF));
-    }
-
+    /* Map physical address into page table entry */
     pt[pte] = MAKE_TABLE_ENTRY(phys_addr & ~(0xFFF), flags);
 
-    uint64_t cr3_value = read_cr(cr3);
-    if (cr3_value == (uint64_t)(VIRT_TO_PHYS(addr_space->pml4))) {
-        __asm__ volatile ("invlpg (%0)" : : "r"(virt_addr));
+    /* Invalidate the TLB entry if this address space is currently active */
+    if (__builtin_expect(read_cr(cr3) == VIRT_TO_PHYS(addr_space->pml4), 1)) {
+        __asm__ volatile ("invlpg (%0)" : : "r"(virt_addr) : "memory");
     }
 }
 
@@ -286,76 +268,86 @@ static void map_page_entry(ADDR_SPACE *address_space, uint64_t virt_addr,
  */
 static void unmap_page_entry(ADDR_SPACE *addr_space, uint64_t virt_addr) {
     ADDR_SPACE *as = CONVERT_ADDR_SPACE(addr_space);
-    uint16_t pte = (virt_addr >> 12) & 0x1FF;
-    uint16_t pde = (virt_addr >> 21) & 0x1FF;
-    uint16_t pdpe = (virt_addr >> 30) & 0x1FF;
+    uint16_t pte   = (virt_addr >> 12) & 0x1FF;
+    uint16_t pde   = (virt_addr >> 21) & 0x1FF;
+    uint16_t pdpe  = (virt_addr >> 30) & 0x1FF;
     uint16_t pml4e = (virt_addr >> 39) & 0x1FF;
 
     uint64_t *pml4 = as->pml4;
-    if (CHECK_NOT_PRESENT(pml4[pml4e])) {
+    if (__builtin_expect(CHECK_NOT_PRESENT(pml4[pml4e]), 0))
         return;
-    }
-    uint64_t *pdpt = (uint64_t *)PHYS_TO_VIRT(pml4[pml4e] & ~(0x1FF));
-    if (CHECK_NOT_PRESENT(pdpt[pdpe])) {
+
+    uint64_t *pdpt = (uint64_t *)PHYS_TO_VIRT(pml4[pml4e] & ~(0xFFF));
+    if (__builtin_expect(CHECK_NOT_PRESENT(pdpt[pdpe]), 0))
         return;
-    }
-    uint64_t *pd = (uint64_t *)PHYS_TO_VIRT(pdpt[pdpe] & ~(0x1FF));
-    if (CHECK_NOT_PRESENT(pd[pde])) {
+
+    uint64_t *pd = (uint64_t *)PHYS_TO_VIRT(pdpt[pdpe] & ~(0xFFF));
+    if (__builtin_expect(CHECK_NOT_PRESENT(pd[pde]), 0))
         return;
-    }
-    uint64_t *pt = (uint64_t *)PHYS_TO_VIRT(pd[pde] & ~(0x1FF));
-    if (CHECK_NOT_PRESENT(pt[pte])) {
+
+    uint64_t *pt = (uint64_t *)PHYS_TO_VIRT(pd[pde] & ~(0xFFF));
+    if (__builtin_expect(CHECK_NOT_PRESENT(pt[pte]), 0))
         return;
+
+    /* Unmap the page: clear the page table entry */
+    pt[pte] = 0;
+
+    /* Invalidate the TLB entry if this address space is active */
+    if (__builtin_expect(read_cr(cr3) == VIRT_TO_PHYS(as->pml4), 1)) {
+        __asm__ volatile ("invlpg (%0)" : : "r"(virt_addr) : "memory");
     }
 
-    pt[pte] = 0;
-    uint64_t cr3_val = read_cr(cr3);
-    if (cr3_val == (uint64_t)(VIRT_TO_PHYS(as->pml4))) {
-        __asm__ volatile("invlpg (%0)" : : "r"(virt_addr));
-    }
+    /* Clear the PD entry for the page table and free it */
     pd[pde] = 0;
-    if (pm_free(VIRT_TO_PHYS(pt), DEFAULT_PAGES) == SYS_ERR) {
+    if (__builtin_expect(pm_free(VIRT_TO_PHYS(pt), DEFAULT_PAGES) == SYS_ERR, 0)) {
         kloge("VM: Failed to free pt\n");
         halt();
     }
-    for (size_t i = 0; i < vector_len(&as->memory_list); i++) {
+    /* Remove the freed page table from the memory list */
+    for (size_t i = 0, len = vector_len(&as->memory_list); i < len; i++) {
         if (vector_at(&as->memory_list, i) == VIRT_TO_PHYS(pt)) {
             vector_erase(&as->memory_list, i);
             break;
         }
     }
+
+    /* Check if the page directory (pd) is now completely empty */
     for (size_t i = 0; i < PAGE_SIZE; i++) {
-        if (pd[i] != 0) {
-            return;
-        }
+        if (pd[i] != 0)
+            goto skip_pd_free;
     }
     pdpt[pdpe] = 0;
-    if (pm_free(VIRT_TO_PHYS(pd), DEFAULT_PAGES) == SYS_ERR) {
+    if (__builtin_expect(pm_free(VIRT_TO_PHYS(pd), DEFAULT_PAGES) == SYS_ERR, 0)) {
         kloge("VM: Failed to free pd\n");
         halt();
     }
-    for (size_t i = 0; i < vector_len(&as->memory_list); i++) {
+    for (size_t i = 0, len = vector_len(&as->memory_list); i < len; i++) {
         if (vector_at(&as->memory_list, i) == VIRT_TO_PHYS(pd)) {
             vector_erase(&as->memory_list, i);
             break;
         }
     }
+
+    /* Check if the PDPT is now empty */
     for (size_t i = 0; i < PAGE_SIZE; i++) {
-        if (pdpt[i] != 0) {
+        if (pdpt[i] != 0)
             return;
-        }
     }
     pml4[pml4e] = 0;
-    if (pm_free(VIRT_TO_PHYS(pdpt), DEFAULT_PAGES) == SYS_ERR) {
+    if (__builtin_expect(pm_free(VIRT_TO_PHYS(pdpt), DEFAULT_PAGES) == SYS_ERR, 0)) {
         kloge("VM: Failed to free pdpt\n");
         halt();
     }
-    for (size_t i = 0; i < vector_len(&as->memory_list); i++) {
+    for (size_t i = 0, len = vector_len(&as->memory_list); i < len; i++) {
         if (vector_at(&as->memory_list, i) == VIRT_TO_PHYS(pdpt)) {
             vector_erase(&as->memory_list, i);
             break;
         }
     }
+    return;
+
+skip_pd_free:
+    return;
 }
 
 /**

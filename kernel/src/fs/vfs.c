@@ -213,54 +213,52 @@ VFS_NODE_DESC *vfs_handle_to_fd(VFS_HANDLE h) {
     return NULL;
 }
 
+
 /**
  * @brief Gets a VFS_TNODE from a path
  *
  * @param path_name Path name to search with
- * @param mode Mode of the node
- * @param type Type of the node
- * @return VFS_TNODE* NULL if not found, VFS_TNODE found otherwise
+ * @param mode Mode of the node (e.g. CREATE, ERR_ON_EXIST)
+ * @param type Type of the node (e.g. VFS_DIRECTORY, VFS_FILE)
+ * @return VFS_TNODE* Returns the found or created node, or NULL on failure.
  */
 VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE type) {
     char temp_buff[VFS_MAX_PATH_LEN];
     char path[VFS_MAX_PATH_LEN];
-
     VFS_TNODE *curr = &vfs_root;
 
-    /* NOTE: only works with absolute paths */
-    /* TODO: Check for NULL pointer deferences here - potentially refactor */
+    /* Only works with absolute paths */
     if (path_name[0] != '/') {
         if (sys_get_full_path(VFS_FW_CWD, path_name, temp_buff) == SYSCALL_FAIL) {
-            kloge("'%s' is not a vaild path!\n", path_name);
+            kloge("'%s' is not a valid path!\n", path_name);
             return NULL;
         }
-        strcpy(path, &(temp_buff[1]));
+        /* Skip the leading slash from the full path */
+        strcpy(path, temp_buff + 1);
     } else {
-        path_name++;
-        strcpy(path, path_name);    /* Skip the leading slash here */
+        /* Skip the leading slash */
+        strcpy(path, path_name + 1);
     }
 
-    /* TODO: Remove the '.' in the fll path name here */
-
+    /* Remove occurrences of "/../" by backing up to the previous slash */
     size_t pathlen = strlen(path);
-    size_t i = 0;
-
-    for (; i + 4 < pathlen; i++) {
+    for (size_t i = 0; i + 4 < pathlen; i++) {
         if (path[i] == '/' && path[i + 1] == '.' && path[i + 2] == '.' && path[i + 3] == '/') {
             int found_parent = 0;
             for (int64_t k = i - 1; k >= 0; k--) {
                 if (path[k] == '/') {
                     strcpy(&path[k], &path[i + 3]);
                     found_parent = 1;
-                    i = 0;
+                    i = 0;  /* restart scanning */
                     break;
                 }
             }
-
             if (!found_parent) {
                 kloge("'%s' is an invalid path\n", path_name);
                 return NULL;
             }
+            /* Update path length after modification */
+            pathlen = strlen(path);
         }
     }
 
@@ -268,68 +266,56 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
         klogw("VFS: \"%s\" -> \"%s\"\n", path_name, path);
     }
 
-    pathlen = strlen(path);
+    /* Traverse path tokens */
     size_t curr_index = 0;
-    int found_node = 1;
-    for (; curr_index < pathlen;) {
-        /* Extract next token from path */
-        for (i = 0; curr_index + i < pathlen; i++) {
-            if (path[curr_index + i] == '/') {
-                break;
-            }
-            temp_buff[i] = path[curr_index + i];
+    uint8_t found_node = TRUE;
+    while (curr_index < pathlen) {
+        /* Extract next token from the path */
+        size_t token_len = 0;
+        while ((curr_index + token_len) < pathlen && path[curr_index + token_len] != '/') {
+            temp_buff[token_len] = path[curr_index + token_len];
+            token_len++;
         }
+        temp_buff[token_len] = '\0';
+        curr_index += token_len + 1;  /* Skip token and the following slash */
 
-        temp_buff[i] = '\0';
-        curr_index += i + 1;
-
+        /* Ignore current directory references */
         if (!strcmp(temp_buff, ".")) {
             continue;
         }
 
-        /* Search for token in children of current node */
-        found_node = 0;
+        /* Look for the token among current node's children */
+        found_node = FALSE;
         if (!IS_TRAVERSABLE(curr->inode)) {
             break;
         }
-
-        for (i = 0; i < curr->inode->child.length; i++) {
-            VFS_TNODE *child = vector_at(&(curr->inode->child), i);
+        for (size_t j = 0; j < curr->inode->child.length; j++) {
+            VFS_TNODE *child = vector_at(&(curr->inode->child), j);
             if (!strncmp(child->name, temp_buff, sizeof(child->name))) {
-                found_node = 1;
                 curr = child;
+                found_node = TRUE;
                 break;
             }
         }
-
-        /* TODO: Issue with /usr/local/include -> /usr/include */
         if (!found_node) {
             break;
         }
     }
 
-    /* Should we create the node */
+    /* Node not found; handle creation if specified */
     if (!found_node) {
-        /* Only directories can contain files */
         if (!IS_TRAVERSABLE(curr->inode)) {
             kloge("'%s' does not reside in a directory!\n", path);
             return NULL;
         }
 
-        /*
-            Create the node if CREATE was specified and the node to be
-            created is the last one in the path
-        */
-
-        if ((mode & CREATE) && curr_index > pathlen && IS_TRAVERSABLE(curr->inode)) {
-            /* Permissions: 777 */
-            VFS_INODE *new_inode = vfs_alloc_inode(type, 0, 0, curr->inode->fs,
-                                                   curr->inode->mount_point);
+        /* Create node only if CREATE is specified and we're at the end of the path */
+        if ((mode & CREATE) && curr_index >= pathlen && IS_TRAVERSABLE(curr->inode)) {
+            /* Allocate a new inode for the node with permissions: 777 */
+            VFS_INODE *new_inode = vfs_alloc_inode(type, 0, 0, curr->inode->fs, curr->inode->mount_point);
 
             uint64_t now_seconds = NANOS_TO_SECONDS(hpet_get_nanos());
             uint64_t boot_seconds = cmos_get_boot_time_seconds();
-
-            /* Add the creation time into the inode */
             seconds_to_std_time(now_seconds + boot_seconds, &(new_inode->time));
 
             VFS_TNODE *new_tnode = vfs_alloc_tnode(temp_buff, new_inode, curr->inode);
@@ -343,7 +329,7 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
                 klogi("VFS: Create \"%s\" node\n", path);
             }
 
-            /* Set the file mode and type */
+            /* Set file mode and type */
             switch (type) {
                 case VFS_DIRECTORY:
                     new_tnode->stat.mode |= S_IFDIR;
@@ -371,12 +357,12 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
             return NULL;
         }
     } else if (mode & ERR_ON_EXIST) {
-        /* the node should have node existed */
+        /* The node should not exist */
         kloge("VFS: \"%s\" already existed\n", path);
         return NULL;
     }
 
-    /* Found the node without needing to make a new one, return it */
+    /* Node found without needing to create a new one */
     return curr;
 }
 
@@ -767,52 +753,63 @@ int64_t vfs_seek(VFS_HANDLE h, size_t offset, int whence) {
  * @brief Gets the parent directory of a path
  *
  * @param path Path to find parent of
- * @param parent Buffer to copy into
- * @param curr_dir Current directory
- * @return int64_t -1 if fail, 0 if success
+ * @param parent Buffer to copy the parent directory into
+ * @param curr_dir Buffer to copy the current (leaf) directory name into (optional)
+ * @return int64_t -1 if failure, 0 if success
  */
 int64_t vfs_get_parent_dir(const char *path, char *parent, char *curr_dir) {
     if (!path || !parent) {
         return -1;
     }
 
+    /* Copy the original path into the parent buffer */
     strcpy(parent, path);
 
-    int64_t i = strlen(parent) - 1;
-    while (i > 0) {
-        if (parent[i] == '/') {
-            parent[i] = '\0';
-            i--;
-        }
-        if (parent[i] != '/') {
-            break;
-        }
+    size_t len = strlen(parent);
+    if (len == 0) {
+        return -1;
     }
 
-    /* Does not have a parent directory */
-    if (i <= 0) {
+    /* Remove trailing slashes (if any) */
+    while (len > 1 && parent[len - 1] == '/') {
+        parent[len - 1] = '\0';
+        len--;
+    }
+
+    /* Find the last slash in the path */
+    char *last_slash = strrchr(parent, '/');
+    if (!last_slash) {
+        /* No slash found means there's no parent directory */
         parent[0] = '\0';
         return -1;
     }
 
-    /* Does have a parent directory */
-    while (i >= 0) {
-        if (parent[i] == '/') {
-            parent[i] = '\0';
-            break;
+    /* If the last slash is at the beginning, the parent is "/" */
+    if (last_slash == parent) {
+        if (curr_dir) {
+            strcpy(curr_dir, parent + 1);
         }
-        i--;
+        /* Set parent to "/" */
+        parent[1] = '\0';
+        return 0;
     }
 
-    if (curr_dir && i >= 0) {
-        strcpy(curr_dir, &(parent[i + 1]));
+    /* Set curr_dir if provided */
+    if (curr_dir) {
+        strcpy(curr_dir, last_slash + 1);
     }
+
+    /* Terminate the string at the last slash to remove the leaf component */
+    *last_slash = '\0';
+
+    /* In case the parent is empty after removal, set it to "/" */
     if (strlen(parent) == 0) {
         strcpy(parent, "/");
     }
 
     return 0;
 }
+
 
 /**
  * @brief Open and possibly create a file

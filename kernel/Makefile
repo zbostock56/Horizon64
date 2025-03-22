@@ -31,6 +31,7 @@ override CFLAGS += \
 	-Wno-cast-function-type \
 	-ffreestanding \
 	-nostdlib \
+	-flto \
     -fno-PIC \
     -std=gnu11 \
     -fno-stack-protector \

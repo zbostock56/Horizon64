@@ -25,6 +25,7 @@ override DEFAULT_CFLAGS := -g 							\
 						   -Werror						\
 						   -pipe						\
 						   -lgcc						\
+						   -flto						\
 						   -ffreestanding 				\
 						   -nostdlib 					\
 						   -std=gnu11					\

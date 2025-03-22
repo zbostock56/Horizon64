@@ -621,7 +621,6 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
     LOCK_LOCK(&ctxsw_lock);
 
     /* Create new process in userland */
-    /* TODO: Massive hiccup when calling process_create, look into */
     pnew = process_create(pname, NULL, 0, PROC_UMODE, !pcurr ?
                                                        NULL : pcurr->addrspace);
 

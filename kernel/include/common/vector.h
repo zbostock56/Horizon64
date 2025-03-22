@@ -14,7 +14,6 @@
 #pragma once
 
 #include <stdint.h>
-
 #include <common/string.h>
 #include <common/kmalloc.h>
 #include <common/memory.h>
@@ -31,78 +30,85 @@
 #define vector_new_static(type, name)       static vector_new(type, name)
 
 /**
- * @brief Amount to multiply the size of the DSA by in case of reaching
- *        its capacity
+ * @brief Resize multiplier for the dynamic array.
  */
 #define RESIZE (4)
 
 /**
- * @brief Gets the length of the DSA
+ * @brief Gets the length of the vector.
  *
  * @param vec Vector to operate on
  */
-#define vector_len(vec)                     (vec)->length
+#define vector_len(vec)                     ((vec)->length)
 
 /**
- * @brief Gets the element stored at index
+ * @brief Gets the element stored at the given index.
  *
  * @param vec Vector to operate on
- * @param index Index of data to get
+ * @param index Index of the data to retrieve.
  */
-#define vector_at(vec, index)               (vec)->data[index]
+#define vector_at(vec, index)               ((vec)->data[index])
 
 /**
- * @brief Appends an element at the back of the DSA, resizes if needed
+ * @brief Appends an element to the end of the vector, resizing if needed.
  *
- * @param vec Vector to operate on
- * @param elem Element to append on end of vector
+ * @param vec Vector to operate on.
+ * @param elem Element to append.
  */
-#define vector_append(vec, elem) {                                          \
-    (vec)->length++;                                                        \
-    if ((vec)->capacity < ((vec)->length * sizeof(elem))) {                 \
-        (vec)->capacity = (vec)->length * sizeof(elem) * RESIZE;            \
-        (vec)->data = krealloc((vec)->data, (vec)->capacity);               \
-    }                                                                       \
-    (vec)->data[(vec)->length - 1] = elem;                                  \
-}
-
-/**
- * @brief Erases the element specified
- *
- * @param vec Vector to operate on
- * @param index Index to erase
- */
-#define vector_erase(vec, index) {                                          \
-    memcpy(&((vec)->data[index]), &((vec)->data[index + 1]),                \
-            sizeof((vec)->data[0]) * (vec)->length - index - 1);            \
-    (vec)->length--;                                                        \
-}
-
-/**
- * @brief Frees memory associated with DSA
- *
- * @param vec Vector to operate on
- */
-#define vector_free(vec) {                                                  \
-    (vec)->length = 0;                                                      \
-    (vec)->capacity = 0;                                                    \
-    if ((vec)->data != NULL) {                                              \
-        kfree((vec)->data);                                                 \
-    }                                                                       \
-    (vec)->data = NULL;                                                     \
-}
-
-/**
- * @brief Erases the first instance of val in vec
- *
- * @param vec Vector to operate on
- * @param val Value to remove on first sighting
- */
-#define vector_erase_value(vec, val) {                                      \
-    for (size_t __i = 0; __i < vector_len(vec); __i++) {                    \
-        if (vector_at(vec, __i) == (val)) {                                 \
-            vector_erase(vec, __i);                                         \
-            break;                                                          \
+#define vector_append(vec, elem)                                            \
+    do {                                                                    \
+        size_t __new_len = (vec)->length + 1;                               \
+        if (__new_len * sizeof(*(vec)->data) > (vec)->capacity) {           \
+            (vec)->capacity = __new_len * sizeof(*(vec)->data) * RESIZE;    \
+            (vec)->data = krealloc((vec)->data, (vec)->capacity);           \
         }                                                                   \
-    }                                                                       \
-}
+        (vec)->data[(vec)->length] = (elem);                                \
+        (vec)->length = __new_len;                                          \
+    } while (0)
+
+/**
+ * @brief Erases the element at the specified index.
+ *
+ * @param vec Vector to operate on.
+ * @param index Index of the element to remove.
+ */
+#define vector_erase(vec, index)                                            \
+    do {                                                                    \
+        size_t __num = (vec)->length - (index) - 1;                         \
+        if (__num > 0) {                                                    \
+            memcpy(&((vec)->data[index]), &((vec)->data[(index) + 1]),      \
+                   __num * sizeof((vec)->data[0]));                         \
+        }                                                                   \
+        (vec)->length--;                                                    \
+    } while (0)
+
+/**
+ * @brief Frees memory associated with the vector.
+ *
+ * @param vec Vector to operate on.
+ */
+#define vector_free(vec)                                                    \
+    do {                                                                    \
+        (vec)->length = 0;                                                  \
+        (vec)->capacity = 0;                                                \
+        if ((vec)->data != NULL) {                                          \
+            kfree((vec)->data);                                             \
+        }                                                                   \
+        (vec)->data = NULL;                                                 \
+    } while (0)
+
+/**
+ * @brief Erases the first instance of a value in the vector.
+ *
+ * @param vec Vector to operate on.
+ * @param val Value to remove on first occurrence.
+ */
+#define vector_erase_value(vec, val)                                        \
+    do {                                                                    \
+        for (size_t __i = 0; __i < vector_len(vec); __i++) {                \
+            if (vector_at(vec, __i) == (val)) {                             \
+                vector_erase(vec, __i);                                     \
+                break;                                                      \
+            }                                                               \
+        }                                                                   \
+    } while (0)

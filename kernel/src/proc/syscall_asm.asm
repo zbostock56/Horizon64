@@ -33,13 +33,8 @@ syscall_handler:
     push r15                ; store r15 in user stack
     mov r15, rsp            ; save process's stack in r15
 
-    ; Push Order: GS, CS, RIP, RFLAGS, RIP
-    ; Not currently used
-    push qword 0x3b         ; User Data Segment
-    push r15                ; Saved Stack
     push r11                ; Saved RFLAGS
-    push qword 0x43         ; User Code Segment
-    push rcx                ; Current RIP
+    push rcx                ; Saved RIP
 
     pushall                 ; push all registers using macro
 
@@ -49,12 +44,10 @@ syscall_handler:
 
     popall_syscall          ; Pop all registers except for RAX
 
-    swapgs
-
     mov rdx, qword [gs:0x0] ; Return errno in rdx
     mov rsp, r15            ; Restore user stack
     pop r15                 ; Pop r15 from user stack
 
-    swapgs
-
-    o64 sysret
+    o64 sysret              ; Return to user mode
+                            ; Restores RIP from RCX
+                            ; Restores RFLAGS from R11

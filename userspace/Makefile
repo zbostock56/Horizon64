@@ -31,13 +31,14 @@ override DEFAULT_CFLAGS := -g 							\
                            -Werror                      \
 						   -pipe						\
 						   -lgcc						\
+						   -flto						\
 						   -ffreestanding 				\
 						   -nostdlib 					\
 						   -std=gnu11					\
 						   -m64 						\
 						   -march=x86-64				\
 						   -mno-red-zone				\
-						   -fpic						\
+						   -fno-pic						\
 						   -mgeneral-regs-only			\
 						   -mcmodel=large
 
@@ -51,7 +52,7 @@ override DEFAULT_LDFLAGS := -static						\
 							-z max-page-size=0x1000		\
 							-I .						\
 							-O0							\
-							-mcmodel=large
+							-mcmodel=large -g
 
 $(eval $(call DEFAULT_VAR,LDFLAGS,$(DEFAULT_LDFLAGS)))
 

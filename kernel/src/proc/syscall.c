@@ -152,108 +152,85 @@ int64_t sys_not_implemented() {
  * @param full_path Buffer to copy full path into
  * @return SYSCALL_RETVAL FAIL if fail, OK if success
  */
-SYSCALL_RETVAL sys_get_full_path(int64_t dirfh, const char *path, char *full_path) {
-    /* Ensure the full path buffer is clean */
-    full_path[0] = '\0';
+SYSCALL_RETVAL sys_get_full_path(int64_t dirfh, const char *path,
+                                 char *full_path) {
+    char *fptr = full_path;
 
+    /* Clear full_path */
+    *fptr = '\0';
+
+    /* If the directory file handle is current working directory */
     if ((int32_t)dirfh == (int32_t)VFS_FW_CWD) {
-        /* Get the parent path name from TCB (task control block) */
         PROCESS *pcurr = sched_get_curr_proc();
-        if (pcurr) {
-            if (path[0] != '/') {
-                strcpy(full_path, pcurr->cwd);
-            } else {
-                cpu_set_errno(EINVAL);
-                return SYSCALL_FAIL;
-            }
-        }
-    } else if ((int32_t)dirfh >= (int32_t) 0) {
-        /* Get the parent name from dirfh */
-        VFS_NODE_DESC *tnode = vfs_handle_to_fd((VFS_HANDLE) dirfh);
-        if (tnode) {
-            if (path[0] == '.') {
-                strcpy(full_path, tnode->path);
-            }
-        } else {
+        if (!pcurr || path[0] == '/') {
             cpu_set_errno(EINVAL);
             return SYSCALL_FAIL;
         }
+        /* Copy the cwd into full_path */
+        strcpy(full_path, pcurr->cwd);
+        /* Set pointer to end of string */
+        fptr = full_path + strlen(full_path);
+    } else if ((int32_t)dirfh >= 0) {
+        VFS_NODE_DESC *tnode = vfs_handle_to_fd((VFS_HANDLE)dirfh);
+        if (!tnode) {
+            cpu_set_errno(EINVAL);
+            return SYSCALL_FAIL;
+        }
+        /* When path starts with a dot, use the node's path */
+        if (path[0] == '.') {
+            strcpy(full_path, tnode->path);
+            fptr = full_path + strlen(full_path);
+        }
     }
 
-    if (!strcmp(path, ".")) {
+    /* If path is just "." then we are done */
+    if (!strcmp(path, "."))
         return SYSCALL_OK;
-    }
 
+    /* If path starts with '/', reset full_path to root */
     if (path[0] == '/') {
         strcpy(full_path, "/");
+        fptr = full_path + 1;
     }
 
-    /* Extract directory name one at a time */
-    char temp_path[VFS_MAX_PATH_LEN] = {0};
-    char *curr = NULL;
-    char *child = NULL;
+    /* Copy path into a temporary buffer for in-place tokenization */
+    char temp_path[VFS_MAX_PATH_LEN];
+    strncpy(temp_path, path, sizeof(temp_path) - 1);
+    temp_path[sizeof(temp_path) - 1] = '\0';
 
-    strcpy(temp_path, path);
-    curr = temp_path;
+    char *token = temp_path;
+    char *next;
 
-    while (1) {
-        child = strchr(curr, '/');
-        if (child) {
-            *child = '\0';
-            child++;
+    while (token && *token) {
+        /* Find the next token delimiter */
+        next = strchr(token, '/');
+        if (next) {
+            *next = '\0';
+            next++;
         }
 
-        if (!strcmp(curr, "..")) {
-            /* Change full path to parent folder */
-            int succ = 0;
-            if (strlen(full_path) > 0) {
-                size_t fpl = strlen(full_path);
-                if (fpl > 0 && full_path[fpl - 1] == '/') {
-                    full_path[fpl - 1] = '\0';
-                }
-                fpl = strlen(full_path);
-                if (fpl > 0) {
-                    for (size_t i = fpl - 1;; i--) {
-                        if (full_path[i] == '/') {
-                            full_path[(i > 0) ? i : (i + 1)] = '\0';
-                            succ = 1;
-                            break;
-                        }
-                        if (i == 0) {
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!succ) {
+        if (!strcmp(token, "..")) {
+            /* Back up fptr to remove the last component */
+            if (fptr > full_path + 1) { /* ensure not at root */
+                /* Backtrack over any non-slash characters */
+                do { fptr--; } while (fptr > full_path && *(fptr - 1) != '/');
+                *fptr = '\0';
+            } else {
                 cpu_set_errno(EINVAL);
                 return SYSCALL_FAIL;
             }
-        } else if (!strcmp(curr, ".")) {
-            /* Do nothing */
-        } else if (strlen(curr) == 0) {
-            /* Do nothing */
-        } else {
-            /* Make sure the parent path name ends with '/' */
-            size_t fpl = strlen(full_path);
-            if (fpl > 0) {
-                if (full_path[fpl - 1] != '/') {
-                    strcat(full_path, "/");
-                }
-            } else {
-                strcpy(full_path, "/");
+        } else if (strcmp(token, ".") && token[0] != '\0') {
+            /* Append separator if needed */
+            if (*(fptr - 1) != '/') {
+                *fptr++ = '/';
             }
-            strcat(full_path, curr);
+            /* Copy token */
+            size_t len = strlen(token);
+            memcpy(fptr, token, len);
+            fptr += len;
+            *fptr = '\0';
         }
-
-        /* Move to next directory */
-        if (child) {
-            curr = child;
-        } else {
-            break;
-        }
+        token = next;
     }
-
     return SYSCALL_OK;
 }
-

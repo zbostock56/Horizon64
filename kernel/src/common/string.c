@@ -297,3 +297,27 @@ long strtol(const char *nptr, char **endptr, register int base) {
 
     return (acc);
 }
+
+/**
+ * @brief Locate the last occurrence of a character in a string.
+ *
+ * @param s The string to search.
+ * @param c The character to find.
+ * @return char* A pointer to the last occurrence of the character,
+ *               or NULL if not found.
+ */
+char *strrchr(const char *s, int c) {
+    const char *last = 0;
+    while (*s) {
+        if (*s == (char)c) {
+            last = s;
+        }
+        s++;
+    }
+    /* If searching for the null terminator, return a pointer to the */
+    /* end of the string                                             */
+    if ((char)c == '\0') {
+        return (char *)s;
+    }
+    return (char *)last;
+}

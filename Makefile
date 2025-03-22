@@ -33,7 +33,7 @@ all-hdd: $(IMAGE_NAME).hdd
 
 # Normal run
 run: $(IMAGE_NAME).iso
-	qemu-system-x86_64													\
+	qemu-system-x86_64	-enable-kvm										\
 	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 			    	\
 	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
 
