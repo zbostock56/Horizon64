@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Implemenation of common time functions
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

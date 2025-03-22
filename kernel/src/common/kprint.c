@@ -4,7 +4,7 @@
  * @brief Internal logging functionality
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 #include <kconfig.h>

@@ -4,7 +4,7 @@
  * @brief Helpers and initalization for the screen framebuffer
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

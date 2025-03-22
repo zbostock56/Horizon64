@@ -11,7 +11,7 @@
  * drivers individually unmask the interrupt lines which correspond to their
  * devices.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

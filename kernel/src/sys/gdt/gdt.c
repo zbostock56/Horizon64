@@ -6,7 +6,7 @@
  * In this file are the initialization functions associated with the Global
  * Descriptor Table (GDT).
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

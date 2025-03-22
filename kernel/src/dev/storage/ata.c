@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Functionality related to ATA devices
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

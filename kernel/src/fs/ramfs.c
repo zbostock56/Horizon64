@@ -4,7 +4,7 @@
  * @brief Main functionality for ramfs
  * @ref https://wiki.osdev.org/Initrd
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

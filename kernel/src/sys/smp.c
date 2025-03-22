@@ -4,7 +4,7 @@
  * @brief Functionality for Symmetric Multiprocessing (SMP)
  * @note AP = Application Processor (opposite of Bootstrap Processor)
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

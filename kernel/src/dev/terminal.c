@@ -4,7 +4,7 @@
  * @brief Helpers and initialization of the terminal
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

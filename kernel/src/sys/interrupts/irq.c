@@ -7,7 +7,7 @@
  * interrupts are setup. There are also helpers for registering handlers for
  * those hardware interrupts.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

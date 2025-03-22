@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Main functionality of scheduler and switching process context
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

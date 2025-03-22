@@ -4,7 +4,7 @@
  * @brief Holds all the variables which are held at global scope
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

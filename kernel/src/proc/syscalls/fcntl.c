@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Functionality pertaining to fnctl system call
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Prints out the contents of a file
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

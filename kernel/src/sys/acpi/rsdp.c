@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Functionality associated with the Root System Descriptor Table (RSDP)
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

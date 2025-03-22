@@ -7,7 +7,7 @@
  * Interrupt Service Routines (ISR). In addition, there is the generic ISR
  * handler. Plus, the initialization function for the ISRs.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

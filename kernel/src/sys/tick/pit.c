@@ -7,7 +7,7 @@
  * Timer (PIT), particularly the Intel 8253/8254 chip, is housed. This acts as the
  * main driver code needed for chip functionality beyond initialization as well.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

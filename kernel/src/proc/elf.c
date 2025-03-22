@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Functionality for loading and running Executable and Linkable Files (ELF)
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

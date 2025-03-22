@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Echoes back the input from the terminal
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

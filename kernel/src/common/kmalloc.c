@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Internal kernel memory allocator
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

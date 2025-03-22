@@ -4,7 +4,7 @@
  * @brief Keyboard initialization and helpers
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

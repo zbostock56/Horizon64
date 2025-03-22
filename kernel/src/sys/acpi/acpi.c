@@ -5,7 +5,7 @@
  * Implementation of Advanced Configuration and Power Interface (ACPI)
  * functions.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

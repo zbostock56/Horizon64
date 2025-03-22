@@ -6,7 +6,7 @@
  * In this file is the initialization code and helpers for the Interrupt
  * Descriptor Table (IDT).
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

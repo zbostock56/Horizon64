@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief General functionality related to hashing
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

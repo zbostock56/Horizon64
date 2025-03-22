@@ -4,7 +4,7 @@
  * @brief Main entry point for kernel
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

@@ -4,7 +4,7 @@
  * @brief Initializes CPU specific features
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

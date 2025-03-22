@@ -10,7 +10,7 @@
  * redirection, and for sending interrupts between processors. These things
  * weren't possible using the older PIC specification.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

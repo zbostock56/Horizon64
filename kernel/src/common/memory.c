@@ -4,7 +4,7 @@
  * @brief Memory helpers, needed for compiler
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

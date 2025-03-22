@@ -8,7 +8,7 @@
  * Bus standard.
  * @ref https://wiki.osdev.org/PCI
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Defines functionality for manipulating arrays of characters
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

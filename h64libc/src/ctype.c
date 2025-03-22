@@ -9,7 +9,7 @@
  * representable as an unsigned char. All the functions return non-zero (true)
  * if the argument c satisfies the condition described, and zero(false) if not.
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

@@ -5,7 +5,7 @@
  * @verbatim
  * Sets up GDT, IDT, ISR, IRQ, and other important system variables.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

@@ -4,7 +4,7 @@
  * @brief Helper for printing out the stack if exception occurs.
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

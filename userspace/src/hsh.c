@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Main shell of Horizon64
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

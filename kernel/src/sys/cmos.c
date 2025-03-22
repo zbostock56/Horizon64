@@ -8,7 +8,7 @@
  * 1984 which used Motorola MC146818A RTC.
  * @ref https://wiki.osdev.org/CMOS 
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

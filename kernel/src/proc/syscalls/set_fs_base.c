@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Functionality pertaining to set_fs_base system call
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

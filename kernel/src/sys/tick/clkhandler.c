@@ -7,7 +7,7 @@
  * for the process which will gain control of the CPU. Additionally, we can
  * track uptime for the system (if desired).
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

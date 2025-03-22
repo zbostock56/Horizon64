@@ -10,7 +10,7 @@
  * mapped IO, and the base address of HPET can be found using ACPI.
  * @ref https://wiki.osdev.org/HPET
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

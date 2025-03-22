@@ -4,7 +4,7 @@
  * @brief Dumps information about the kernel and its execution when its state
  * is unrecoverable
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

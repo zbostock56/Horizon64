@@ -5,7 +5,7 @@
  * Implementation of the Multiple APIC Description Table (MADT) functionality,
  * part of the ACPI table.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

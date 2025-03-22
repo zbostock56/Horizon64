@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Basic operations for creating and removing processes
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 

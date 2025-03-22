@@ -7,7 +7,7 @@
  * on top of a more concrete file system. The purpose of a VFS is to allow client
  * applications to access different types of concrete file systems in a uniform way.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

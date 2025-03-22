@@ -4,7 +4,7 @@
  * @brief Helpers for reading from files in the system image
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
