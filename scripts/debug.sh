@@ -1,42 +1,51 @@
 #!/bin/bash
 
-if [ -e "$1" ]; then
+# Function to check if GEF is installed
+check_gef() {
+    if gdb -q -ex "pi import gef" -ex "q" 2>/dev/null | grep -q "gef"; then
+        return 0  # GEF is installed
+    else
+        return 1  # GEF is not installed
+    fi
+}
 
-pgrep -x "qemu-system-x86" >> /dev/null
+# Wait for QEMU to start
+pgrep -x "qemu-system-x86" > /dev/null
 while [ $? -gt 0 ]; do
-  sleep 1
-  pgrep -x "qemu-system-x86" >> /dev/null
+    sleep 1
+    pgrep -x "qemu-system-x86" > /dev/null
 done
 
+# Ensure .gdb directory exists
 if ! [ -d "./.gdb" ]; then
-  mkdir ./.gdb
+    mkdir ./.gdb
 fi
 
+
+# Generate the GDB script
 cat > .gdb/.gdb_script.gdb << EOF
     file kernel/bin/kernel
-    target remote localhost:1234
-    c
+    add-symbol-file userspace/bin/init 0xffff800040000000
 EOF
 
+# If GEF is installed, add remote-safe GEF commands
+if check_gef; then
+    echo "    gef-remote localhost 1234" >> .gdb/.gdb_script.gdb
 else
-
-pgrep -x "qemu-system-x86" >> /dev/null
-while [ $? -gt 0 ]; do
-  sleep 1
-  pgrep -x "qemu-system-x86" >> /dev/null
-done
-
-if ! [ -d "./.gdb" ]; then
-  mkdir ./.gdb
+    echo "    target remote localhost:1234" >> .gdb/.gdb_script.gdb
 fi
 
-cat > .gdb/.gdb_script.gdb << EOF
-    file kernel/bin/kernel
-    target remote localhost:1234
-    break $1
-    c
-EOF
-
+# If a breakpoint argument is provided, add it
+if [ -e "$1" ]; then
+    echo "    c" >> .gdb/.gdb_script.gdb
+else
+    echo "    break $1" >> .gdb/.gdb_script.gdb
+    echo "    c" >> .gdb/.gdb_script.gdb
 fi
 
-gdb -x .gdb/.gdb_script.gdb
+# Run GDB with the generated script
+if check_gef; then
+    gdb -q -x .gdb/.gdb_script.gdb
+else
+    gdb -x .gdb/.gdb_script.gdb
+fi
