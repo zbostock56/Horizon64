@@ -25,7 +25,7 @@ fi
 # Generate the GDB script
 cat > .gdb/.gdb_script.gdb << EOF
     file kernel/bin/kernel
-    add-symbol-file userspace/bin/init 0xffff800040000000
+    add-symbol-file userspace/bin/init
 EOF
 
 # If GEF is installed, add remote-safe GEF commands

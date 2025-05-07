@@ -147,7 +147,7 @@ void isr_handler(REGISTERS *regs) {
   } else if (regs->interrupt >= 32) {
     /* Unreserved interrupt with no handler, hang the system */
     kloge("Unhandled interrupt %d!\n\n", regs->interrupt);
-    backtrace();
+    backtrace(0x0);
     halt();
   } else {
     /* Reserved interrupt, hang the system */
@@ -160,7 +160,7 @@ void isr_handler(REGISTERS *regs) {
         kloge("Unhandled Exception! %s with error code %x (%d).\n\n",
               exceptions[regs->interrupt], regs->error_code, regs->error_code);
     }
-    backtrace();
+    backtrace(regs->rip);
     uint64_t cr2 = read_cr(cr2);
     uint64_t cr3 = read_cr(cr3);
     uint64_t cr4 = read_cr(cr4);

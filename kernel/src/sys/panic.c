@@ -37,7 +37,19 @@ static inline int symbols_get_index(uint64_t addr) {
 /**
  * @brief Dumps the backtrace of the current RBP
  */
-void backtrace() {
+void backtrace(uint64_t rip) {
+    if (rip) {
+        int idx = symbols_get_index(rip);
+        if (idx < 0) {
+            klogn("Problematic Instruction:\n\t(Unknown Function): %x\n", rip);
+        } else {
+            klogn("Problematic Instruction:\n\tBase: %x\tCrash Point: %x (%s + %04x)\n",
+                                                _kernel_symbols[idx].addr,
+                                                rip, _kernel_symbols[idx].name,
+                                                rip - _kernel_symbols[idx].addr);
+        }
+    }
+
     uint64_t *rbp = 0;
     __asm__ volatile("mov %%rbp, %0" : "=g" (rbp) :: "memory");
 

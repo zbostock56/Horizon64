@@ -3,7 +3,7 @@
  * @author Zack Bostock
  * @brief Main initialization function for userspace
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 
@@ -17,6 +17,11 @@ static char *argv[] = {
 
 int main() {
     int pid;
+
+    libc_log("In userspace\n");
+    libc_log("In userspace\n");
+
+    while (1) {}
 
     printf(
     "                     _                     __    _  _   \n"

@@ -126,8 +126,7 @@
  * @param msg Message to log
  */
 void libc_log(const char *msg) {
-    int ret;
-    int errno;
+    int ret, errno;
     SYSCALL1(SYSCALL_DEBUGLOG, msg);
 }
 
