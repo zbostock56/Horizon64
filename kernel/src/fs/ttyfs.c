@@ -165,7 +165,7 @@ VFS_TNODE *ttyfs_open(VFS_INODE *this, const char *path) {
 int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
     TTYFS_IDENT *id = this->ident;
 
-    UNLOCK_LOCK(&tty_lock);
+    LOCK_LOCK(&tty_lock);
 
     (void) offset;
 
