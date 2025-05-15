@@ -42,30 +42,6 @@ exit_ctxsw:
     popall
     iretq
 
-; extern walk_memory
-
-; exit_ctxsw:
-;     test rsi, rsi
-
-;     jz .dont_load_cr3
-;     mov cr3, rsi
-
-;     mov rsp, rdi
-;     popall
-
-;     mov rdi, rsp
-;     mov rsi, 8
-
-;     call walk_memory
-
-;     iretq
-
-; .dont_load_cr3:
-;     mov rsp, rdi
-;     popall
-;     iretq
-
-
 ;
 ;   void force_ctxsw()
 ;

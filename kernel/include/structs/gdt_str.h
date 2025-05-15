@@ -68,6 +68,8 @@ typedef struct {
     SYSTEM_SEGMENT_SELECTOR tss;
 } __attribute__((packed)) GDT_TABLE;
 
+extern const char gdt_member_names[10][64];
+
 typedef enum {
     GDT_FLAG_64BIT                      = 0x20,
     GDT_FLAG_32BIT                      = 0x40,

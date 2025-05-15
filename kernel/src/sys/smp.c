@@ -301,7 +301,7 @@ void smp_init() {
 
     klogi("INIT SMP: %d processors brought up\n", smp_info->num_cpus);
 
-    /* Identidy mapping is no longer needed */
+    /* Identity mapping is no longer needed */
     vm_unmap(NULL, 0, NUM_PAGES(0x100000));
 
     smp_initialized = TRUE;

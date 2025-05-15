@@ -37,6 +37,8 @@ static uint64_t klog_clear_times = 0;
 static uint64_t klog_refresh_times = 0;
 static uint64_t klog_putchar_times = 0;
 
+static int print_prefix = TRUE;
+
 extern int timer_enabled;
 
 /**
@@ -56,10 +58,22 @@ void klog_init() {
     UNLOCK_LOCK(&klog_info_lock);
 }
 
+/**
+ * @brief Print debug stats about logging
+ */
 void klog_print_debug_stats() {
     klogd("Clear times: %d\n", klog_clear_times);
     klogd("Refresh times: %d\n", klog_refresh_times);
     klogd("Putc times: %d\n", klog_putchar_times);
+}
+
+/**
+ * @brief Helper to toggle printing prefix
+ * 
+ * @param toggle TRUE to enable, FALSE to disable
+ */
+void klog_toggle_print_prefix(int toggle) {
+    print_prefix = toggle;
 }
 
 /**
@@ -155,11 +169,17 @@ void klog_refresh(TERM_MODE mode) {
  */
 static void kprint_hex(KLOG *k, uint64_t num, uint32_t width) {
     if (!num) {
-        kputs(k, "0x0", width);
+        if (print_prefix) {
+            kputs(k, "0x0", width);
+        } else {
+            kputs(k, "0", width);
+        }
         return;
     }
 
-    kputs(k, "0x", 0);
+    if (print_prefix)
+        kputs(k, "0x", 0);
+
     int j = 0;
     for (int i = 60; i >= 0; i -= 4) {
         j++;
@@ -181,16 +201,17 @@ static void kprint_hex(KLOG *k, uint64_t num, uint32_t width) {
  */
 static void kprint_bin(KLOG *k, uint64_t num, uint32_t width, uint8_t mid_blank) {
     if (!num) {
-        kputs(k, "0b0", width);
+        if (print_prefix) {
+            kputs(k, "0b0", width);
+        } else {
+            kputs(k, "0", width);
+        }
         return;
     }
 
-    kputs(k, "0b", 0);
-    for (int i = 63; i >= 0; i--) {
-        /* Optionally skip leading zeros if width is specified */
-        if (width > 0 && (i + width) <= 64) {
-            continue;
-        }
+    if (print_prefix)
+        kputs(k, "0b", 0);
+    for (int i = (width > 0 ? width - 1 : 63); i >= 0; i--) {
         uint64_t digit = (num >> i) & 0x1;
         kputc(k, (digit == 0) ? '0' : '1');
         if ((i % 4 == 0) && i > 0 && mid_blank) {

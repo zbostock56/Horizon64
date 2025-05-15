@@ -17,6 +17,8 @@
 #include <sys/asm.h>
 #include <sys/panic.h>
 
+#include <util/gpf_decode.h>
+
 #include <proc/ctxsw.h>
 
 static char* exceptions[] = {
@@ -152,6 +154,11 @@ void isr_handler(REGISTERS *regs) {
   } else {
     /* Reserved interrupt, hang the system */
     PROCESS *p = sched_get_curr_proc();
+
+    // if (p->mode == PROC_UMODE && regs->interrupt == 14) {
+        // klogd("Killing usermode process %d\n", p->id);
+        // sched_exit(0);
+    // }
     if (p) {
         kloge("Unhandled Exception for process %d (%s)! %s with error code %x (%d).\n\n",
               p->id, p->name, exceptions[regs->interrupt], regs->error_code,
@@ -159,6 +166,10 @@ void isr_handler(REGISTERS *regs) {
     } else {
         kloge("Unhandled Exception! %s with error code %x (%d).\n\n",
               exceptions[regs->interrupt], regs->error_code, regs->error_code);
+    }
+
+    if (regs->interrupt == 13) {
+        gpf_decode(regs->error_code);
     }
     backtrace(regs->rip);
     uint64_t cr2 = read_cr(cr2);

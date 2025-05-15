@@ -122,6 +122,8 @@ void system_calls_init() {
 
     /* Set where syscall will jump to */
     write_msr(MSR_LSTAR, (uint64_t) &syscall_handler);
+
+    /* Set what attributes of RFLAGS change when SYSCALL is executed */
     write_msr(MSR_SFMASK, X86_EFLAGS_TF | X86_EFLAGS_DF | X86_EFLAGS_IF |
                           X86_EFLAGS_IOPL | X86_EFLAGS_AC | X86_EFLAGS_NT);
 

@@ -58,6 +58,15 @@ debug: $(IMAGE_NAME).iso
 	-cdrom $(IMAGE_NAME).iso -boot d  									\
 	-d in_asm -nographic
 
+nographics: $(IMAGE_NAME).iso
+	./scripts/remove_from_port.sh
+	qemu-system-x86_64 -M q35,smm=off						 			\
+	-m $(MEMORY) $(TIME) -no-reboot 								 	\
+	-cdrom $(IMAGE_NAME).iso -boot d  									\
+	-nographic
+
+
+
 run-uefi: ovmf $(IMAGE_NAME).iso
 	qemu-system-x86_64 -M q35 -m $(MEMORY) -bios ovmf/OVMF.fd $(TIME) -cdrom $(IMAGE_NAME).iso -boot d
 

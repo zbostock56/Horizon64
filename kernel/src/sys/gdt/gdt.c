@@ -17,6 +17,19 @@
 static GDT_TABLE g_gdt[NUM_CPUS] = {0};
 static size_t num_gdt = 0;
 
+const char gdt_member_names[10][64] = {
+    "null_desc",
+    "kernel_code_16_bit",
+    "kernel_data_16_bit",
+    "kernel_code_32_bit",
+    "kernel_data_32_bit",
+    "kernel_code_64_bit",
+    "kernel_data_64_bit",
+    "user_code_64_bit",
+    "user_data_64_bit",
+    "tss"
+};
+
 /**
  * @brief Helper for making entry in the GDT.
  *
