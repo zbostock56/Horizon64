@@ -29,6 +29,31 @@ syscall_entry:
 
     ret
 
+; @ref Intel Systems Programmer Guide Section 5.8.8
+;
+; SYSCALL:
+; For SYSCALL, the processor saves RFLAGS into R11 and the RIP of the next
+; instruction into RCX; it then gets the privilege-level 0 target code segment,
+; instruction pointer, stage segment and flags as follows:
+;
+; Target Code Segment - Reads a non-NULL selector from IA32_STAR[47:32] 
+; Target Instruction Pointer - Reads a 64-bit address from IA32_LSTAR
+; Stack Segment - Computed by adding 8 to the value in IA32_STAR
+; Flags - The processor set RFLAGS to the logical-AND of its current value
+;         with the complement of the value in IA32_FMASK MSR
+;
+; The SYSCALL instruction does not save the stack pointer, and the SYSRET
+; instruction does not restore it.
+;
+; SYSRET:
+; When SYSRET transfers control to 64-bit mode user code using REX.W, the
+; processor gets the privilege level 3 target code segment, instruction pointer,
+; stack segment, and flags as follows:
+;
+; Target Code Segment - Reads a non-NULL selector from IA32_STAR[63:48] + 16
+; Target Instruction Pointer - Copies value from RCX into RIP
+; Stack Segment - IA32_STAR[63:48] + 8
+; EFLAGS - Loaded from R11
 syscall_handler:
     push r15                ; store r15 in user stack
     mov r15, rsp            ; save process's stack in r15
@@ -44,7 +69,8 @@ syscall_handler:
 
     popall_syscall          ; Pop all registers except for RAX
 
-    mov rdx, qword [gs:0x0] ; Return errno in rdx
+    ; mov rdx, qword [gs:0x0] ; Return errno in rdx
+    mov rdx, 0
     mov rsp, r15            ; Restore user stack
     pop r15                 ; Pop r15 from user stack
 

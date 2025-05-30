@@ -35,9 +35,11 @@ static inline int symbols_get_index(uint64_t addr) {
 }
 
 /**
- * @brief Dumps the backtrace of the current RBP
+ * @brief Helper to determine which instruction caused the kernel panic
+ *
+ * @param rip Instruction pointer from interrupt handler
  */
-void backtrace(uint64_t rip) {
+void problematic_instruction(uint64_t rip) {
     if (rip) {
         int idx = symbols_get_index(rip);
         if (idx < 0) {
@@ -49,7 +51,12 @@ void backtrace(uint64_t rip) {
                                                 rip - _kernel_symbols[idx].addr);
         }
     }
+}
 
+/**
+ * @brief Dumps the backtrace of the current RBP
+ */
+void backtrace() {
     uint64_t *rbp = 0;
     __asm__ volatile("mov %%rbp, %0" : "=g" (rbp) :: "memory");
 

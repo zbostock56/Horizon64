@@ -10,10 +10,16 @@
 #pragma once
 
 #include <structs/process_str.h>
+#include <structs/gdt_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
-#define DEFAULT_UMODE_DATA      (0x43)
-#define DEFAULT_UMODE_CODE      (0x3B)
+/**
+ * NOTE: Because of Requested Privilege Level (RPL), the usermode segments must
+ *       be OR'd with 0x3 to denote RING3 operation
+ */
+#define DEFAULT_UMODE_DATA      (GDT_USER_DATA_64_BIT | 0x3)
+#define DEFAULT_UMODE_CODE      (GDT_USER_CODE_64_BIT | 0x3)
+
 #define DEFAULT_KMODE_DATA      (0x30)
 #define DEFAULT_KMODE_CODE      (0x28)
 
@@ -34,3 +40,4 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
 PROCESS *process_fork(PROCESS *parent);
 void process_free(PROCESS *p);
 PROC_ID process_get_max_processes();
+void process_change_name(PROCESS *p, const char *name);

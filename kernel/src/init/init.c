@@ -11,8 +11,6 @@
 
 #include <init/init.h>
 
-void klog_print_debug_stats();
-
 /**
  * @brief Main system initialization function where high level handlers
  *        are called.
@@ -109,5 +107,4 @@ void system_init() {
     initrd_init(file_request);
 
     klogs("SYSTEM INIT: System initialized successfully...\n");
-    klog_print_debug_stats();
 }

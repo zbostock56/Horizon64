@@ -39,6 +39,7 @@ __attribute__((noreturn)) void kshell(PROC_ID id) {
     /* This now becomes the idle process */
     PROCESS *p = sched_get_curr_proc();
     if (p) {
+        process_change_name(p, "idle");
         process_idle_proc(p->id);
     } else {
         klog("kshell does not have a process id!\n");
@@ -78,8 +79,8 @@ void _start() {
     system_init();
 
     /* Add the cursor process */
-    klogi("Kernel: Adding the kcursor process...\n");
-    sched_add(sched_new("kcursor", kcursor, FALSE));
+    // klogi("Kernel: Adding the kcursor process...\n");
+    // sched_add(sched_new("kcursor", kcursor, FALSE));
 
     /* Add the shell process */
     klogi("Kernel: Adding the kshell process...\n");

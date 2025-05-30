@@ -72,7 +72,9 @@ override LDFLAGS += \
 
 override NASMFLAGS += \
     -Wall \
-    -f elf64
+    -f elf64 \
+	-g \
+	-F dwarf
 
 override CFILES := $(shell find -L src/* -type f -name '*.c')
 override NASMFILES := $(shell find -L src/* -type f -name '*.asm')

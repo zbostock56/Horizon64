@@ -18,5 +18,5 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-int64_t sys_debug_log(char *msg);
+int64_t sys_debug_log(const char *msg);
 

@@ -16,7 +16,7 @@
 
 #include <sys/cmos.h>
 
-#define CURRENT_YEAR        (2024)
+#define CURRENT_YEAR        (2025)
 
 /* Ideally, set by the ACPI table parsing code if possible */
 int century_register = 0x0;

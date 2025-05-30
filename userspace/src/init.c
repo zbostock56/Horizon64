@@ -17,11 +17,13 @@ static char *argv[] = {
 
 int main() {
     int pid;
+    libc_log("In userspace");
+    libc_log("In userspace");
+    libc_log("In userspace");
+    exit(1);
 
-    libc_log("In userspace\n");
-    libc_log("In userspace\n");
-
-    while (1) {}
+    while (1) {
+    }
 
     printf(
     "                     _                     __    _  _   \n"

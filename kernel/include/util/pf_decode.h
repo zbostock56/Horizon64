@@ -1,9 +1,9 @@
 /**
- * @file panic.h
+ * @file pf_decode.h
  * @author Zack Bostock
- * @brief Information about kernel panics
+ * @brief Information pertaining to decoding #PF error codes
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 
@@ -18,5 +18,4 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void backtrace();
-void problematic_instruction(uint64_t rip);
+void pf_decode(uint64_t error_code, uint64_t cr2);

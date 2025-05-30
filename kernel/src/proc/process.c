@@ -13,6 +13,7 @@
 #include <common/kmalloc.h>
 #include <common/string.h>
 #include <common/vector.h>
+#include <common/math.h>
 
 #include <sys/cpu.h>
 #include <sys/mmu.h>
@@ -59,9 +60,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
     }
     memset(p, 0, sizeof(PROCESS));
 
-    /* Set the process ID */
     p->id = curr_pid;
-    /* Mark this as a new (non-forked) process */
     p->is_forked = FALSE;
 
     if (mode == PROC_UMODE) {
@@ -96,9 +95,11 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         p->tstack_top = p->ustack_top;
 
         /* Map the user stack in both the parent physical and the new virtual address space */
-        vm_map(paddr_space, (uint64_t)p->ustack_bottom, (uint64_t)p->ustack_bottom,
+        vm_map(paddr_space, (uint64_t)p->ustack_bottom,
+               (uint64_t)p->ustack_bottom,
                NUM_PAGES(STACK_SIZE), VM_DEFAULT | VM_USERMODE);
-        vm_map(vaddr_space, (uint64_t)p->ustack_bottom, (uint64_t)p->ustack_bottom,
+        vm_map(vaddr_space, (uint64_t)p->ustack_bottom,
+               (uint64_t)p->ustack_bottom,
                NUM_PAGES(STACK_SIZE), VM_DEFAULT | VM_USERMODE);
 
         MEM_MAP m = {
@@ -110,7 +111,6 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
 
         vector_append(&p->memmap_list, m);
 
-        /* Calculate register area using proper byte pointer arithmetic */
         regs = (PROC_REGS *)((uint8_t *)p->ustack_top - sizeof(PROC_REGS));
         regs->cs = DEFAULT_UMODE_CODE;
         regs->ss = DEFAULT_UMODE_DATA;
@@ -142,7 +142,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         regs->ss = DEFAULT_KMODE_DATA;
     }
 
-    p->addrspace = vaddr_space; // In kernel mode, this remains NULL.
+    p->addrspace = vaddr_space;
     regs->rsp = (uint64_t)p->tstack_top;
     regs->rflags = DEFAULT_RFLAGS;
     regs->rip = (uint64_t)entry;
@@ -155,11 +155,9 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
     p->last_tick = 0;
     p->state = PROC_READY;
 
-    /* Safely copy the process name ensuring null termination */
     strncpy(p->name, name, sizeof(p->name) - 1);
     p->name[sizeof(p->name) - 1] = '\0';
 
-    /* Set current working directory to "/" */
     strncpy(p->cwd, "/", sizeof(p->cwd) - 1);
     p->cwd[sizeof(p->cwd) - 1] = '\0';
 
@@ -343,14 +341,15 @@ void process_free(PROCESS *p) {
     }
 
     /* Free all memory mapping entries */
-    /*
-        TODO: Fix kfree error when trying to free certain parts
-              of memory maps.
-    */
+    
     for (size_t i = 0; i < vector_len(&p->memmap_list); i++) {
         MEM_MAP m = vector_at(&p->memmap_list, i);
         vm_unmap(p->addrspace, m.virt_addr, m.num_pages);
-        kfree((void *)PHYS_TO_VIRT(m.phys_addr));
+        /*
+            TODO: Fix kfree error when trying to free certain parts
+                  of memory maps.
+        */
+        // kfree((void *)PHYS_TO_VIRT(m.phys_addr));
     }
     vector_free(&p->memmap_list);
     vector_free(&p->child_list);
@@ -362,7 +361,7 @@ void process_free(PROCESS *p) {
     /* Free all memory in the address space memory list */
     for (size_t i = 0; i < vector_len(&p->addrspace->memory_list); i++) {
         uint64_t m = vector_at(&p->addrspace->memory_list, i);
-        pm_free(m, 8);
+        pm_free(m, DEFAULT_PAGES);
     }
     vector_free(&p->addrspace->memory_list);
 
@@ -371,4 +370,21 @@ void process_free(PROCESS *p) {
     kfree(p->addrspace->pml4);
     kfree(p->addrspace);
     kfree(p);
+}
+
+/**
+ * @brief Helper to change the name of a process 
+ * 
+ * @param p Process whose name to change
+ * @param name Name to change to
+ */
+void process_change_name(PROCESS *p, const char *name) {
+    if (!p) {
+        kloge("Trying to change the name of a NULL process!\n");
+        return;
+    }
+
+    klogd("Changing name of process %d from '%s' to '%s'\n", p->id, p->name, name);
+
+    strncpy(p->name, name, MAX(63, strlen(name)));
 }

@@ -107,16 +107,16 @@ void gdt_init(CPU *cpu_info) {
         GDT_ACCESS_DATA_SEGMENT | GDT_ACCESS_DATA_WRITEABLE,
         GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
 
-    /* User code 64-bit */
-    gdt_init_entry(&(gdt->user_code_64_bit), 0, 0xFFFFFFFF,
-        GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 | GDT_ACCESS_EXECUTABLE |
-        GDT_ACCESS_CODE_SEGMENT | GDT_ACCESS_CODE_READABLE,
-        GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
-
     /* User data 64-bit */
     gdt_init_entry(&(gdt->user_data_64_bit), 0, 0xFFFFFFFF,
         GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 |
         GDT_ACCESS_DATA_SEGMENT | GDT_ACCESS_DATA_WRITEABLE,
+        GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
+
+    /* User code 64-bit */
+    gdt_init_entry(&(gdt->user_code_64_bit), 0, 0xFFFFFFFF,
+        GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 | GDT_ACCESS_EXECUTABLE |
+        GDT_ACCESS_CODE_SEGMENT | GDT_ACCESS_CODE_READABLE,
         GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
 
     GDT_DESCRIPTOR g = {

@@ -18,6 +18,7 @@
 #include <sys/panic.h>
 
 #include <util/gpf_decode.h>
+#include <util/pf_decode.h>
 
 #include <proc/ctxsw.h>
 
@@ -155,10 +156,15 @@ void isr_handler(REGISTERS *regs) {
     /* Reserved interrupt, hang the system */
     PROCESS *p = sched_get_curr_proc();
 
-    // if (p->mode == PROC_UMODE && regs->interrupt == 14) {
-        // klogd("Killing usermode process %d\n", p->id);
-        // sched_exit(0);
-    // }
+    uint64_t cr2 = read_cr(cr2);
+    uint64_t cr3 = read_cr(cr3);
+    uint64_t cr4 = read_cr(cr4);
+    if (p->mode == PROC_UMODE && regs->interrupt == 14) {
+        kloge("#PF: Killing usermode process %d (%s)!\n", p->id, p->name);
+        pf_decode(regs->error_code, cr2);
+        problematic_instruction(regs->rip);
+        sched_exit(0);
+    }
     if (p) {
         kloge("Unhandled Exception for process %d (%s)! %s with error code %x (%d).\n\n",
               p->id, p->name, exceptions[regs->interrupt], regs->error_code,
@@ -170,11 +176,12 @@ void isr_handler(REGISTERS *regs) {
 
     if (regs->interrupt == 13) {
         gpf_decode(regs->error_code);
+    } else if (regs->interrupt == 14) {
+        pf_decode(regs->error_code, cr2);
     }
-    backtrace(regs->rip);
-    uint64_t cr2 = read_cr(cr2);
-    uint64_t cr3 = read_cr(cr3);
-    uint64_t cr4 = read_cr(cr4);
+
+    problematic_instruction(regs->rip);
+    backtrace();
     klogn("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
             "RSP   : (%x)\nSS    : (%x)\n"
             "RAX   : %x\nRBX   : %x\nRCX   : %x\nRDX   : %x\n"

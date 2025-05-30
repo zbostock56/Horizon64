@@ -14,7 +14,18 @@
 
 #include <common/kprint.h>
 
+/**
+ * @brief Decodes the error code passed from the interrupt handler to make
+ *        it easier to read in the traceback
+ * 
+ * @param error_code Error code from interrupt handler
+ */
 void gpf_decode(uint64_t error_code) {
+    /* When error code is 0, decoding error code has no meaning */
+    if (error_code == 0) {
+        return;
+    }
+
     klog_toggle_print_prefix(FALSE);
     int external = (0x1 & error_code);
     int table = (0x3 & (error_code >> 1));
