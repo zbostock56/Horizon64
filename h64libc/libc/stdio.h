@@ -23,20 +23,9 @@
 
 #include <libc/printf.h>
 
-typedef int64_t DEVICE;
-typedef uint64_t INO;
-typedef int64_t OFFSET;
-typedef int64_t MODE;
-typedef int64_t NLINK;
-typedef int64_t BLOCK_SIZE;
-typedef int64_t BLOCK_COUNT;
-
-typedef int32_t PID;
-typedef int32_t TID;
-typedef int32_t UID;
-typedef int32_t GID;
-
-#define MAX_PATH_LEN    (4096)
+#include "src/internal/structs/dirent_str.h"
+#include "src/internal/structs/stat_str.h"
+#include "src/internal/structs/timespec_str.h"
 
 /**
  * @brief File types
@@ -91,42 +80,15 @@ typedef int32_t GID;
 #define S_IWOTH                 (00002)     /* Other has write perm */
 #define S_IXOTH                 (00001)     /* Other has exec perm  */
 
-typedef struct {
-    int64_t TV_SEC;
-    int64_t TV_NSEC;
-} TIMESPEC;
-
-typedef struct {
-    INO ino;
-    OFFSET off;
-    uint16_t rec_len;
-    uint8_t type;
-    char name[MAX_PATH_LEN];
-} DIRENT;
-
-typedef struct {
-    DEVICE dev;                     /* ID of device which has the file */
-    INO ino;                        /* inode number                    */
-    MODE mode;                      /* File type and mode              */
-    NLINK nlink;                    /* Number of hard links to file    */
-    UID uid;                        /* User ID of owner                */
-    GID gid;                        /* Group ID of owner               */
-    DEVICE rdev;                    /* Dev ID (if special file type)   */
-    OFFSET size;                    /* Total size in bytes             */
-    TIMESPEC access_time;           /* Time of last access             */
-    TIMESPEC modify_time;           /* Time of last modification       */
-    TIMESPEC status_change_time;    /* Time of last status change      */
-    BLOCK_SIZE blksz;               /* Block size for filesystem I/O   */
-    BLOCK_COUNT blk_count;          /* Number of 512B blocks alloc'd   */
-} STAT;
-
-#else                   /* Compiling with the kernel */
-#include <fs/vfs.h>
-typedef VFS_STAT STAT;
-#endif
 
 /* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
+void perror(const char *s);
+
+#else                   /* Compiling with the kernel */
+#include <fs/vfs.h>
+typedef VFS_STAT STAT;
+#endif

@@ -9,6 +9,7 @@
 
 #include <libc/string.h>
 #include <libc/sys.h>
+#include <libc/stdio.h>
 
 static char *argv[] = {
     "hsh",
@@ -17,14 +18,6 @@ static char *argv[] = {
 
 int main() {
     int pid;
-    libc_log("In userspace");
-    libc_log("In userspace");
-    libc_log("In userspace");
-    exit(1);
-
-    while (1) {
-    }
-
     printf(
     "                     _                     __    _  _   \n"
     "  /\\  /\\ ___   _ __ (_) ____ ___   _ __   / /_  | || |  \n"
@@ -37,17 +30,20 @@ int main() {
     for (;;) {
         printf("init: starting shell...\n");
         pid = fork();
+        printf("Return value of fork: %d\n", pid);
         if (pid < 0) {
             /* Failure */
-            printf("init: fork failed\n");
+            perror("fork");
             exit(1);
         } else if (pid == 0) {
             /* Child process */
+            printf("Child process: Going to execute shell\n");
             execv("/bin/hsh", argv);
             printf("init: execution of shell failed\n");
             exit(1);
         } else {
             /* Parent process */
+            printf("Parent Process: Waiting...\n");
             wait(-1);
         }
     }

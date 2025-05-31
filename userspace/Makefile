@@ -68,7 +68,7 @@ USER_ASMFILES := $(wildcard $(USERSRC_DIR)/*.asm)
 USER_OBJS := $(addprefix obj/,$(notdir $(USER_CFILES:.c=.o)) $(notdir $(USER_ASMFILES:.asm=.o)))
 
 # Collect all libc object files
-LIBC_OBJS := $(wildcard $(LIBC_OBJ_DIR)/*.o)
+LIBC_OBJS := $(shell find $(LIBC_OBJ_DIR) -name '*.o')
 
 # Create a list of all header dependencies
 HEADER_DEPS := $(USER_OBJS:.o=.d)

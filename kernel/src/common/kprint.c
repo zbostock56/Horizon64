@@ -348,7 +348,7 @@ static void klog_vprintf_wrapper(KLOG *k, const char *s, ...) {
  * then uses two loops if the buffer wraps around.
  *
  * @param k Kernel log to read from
- * @param kprintf Determines whether to send to terminal with extra formatting\n
+ * @param kprintf Determines whether to send to terminal with extra formatting
  */
 static void klog_send(KLOG *k, uint8_t kprintf) {
     LOCK_LOCK(&klog_info_lock);
@@ -395,7 +395,7 @@ static void klog_send(KLOG *k, uint8_t kprintf) {
  * @param ... Variadic arguments
  */
 void klog_vprintf(uint8_t level, const char *s, ...) {
-    #ifndef ENABLE_KLOG_DEBUG
+    #if !ENABLE_KLOG_DEBUG
     if (level <= KLOG_LVL_DEBUG) {
         return;
     }

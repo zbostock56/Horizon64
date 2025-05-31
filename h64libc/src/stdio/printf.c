@@ -917,6 +917,7 @@ int fctprintf(void (*out)(char character, void* arg), void* arg, const char* for
 
 #include <libc/string.h>
 #include <libc/sys.h>
+#include <libc/stdio.h>
 
 /**
  * @brief Helper function to putting a character to STDOUT

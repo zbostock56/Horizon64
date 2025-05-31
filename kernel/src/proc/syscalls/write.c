@@ -22,7 +22,7 @@
 
 extern LOCK vfs_lock;
 
-static PROC_ID last_write_pid = 0;
+static PROC_ID last_write_pid = DEFAULT_MAX_PROCESSES + 1;
 static uint64_t last_write_ticks = 0;
 
 /**
@@ -31,7 +31,7 @@ static uint64_t last_write_ticks = 0;
  * @param fh File handle to write to
  * @param buff Buffer of which to write
  * @param count Number of bytes to write
- * @return int64_t
+ * @return int64_t Bytes written, or -1 if failure
  */
 int64_t sys_write(int64_t fh, void *buff, size_t count) {
     if (!buff || count == 0 || fh == VFS_INVALID_HANDLE) {
@@ -70,7 +70,8 @@ int64_t sys_write(int64_t fh, void *buff, size_t count) {
                   count, fh, oldfh);
             return vfs_write(oldfh, buff, count);
         } else {
-            if (last_write_pid != pcurr->id) {
+            if (last_write_pid != (DEFAULT_KMODE_CODE + 1) &&
+                last_write_pid != pcurr->id) {
                 while (TRUE) {
                     if (ticks > last_write_ticks &&
                         ticks - last_write_ticks > 250) {

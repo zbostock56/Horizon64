@@ -32,3 +32,4 @@ char *strchr(const char *s, int c);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, size_t n);
 long strtol(const char *nptr, char **endptr, register int base);
+char *strerror(int errnum);

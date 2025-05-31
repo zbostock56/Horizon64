@@ -25,8 +25,8 @@ const char gdt_member_names[10][64] = {
     "kernel_data_32_bit",
     "kernel_code_64_bit",
     "kernel_data_64_bit",
-    "user_code_64_bit",
     "user_data_64_bit",
+    "user_code_64_bit",
     "tss"
 };
 

@@ -9,8 +9,10 @@
 
 #pragma once
 
-#include <libc/stdio.h>
 #include <stddef.h>
+
+#include "src/internal/structs/stat_str.h"
+#include "src/internal/structs/dirent_str.h"
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 

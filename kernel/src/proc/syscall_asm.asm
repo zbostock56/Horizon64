@@ -69,10 +69,13 @@ syscall_handler:
 
     popall_syscall          ; Pop all registers except for RAX
 
-    ; mov rdx, qword [gs:0x0] ; Return errno in rdx
-    mov rdx, 0
+    swapgs
+
+    mov rdx, qword [gs:0x0] ; Return errno in rdx
     mov rsp, r15            ; Restore user stack
     pop r15                 ; Pop r15 from user stack
+
+    swapgs
 
     o64 sysret              ; Return to user mode
                             ; Restores RIP from RCX

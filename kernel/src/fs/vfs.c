@@ -263,7 +263,7 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
     }
 
     if (strlen(path_name) != strlen(path)) {
-        klogw("VFS: \"%s\" -> \"%s\"\n", path_name, path);
+        klogd("VFS: \"%s\" -> \"%s\"\n", path_name, path);
     }
 
     /* Traverse path tokens */
@@ -326,7 +326,7 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
                 new_tnode->inode->fs = curr->inode->fs;
             }
             if (!strncmp(path, "usr/local", 9) || !strncmp(path, "/usr/bin", 8)) {
-                klogi("VFS: Create \"%s\" node\n", path);
+                klogd("VFS: Create \"%s\" node\n", path);
             }
 
             /* Set file mode and type */
@@ -592,7 +592,7 @@ int64_t vfs_read(VFS_HANDLE h, size_t len, void *buff) {
  * @return int64_t 0 if success, -1 if failure
  */
 int64_t vfs_unlink(char *path) {
-    klogi("VFS: unlinking %s\n", path);
+    klogd("VFS: unlinking %s\n", path);
 
     LOCK_LOCK(&vfs_lock);
 
@@ -856,7 +856,7 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
     } else {
         /* Move forward to open the file */
         if (req->inode->fs) {
-            klogi("VFS: Open: inode for %s already exists\n", path);
+            klogd("VFS: Open: inode for %s already exists\n", path);
             req = req->inode->fs->open(req->inode, path);
         }
     }
@@ -892,7 +892,7 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
 
     UNLOCK_LOCK(&vfs_lock);
 
-    klogi("VFS Open: Opened %s with mode %x and return handle %d, "
+    klogd("VFS Open: Opened %s with mode %x and return handle %d, "
           "node desc: %x, inode: %x\n", path, mode, h, nd, nd->inode);
     return h;
 }
@@ -915,7 +915,7 @@ int64_t vfs_close(VFS_HANDLE h) {
     }
 
     if (!strcmp(nd->path, "/dev/tty")) {
-        klogi("VFS: close /dev/tty with file handle %d\n", h);
+        klogd("VFS: close /dev/tty with file handle %d\n", h);
     }
     nd->inode->references--;
 
@@ -930,7 +930,7 @@ int64_t vfs_close(VFS_HANDLE h) {
     /* Remove the file if needed */
     if (nd->inode->references == 0 && nd->tnode->stat.nlink == 0) {
         if (nd->inode->fs->rmnode) {
-            klogi("VFS: Close: close \"%s\" and remove tnode\n", nd->path);
+            klogd("VFS: Close: close \"%s\" and remove tnode\n", nd->path);
             nd->inode->fs->rmnode(nd->tnode);
         }
     }

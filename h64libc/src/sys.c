@@ -8,6 +8,9 @@
  */
 
 #include <libc/sys.h>
+#include <libc/stdio.h>
+
+#include "src/internal/__internal.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -128,6 +131,7 @@
 void libc_log(const char *msg) {
     int ret, errno;
     SYSCALL1(SYSCALL_DEBUGLOG, msg);
+    __syscall_ret(errno);
 }
 
 /**
@@ -140,6 +144,7 @@ void *malloc(int size) {
     void *ret;
     int errno;
     SYSCALL6(SYSCALL_MMAP, 0, size, 0, 0x08, 0, 0);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -155,6 +160,7 @@ int openat(int dirfd, const char *path, int flags) {
     int ret;
     int errno;
     SYSCALL3(SYSCALL_OPENAT, dirfd, path, flags);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -170,6 +176,7 @@ int read(int fd, const void *buff, size_t count) {
     int64_t ret;
     int errno;
     SYSCALL3(SYSCALL_READ, fd, buff, count);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -185,6 +192,7 @@ int write(int fd, const void *buff, size_t count) {
     int64_t ret;
     int errno;
     SYSCALL3(SYSCALL_WRITE, fd, buff, count);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -198,6 +206,7 @@ int close(int fd) {
     int ret;
     int errno;
     SYSCALL1(SYSCALL_CLOSE, fd);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -211,6 +220,7 @@ int chdir(const char *path) {
     int ret;
     int errno;
     SYSCALL1(SYSCALL_CHDIR, path);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -224,6 +234,7 @@ int mkdirat(const char *path) {
     int ret;
     int errno;
     SYSCALL3(SYSCALL_MKDIRAT, AT_FDCWD, path, 0755);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -238,6 +249,7 @@ int fork() {
     int64_t ret;
     int errno;
     SYSCALL0(SYSCALL_FORK);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -256,6 +268,7 @@ int execv(const char *path, char *const argv[]) {
         NULL
     };
     SYSCALL3(SYSCALL_EXECVE, path, argv, envp);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -271,6 +284,7 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
     int errno;
     int ret;
     SYSCALL3(SYSCALL_EXECVE, path, argv, envp);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -287,6 +301,7 @@ int fstatat(int dirfd, const char *path, STAT *statbuf, int flags) {
     int errno;
     int ret;
     SYSCALL4(SYSCALL_FSTATAT, dirfd, path, statbuf, flags);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -302,6 +317,7 @@ int fstat(int fd, STAT *statbuf) {
     int errno;
     int ret;
     SYSCALL2(SYSCALL_FSTAT, fd, statbuf);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -318,6 +334,7 @@ int dup3(int oldfd, int newfd, int flags) {
     int errno;
     int ret;
     SYSCALL3(SYSCALL_DUP3, oldfd, newfd, flags);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -332,6 +349,7 @@ int wait(int pid) {
         int errno;
         int ret;
         SYSCALL3(SYSCALL_WAITPID, pid, NULL, 0);
+        __syscall_ret(errno);
         if (ret < 0) {
             break;
         }
@@ -348,6 +366,7 @@ void exit(int status) {
     int ret;
     int errno;
     SYSCALL1(SYSCALL_EXIT, status);
+    __syscall_ret(errno);
 }
 
 /**
@@ -363,6 +382,7 @@ int readdir(int fd, DIRENT *buffer) {
     int ret;
     int errno;
     SYSCALL2(SYSCALL_READDIR, fd, buffer);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -378,6 +398,7 @@ int getcwd(char *buffer, size_t size) {
     int ret;
     int errno;
     SYSCALL2(SYSCALL_GETCWD, buffer, size);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -390,6 +411,7 @@ int meminfo() {
     int64_t ret;
     int errno;
     SYSCALL0(SYSCALL_MEMINFO);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -405,6 +427,7 @@ int pipe(int pipefd[2]) {
     int ret;
     int errno;
     SYSCALL1(SYSCALL_PIPE, pipefd);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -418,6 +441,7 @@ int unlink(const char *path) {
     int ret;
     int errno;
     SYSCALL1(SYSCALL_UNLINK, path);
+    __syscall_ret(errno);
     return ret;
 }
 
@@ -431,6 +455,7 @@ int runcmd(const char *cmd) {
     int ret;
     int64_t errno;
     SYSCALL1(SYSCALL_RUNCMD, cmd);
+    __syscall_ret(errno);
     return ret;
 }
 

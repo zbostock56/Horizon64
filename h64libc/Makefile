@@ -41,7 +41,7 @@ $(eval $(call DEFAULT_VAR,CFLAGS,$(DEFAULT_CFLAGS)))
 override CPPFLAGS := -I . -MMD -MP $(CPPFLAGS)
 
 # Set the source and object files for libc
-LIBC_CFILES := $(wildcard $(LIBCSRC_DIR)/*.c)
+LIBC_CFILES := $(shell find $(LIBCSRC_DIR) -name '*.c')
 LIBC_OBJS := $(LIBC_CFILES:$(LIBCSRC_DIR)/%.c=$(LIBCOBJ_DIR)/%.o)
 
 # Create a list of all header dependencies
@@ -59,7 +59,8 @@ $(LIBCOBJ_DIR)/%.o: $(LIBCSRC_DIR)/%.c
 # Create necessary directories for object files
 dir:
 	@mkdir -p $(LIBCOBJ_DIR)
-	@echo "Created libc object directory"
+	@find $(LIBCSRC_DIR) -type d | sed "s|^$(LIBCSRC_DIR)|$(LIBCOBJ_DIR)|" | xargs -I{} mkdir -p {}
+	@echo "Created libc object directory structure"
 
 # Include header dependencies for incremental builds
 -include $(HEADER_DEPS)
