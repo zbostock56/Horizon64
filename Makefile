@@ -58,6 +58,13 @@ debug: $(IMAGE_NAME).iso
 	-cdrom $(IMAGE_NAME).iso -boot d  									\
 	-d in_asm -nographic
 
+debuggraphics: $(IMAGE_NAME).iso
+	./scripts/remove_from_port.sh
+	qemu-system-x86_64 -S -s -M q35,smm=off					 			\
+	-m $(MEMORY) $(TIME) -no-reboot 								 	\
+	-cdrom $(IMAGE_NAME).iso -boot d  									\
+	-d in_asm
+
 nographics: $(IMAGE_NAME).iso
 	./scripts/remove_from_port.sh
 	qemu-system-x86_64 -M q35,smm=off						 			\

@@ -64,35 +64,34 @@ static void kbhandler() {
     keyboard_set_key(key_state, scancode);
     while (key_state && c) {
         if (keyboard.key_pressed[LEFT_CONTROL]) {
-            if (buffer_length < KB_BUFF_SIZE) {
-                /* Check if the D key was pressed, if so, send EOF */
-                if (c == 'd' || c == 'D') {
-                    LOCK_LOCK(&kb_lock);
-                    key_buffer[write_index++] = EOF;
-                    buffer_length++;
-                    if (write_index == KB_BUFF_SIZE) {
-                        write_index = 0;
-                    }
-                    UNLOCK_LOCK(&kb_lock);
-
-                    cb_publish(0, CB_KEY_PRESS, EOF);
-                    klogd("KBHANDLER: EOF was pressed...\n");
-                    break;
-                } else {
-                    /* Normal keystroke */
-                    LOCK_LOCK(&kb_lock);
-                    key_buffer[write_index++] = c;
-                    buffer_length++;
-                    if (write_index == KB_BUFF_SIZE) {
-                        write_index = 0;
-                    }
-                    UNLOCK_LOCK(&kb_lock);
-                    klogd("KBHANDLER: %c was pressed\n", c);
-                    cb_publish(0, CB_KEY_PRESS, c);
-                    break;
+            if (buffer_length < KB_BUFF_SIZE &&
+                (c == 'd' || c == 'D')) {
+                LOCK_LOCK(&kb_lock);
+                key_buffer[write_index++] = EOF;
+                buffer_length++;
+                if (write_index == KB_BUFF_SIZE) {
+                    write_index = 0;
                 }
+                UNLOCK_LOCK(&kb_lock);
+                cb_publish(0, CB_KEY_PRESS, EOF);
+                klogd("KBHANLDER: EOF was pressed...\n");
+                break;
             }
         }
+
+        if (buffer_length < KB_BUFF_SIZE) {
+            LOCK_LOCK(&kb_lock);
+            key_buffer[write_index++] = c;
+            buffer_length++;
+            if (write_index == KB_BUFF_SIZE) {
+                write_index = 0;
+            }
+            UNLOCK_LOCK(&kb_lock);
+            klogd("KBHANDLER: %c was pressed\n", c);
+        }
+
+        cb_publish(0, CB_KEY_PRESS, c);
+        break;
     }
 }
 
@@ -120,11 +119,11 @@ void keyboard_init() {
   outb(PS2_COMMAND_REGISTER, COMMAND_DISABLE_SECOND_PS2_PORT);
 
   /* Flush device's buffer */
-  //while (inb(PS2_COMMAND_REGISTER) & 0x01) {
-  //  io_wait();
-  //  klogd("Flushing device\n");
-  //  inb(PS2_STATUS_REGISTER);
-  //}
+  while (inb(PS2_COMMAND_REGISTER) & 0x01) {
+   io_wait();
+   klogd("Flushing device\n");
+   inb(PS2_STATUS_REGISTER);
+  }
 
   outb(PS2_COMMAND_REGISTER, COMMAND_ENABLE_FIRST_PS2_PORT);
   outb(PS2_COMMAND_REGISTER, COMMAND_ENABLE_SECOND_PS2_PORT);
@@ -135,6 +134,7 @@ void keyboard_init() {
   irq_register_handler(1, kbhandler);
   klogd("Registered keyboard handler in IRQ vectors\n");
   pic_unmask(1);
+  pic_unmask(2);
   enable_interrupts();
   klogd("Enabled interrupts\n");
 

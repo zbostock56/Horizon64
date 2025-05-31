@@ -100,7 +100,7 @@ void pit_init(uint32_t hertz) {
   outb(PIT_CHANNEL_0_DATA_PORT, (hertz & 0xFF00) >> 8);    /* MSB */
 
   /* Set the interrupt handler for the PIT (IRQ 0) to be serviceable */
-  pic_unmask(0);
+  pic_unmask(IRQ_PIT);
 
   klogi("PIT set to %d hz...\n", hertz);
 }

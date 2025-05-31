@@ -536,8 +536,8 @@ void apic_timer_init() {
         /* Now we know how often the APIC timer has ticked */
         base_frequency = UINT32_MAX - static_apic_read_reg(APIC_CURRENT_COUNT_REG);
 
-        /* PIC (and connected devices) should not interrupt anymore */
-        pic_disable();
+        /* Disable PIT from ticking since we now rely on APIC */
+        pic_mask(IRQ_PIT);
     }
 
     /* Register enter_ctxsw */

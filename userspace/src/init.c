@@ -26,6 +26,8 @@ int main() {
     "\\/ /_/  \\___/ |_|   |_|/___|\\___/ |_| |_| \\___/    |_|  \n"
     "                                                        \n");
 
+    execv("/bin/hsh", argv);
+    exit(1);
     /* Loop to start shell program */
     for (;;) {
         printf("init: starting shell...\n");

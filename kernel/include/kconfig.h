@@ -25,7 +25,7 @@
  * @brief Enables the printing of debug level logs
  *
  */
-#define ENABLE_KLOG_DEBUG   (1)
+#define ENABLE_KLOG_DEBUG   (0)
 
 /**
  * @brief Prints kernel logs to the framebuffer
