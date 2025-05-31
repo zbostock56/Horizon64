@@ -295,7 +295,7 @@ PROC_ID sched_fork() {
     }
     UNLOCK_LOCK(&ctxsw_lock);
 
-    force_ctxsw();
+    fork_ctxsw();
 
     return pid;
 }

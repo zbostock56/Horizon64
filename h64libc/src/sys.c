@@ -246,7 +246,7 @@ int mkdirat(const char *path) {
  * process is created with errno set appropriately.
  */
 int fork() {
-    int64_t ret;
+    int ret;
     int errno;
     SYSCALL0(SYSCALL_FORK);
     __syscall_ret(errno);
@@ -453,7 +453,7 @@ int unlink(const char *path) {
  */
 int runcmd(const char *cmd) {
     int ret;
-    int64_t errno;
+    int errno;
     SYSCALL1(SYSCALL_RUNCMD, cmd);
     __syscall_ret(errno);
     return ret;
