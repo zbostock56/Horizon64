@@ -20,6 +20,7 @@
 #include <proc/callback.h>
 #include <proc/syscall.h>
 #include <proc/elf.h>
+#include <proc/process.h>
 
 #include <sys/acpi/apic.h>
 #include <sys/acpi/hpet.h>
@@ -224,6 +225,11 @@ void ctxsw(void *stack, int64_t mode) {
 
     proc_coords[cpu_id]++;
 
+    if (pnext->id == 0x5) {
+        int x = 0;
+        x++;
+    }
+
     UNLOCK_LOCK(&ctxsw_lock);
 
 
@@ -297,6 +303,7 @@ PROC_ID sched_fork() {
 
     fork_ctxsw();
 
+    klogi("sched_fork: returning %d\n", pid);
     return pid;
 }
 
@@ -483,14 +490,14 @@ CALLBACK sched_wait_callback(CALLBACK cb) {
     }
 
     LOCK_LOCK(&ctxsw_lock);
+
+    /* pcurr will never be NULL here */
     PROCESS *pcurr = proc_running[cpu->cpu_id];
-    if (pcurr) {
-        CHECK_PID(pcurr);
-        /* In milliseconds */
-        pcurr->wakeup_time = 0;
-        pcurr->wakeup_cb = cb;
-        pcurr->state = PROC_SLEEPING;
-    }
+    CHECK_PID(pcurr);
+    /* In milliseconds */
+    pcurr->wakeup_time = 0;
+    pcurr->wakeup_cb = cb;
+    pcurr->state = PROC_SLEEPING;
     UNLOCK_LOCK(&ctxsw_lock);
 
     force_ctxsw();
@@ -616,7 +623,7 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
         }
     }
 
-    klogd("EXECVE: New Process (%s)\n", pname);
+    klogi("EXECVE: New Process (%s)\n", pname);
 
     LOCK_LOCK(&ctxsw_lock);
 
@@ -633,21 +640,7 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
 
         /* Increase the reference count of all open files */
         hash_init_core(&pnew->open_files, pcurr->open_files.size);
-        for (size_t i = 0; i < pcurr->open_files.size; i++) {
-            if (pcurr->open_files.entries[i].key == EMPTY_KEY ||
-                !pcurr->open_files.entries[i].data) {
-                continue;
-            }
-            VFS_NODE_DESC *nd = (VFS_NODE_DESC *) kmalloc(sizeof(VFS_NODE_DESC));
-            if (!nd) {
-                kloge("EXECVE: Failed to allocate more space for VFS_NODE_DESC!\n");
-                halt();
-            }
-            memcpy(nd, pcurr->open_files.entries[i].data, sizeof(VFS_NODE_DESC));
-            pnew->open_files.entries[i] = pcurr->open_files.entries[i];
-            pnew->open_files.entries[i].data = nd;
-            nd->inode->references++;
-        }
+        process_dup_file_descriptors(pcurr, pnew, __func__);
     }
 
     UNLOCK_LOCK(&ctxsw_lock);
@@ -783,4 +776,53 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
     klogd("EXECVE: (%s) is now ready\n", pnew->name);
 
     return pnew;
+}
+
+/**
+ * @brief Helper to print out the process table
+ */
+void print_process_table() {
+    LOCK_LOCK(&ctxsw_lock);
+    klogn("+------+-----------------------------+----------+----------+-----------+-------+\n");
+    klogn("| %4s | %27s | %8s | %8s | %9s | %4s |\n", 
+           "ID", "Name", "Mode", "State", "IsForked", "Errno");
+    klogn("+------+-----------------------------+----------+----------+-----------+-------+\n");
+        CPU *cpu = smp_get_curr_cpu(NO_FORCE_GET_CPU);
+        PROCESS *running;
+        PROCESS *idle;
+        if (cpu) {
+            running = proc_running[cpu->cpu_id];
+            idle = proc_idle[cpu->cpu_id];
+        } else {
+            kloge("%s: Unable to get current CPU!\n", __func__);
+            running = proc_running[0];
+            idle = proc_idle[0];
+        }
+        klogn("| %4d | %27s | %8s | %8s | %9s | %4d  |\n",
+            running->id,
+            running->name,
+            running->mode ? "User" : "Kernel",
+            PROC_TOSTR_STATE(running->state),
+            running->is_forked ? "Yes" : "No",
+            running->errno);
+        klogn("| %4d | %27s | %8s | %8s | %9s | %4d  |\n",
+            idle->id,
+            idle->name,
+            idle->mode ? "User" : "Kernel",
+            PROC_TOSTR_STATE(idle->state),
+            idle->is_forked ? "Yes" : "No",
+            idle->errno);
+
+    for (size_t i = 0; i < vector_len(&proc_active); ++i) {
+        PROCESS *p = vector_at(&proc_active, i);
+        klogn("| %4d | %27s | %8s | %8s | %9s | %4d  |\n",
+            p->id,
+            p->name,
+            p->mode ? "User" : "Kernel",
+            PROC_TOSTR_STATE(p->state),
+            p->is_forked ? "Yes" : "No",
+            p->errno);
+    }
+    klogn("+------+-----------------------------+----------+----------+-----------+-------+\n");
+    UNLOCK_LOCK(&ctxsw_lock);
 }

@@ -15,7 +15,7 @@
 #include <structs/hash_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
-#define EMPTY_KEY   (-1)
+#define HASH_EMPTY_KEY   (-1)
 
 /* -------------------------------- GLOBALS --------------------------------- */
 

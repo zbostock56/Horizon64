@@ -205,6 +205,7 @@ void run_cmd(CMD *cmd) {
         case PIPE:
             pcmd = (PIPE_CMD *) cmd;
             if (pipe(p) < 0) {
+                perror("pipe");
                 panic("pipe");
             }
             libc_log("hsh: start to fork pipe process for left and right tasks\n");

@@ -18,6 +18,7 @@ static char *argv[] = {
 
 int main() {
     int pid;
+    /*
     printf(
     "                     _                     __    _  _   \n"
     "  /\\  /\\ ___   _ __ (_) ____ ___   _ __   / /_  | || |  \n"
@@ -25,9 +26,8 @@ int main() {
     "/ __  /| (_) || |   | | / /| (_) || | | || (_) ||__   _|\n"
     "\\/ /_/  \\___/ |_|   |_|/___|\\___/ |_| |_| \\___/    |_|  \n"
     "                                                        \n");
+    */
 
-    execv("/bin/hsh", argv);
-    exit(1);
     /* Loop to start shell program */
     for (;;) {
         printf("init: starting shell...\n");

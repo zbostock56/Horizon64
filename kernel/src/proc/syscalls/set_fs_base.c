@@ -23,6 +23,10 @@
  */
 int64_t sys_set_fs_base(uint64_t val) {
     PROCESS *pcurr = sched_get_curr_proc();
+    if (!pcurr) {
+        kloge("%s: Failed to get current process!\n", __func__);
+        halt();
+    }
     klogd("sys_set_fs_base: process %d set to %x\n", pcurr == NULL ? 0 : pcurr->id,
                                                      val);
     write_msr(MSR_FS_BASE_ADDR, val);

@@ -16,13 +16,13 @@
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define KLOG_LVL_VERBOSE    (0)
-#define KLOG_LVL_TAB        (1)
-#define KLOG_LVL_NONE       (2)
-#define KLOG_LVL_DEBUG      (3)
-#define KLOG_LVL_INFO       (4)
-#define KLOG_LVL_WARN       (5)
-#define KLOG_LVL_ERROR      (6)
-#define KLOG_LVL_SRTUP      (7)
+#define KLOG_LVL_DEBUG      (1)
+#define KLOG_LVL_INFO       (2)
+#define KLOG_LVL_WARN       (3)
+#define KLOG_LVL_ERROR      (4)
+#define KLOG_LVL_SRTUP      (5)
+#define KLOG_LVL_TAB        (6)
+#define KLOG_LVL_NONE       (7)
 #define KLOG_LVL_UNKNOWN    (8)
 
 #define KLOG_BUFFER_SIZE    (0x10000UL)
