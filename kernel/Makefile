@@ -74,7 +74,12 @@ override NASMFLAGS += \
     -Wall \
     -f elf64 \
 	-g \
-	-F dwarf
+	-F dwarf \
+	-w-reloc-abs-dword \
+	-w-reloc-abs-qword \
+	-w-reloc-abs-word \
+	-w-reloc-rel-dword
+
 
 override CFILES := $(shell find -L src/* -type f -name '*.c')
 override NASMFILES := $(shell find -L src/* -type f -name '*.asm')
