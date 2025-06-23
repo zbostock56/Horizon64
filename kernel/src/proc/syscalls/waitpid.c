@@ -40,11 +40,12 @@ int64_t sys_waitpid(int64_t pid, int32_t *status, int32_t flags) {
     }
 
     if (((uint32_t) pid) == ((uint32_t) -1)) {
+        /* Wait on child processes */
         uint8_t all_dead = TRUE;
         for (size_t i = 0; i < vector_len(&(pcurr->child_list)); i++) {
             PROC_ID pchild_id = vector_at(&(pcurr->child_list), i);
             PROC_STATE pchild_state = sched_get_proc_state(pchild_id);
-            if (pchild_state == PROC_UNKNOWN) {
+            if (pchild_state != PROC_UNKNOWN) {
                 klogv("sys_waitpid: pid %d -> child pid %d status: ACTIVE\n",
                     pcurr->id, pchild_id);
                 all_dead = FALSE;

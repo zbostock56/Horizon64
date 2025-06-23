@@ -39,10 +39,6 @@ int64_t sys_fork() {
 
     PROC_ID pchild_id = sched_fork();
     PROC_ID curr_pid = sched_get_pid();
-    klogi("sys_fork: Parent id (%d), pcurr (%d), return val (%d)\n",
-          p->id, curr_pid, pchild_id);
-
-    print_process_table();
 
     if (pchild_id == process_get_max_processes()) {
         cpu_set_errno(ECHILD);
