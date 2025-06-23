@@ -46,6 +46,9 @@ int64_t sys_vm_unmap(void *ptr, size_t size) {
     uint64_t np = NUM_PAGES(size);
     vm_unmap(as, (uint64_t) ptr, np);
 
-    klogd("sys_vm_unmap: process %d unmap %x with %d pages\n", pcurr->id, ptr, np);
+    if (pcurr) {
+        klogd("sys_vm_unmap: process %d unmap %x with %d pages\n", pcurr->id,
+                                                                   ptr, np);
+    }
     return 0;
 }

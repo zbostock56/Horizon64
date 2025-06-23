@@ -33,6 +33,14 @@
 /* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
+#define PROC_TOSTR_STATE(state)                                             \
+    ((state) == PROC_READY    ? "READY"    :                                \
+     (state) == PROC_RUNNING  ? "RUNNING"  :                                \
+     (state) == PROC_SLEEPING ? "SLEEPING" :                                \
+     (state) == PROC_DYING    ? "DYING"    :                                \
+     (state) == PROC_DEAD     ? "DEAD"     :                                \
+     "UNKNOWN")
+
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio,
@@ -41,3 +49,5 @@ PROCESS *process_fork(PROCESS *parent);
 void process_free(PROCESS *p);
 PROC_ID process_get_max_processes();
 void process_change_name(PROCESS *p, const char *name);
+STATUS process_dup_file_descriptors(PROCESS *parent, PROCESS *child,
+                                    const char *func);

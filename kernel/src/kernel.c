@@ -79,8 +79,8 @@ void _start() {
     system_init();
 
     /* Add the cursor process */
-    // klogi("Kernel: Adding the kcursor process...\n");
-    // sched_add(sched_new("kcursor", kcursor, FALSE));
+    klogi("Kernel: Adding the kcursor process...\n");
+    sched_add(sched_new("kcursor", kcursor, FALSE));
 
     /* Add the shell process */
     klogi("Kernel: Adding the kshell process...\n");

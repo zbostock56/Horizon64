@@ -59,7 +59,7 @@ void *hash_search(HASH *h, int64_t key) {
     int64_t i = HASHCODE(h, key);
 
     /* Move in array until empty */
-    while (h->entries[i].key != EMPTY_KEY && h->entries[i].data) {
+    while (h->entries[i].key != HASH_EMPTY_KEY && h->entries[i].data) {
         if (h->entries[i].key == key) {
             return h->entries[i].data;
         }
@@ -96,7 +96,7 @@ STATUS hash_insert(HASH *h, int64_t key, void *data) {
     int64_t i = HASHCODE(h, key);
 
     /* Move through the entries until an empty or deleted cell */
-    while (h->entries[i].key != EMPTY_KEY && h->entries[i].data) {
+    while (h->entries[i].key != HASH_EMPTY_KEY && h->entries[i].data) {
         /* Go to the next cell */
         i++;
 
@@ -138,7 +138,7 @@ void *hash_delete(HASH *h, int64_t key) {
     int64_t i = HASHCODE(h, key);
 
     /* Search */
-    while (h->entries[i].key != EMPTY_KEY && h->entries[i].data) {
+    while (h->entries[i].key != HASH_EMPTY_KEY && h->entries[i].data) {
         if (h->entries[i].key == key) {
             void *temp = h->entries[i].data;
             /* Assign dummy element here */

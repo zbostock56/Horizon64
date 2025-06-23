@@ -351,7 +351,7 @@ int wait(int pid) {
         SYSCALL3(SYSCALL_WAITPID, pid, NULL, 0);
         __syscall_ret(errno);
         if (ret < 0) {
-            break;
+            return -1;
         }
     }
     return 0;

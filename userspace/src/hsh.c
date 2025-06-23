@@ -205,6 +205,7 @@ void run_cmd(CMD *cmd) {
         case PIPE:
             pcmd = (PIPE_CMD *) cmd;
             if (pipe(p) < 0) {
+                perror("pipe");
                 panic("pipe");
             }
             libc_log("hsh: start to fork pipe process for left and right tasks\n");
@@ -525,6 +526,7 @@ CMD *parse_cmd(char *s) {
 }
 
 int main() {
+    printf("Shell started...\n");
     char *buf = (char *)(malloc(CMD_MAX_LEN));
     if (!buf) {
         panic("hsh: failed to allocate memory for the command buffer\n");

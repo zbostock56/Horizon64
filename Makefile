@@ -67,7 +67,8 @@ debuggraphics: $(IMAGE_NAME).iso
 
 nographics: $(IMAGE_NAME).iso
 	./scripts/remove_from_port.sh
-	qemu-system-x86_64 -M q35,smm=off						 			\
+	qemu-system-x86_64 -enable-kvm										\
+	-M q35,smm=off						 								\
 	-m $(MEMORY) $(TIME) -no-reboot 								 	\
 	-cdrom $(IMAGE_NAME).iso -boot d  									\
 	-nographic

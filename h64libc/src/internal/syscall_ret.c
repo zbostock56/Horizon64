@@ -17,5 +17,5 @@ int __set_errno = 0;
  * @return long Potentially adjusted return value
  */
 void __syscall_ret(int r) {
-    __set_errno = -r;
+    __set_errno = r;
 }

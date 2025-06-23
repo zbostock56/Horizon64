@@ -14,6 +14,7 @@
 #include <common/string.h>
 #include <common/vector.h>
 #include <common/math.h>
+#include <common/hash.h>
 
 #include <sys/cpu.h>
 #include <sys/mmu.h>
@@ -186,6 +187,68 @@ error_cleanup:
 }
 
 /**
+ * @brief Helper to duplicate memory map between two processes
+ * 
+ * @param parent Parent process to copy memmap from
+ * @param child Child process to copy memmap to
+ * @return STATUS SYS_ERR if error, SYS_OK otherwise
+ */
+static STATUS process_dup_memmap(PROCESS *parent, PROCESS *child) {
+    if (!parent || !child) {
+        kloge("Trying to duplicate memmap on NULL process!\n");
+        halt();
+    }
+    for (size_t i = 0; i < vector_len(&parent->memmap_list); i++) {
+        MEM_MAP m = vector_at(&parent->memmap_list, i);
+        void *temp = kmalloc(m.num_pages * PAGE_SIZE);
+        if (!temp) {
+            kloge("Failed to allocate memory during memmap duplication!\n");
+            return SYS_ERR;
+        }
+        uint64_t ptr = VIRT_TO_PHYS(temp);
+        memcpy((void *)(PHYS_TO_VIRT(ptr)), (const void *)(PHYS_TO_VIRT(m.phys_addr)),
+               m.num_pages * PAGE_SIZE);
+        vm_map(child->addrspace, m.virt_addr, ptr, m.num_pages, m.flags);
+        m.phys_addr = ptr;
+        vector_append(&child->memmap_list, m);
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Helper for duplicating descriptors between two processes
+ * 
+ * @param parent Process to copy descriptors from
+ * @param child Process to copy descriptors to
+ * @return STATUS SYS_ERR if error, SYS_OK otherwise
+ */
+STATUS process_dup_file_descriptors(PROCESS *parent, PROCESS *child,
+                                    const char *func) {
+    if (!parent || !child) {
+        kloge("Trying to duplicate descriptors on NULL process!\n");
+        halt();
+    }
+
+    for (size_t i = 0; i < parent->open_files.size; i++) {
+        if (parent->open_files.entries[i].key != HASH_EMPTY_KEY &&
+            parent->open_files.entries[i].data) {
+            VFS_NODE_DESC *nd = (VFS_NODE_DESC *)(kmalloc(sizeof(VFS_NODE_DESC)));
+            if (!nd) {
+                kloge("%s: Failed to allocate memory for new VFS_NODE_DESC!\n", func);
+                return SYS_ERR;
+            }
+            memcpy(nd, parent->open_files.entries[i].data, sizeof(VFS_NODE_DESC));
+            child->open_files.entries[i].key = parent->open_files.entries[i].key;
+            child->open_files.entries[i].data = nd;
+            nd->inode->references++;
+        }
+    }
+
+    return SYS_OK;
+}
+
+/**
  * @brief Process forking function
  *
  * @param parent Parent process to fork from
@@ -207,25 +270,13 @@ PROCESS *process_fork(PROCESS *parent) {
         kloge("Cannot allocate memory for forked process!\n");
         return NULL;
     }
-    memset(child, 0, sizeof(PROCESS));
 
-    /* Manually copy only the necessary fields instead of a full memcpy */
-    child->mode = parent->mode;
-    child->priority = parent->priority;
+    memcpy(child, parent, sizeof(PROCESS));
+    child->is_forked = TRUE;
     child->parent_id = parent->id;
-    child->last_tick = parent->last_tick;
-    child->state = parent->state;
-    strncpy(child->name, parent->name, sizeof(child->name) - 1);
-    child->name[sizeof(child->name) - 1] = '\0';
-    strncpy(child->cwd, parent->cwd, sizeof(child->cwd) - 1);
-    child->cwd[sizeof(child->cwd) - 1] = '\0';
+    child->id = curr_pid++;
+    num_processes++;
 
-    /* TODO: Do the vector lists need to be initialized here? */
-    memset(&child->memmap_list, 0, sizeof(child->memmap_list));
-    memset(&child->child_list, 0, sizeof(child->child_list));
-    hash_init(&child->open_files);
-
-    /* Create a new address space for the child process */
     child->addrspace = create_address_space();
     if (!child->addrspace) {
         kloge("Failed to create address space for forked process!\n");
@@ -233,26 +284,17 @@ PROCESS *process_fork(PROCESS *parent) {
         return NULL;
     }
 
-    /* Duplicate parent's memory map entries */
-    for (size_t i = 0; i < vector_len(&parent->memmap_list); i++) {
-        MEM_MAP m = vector_at(&parent->memmap_list, i);
-        void *temp = kmalloc(m.num_pages * PAGE_SIZE);
-        if (!temp) {
-            kloge("Failed to allocate memory during fork for memmap duplication!\n");
-            goto fork_error_cleanup;
-        }
-        uint64_t ptr = VIRT_TO_PHYS(temp);
-        memcpy((void *)(PHYS_TO_VIRT(ptr)), (const void *)(PHYS_TO_VIRT(m.phys_addr)),
-               m.num_pages * PAGE_SIZE);
-        vm_map(child->addrspace, m.virt_addr, ptr, m.num_pages, m.flags);
-        m.phys_addr = ptr;
-        vector_append(&child->memmap_list, m);
-    }
+    memset(&child->memmap_list, 0, sizeof(child->memmap_list));
+    memset(&child->child_list, 0, sizeof(child->child_list));
+    hash_init(&child->open_files);
 
-    /* Set child process ID and update process counters */
-    child->id = curr_pid;
-    curr_pid++;
-    num_processes++;
+    if (process_dup_memmap(parent, child) == SYS_ERR) {
+        goto fork_error_cleanup;
+    } 
+
+    if (process_dup_file_descriptors(parent, child, __func__) == SYS_ERR) {
+        goto fork_error_cleanup;
+    }
 
     /* Duplicate the kernel stack by allocating a new one and copying content */
     child->kstack_bottom = kmalloc(STACK_SIZE);
@@ -261,40 +303,28 @@ PROCESS *process_fork(PROCESS *parent) {
         goto fork_error_cleanup;
     }
     memcpy(child->kstack_bottom, parent->kstack_bottom, STACK_SIZE);
-    /* Recalculate the thread stack pointer based on offset */
-    uint64_t offset = (uint64_t)parent->tstack_top - (uint64_t)parent->kstack_bottom;
-    child->kstack_top = (void *)((uint8_t *)child->kstack_bottom + STACK_SIZE);
-    child->tstack_top = (void *)((uint8_t *)child->kstack_bottom + offset);
+
+    /* Calculate stack for forked process */
+    uint64_t offset = (uint64_t)child->kstack_top - (uint64_t)parent->kstack_bottom;
+    child->kstack_top = (void *)((uint64_t)child->kstack_bottom + offset);
 
     /* Adjust registers on the child’s thread stack if within kernel stack range */
-    if ((uint64_t)child->tstack_top >= (uint64_t)child->kstack_bottom &&
-        (uint64_t)child->tstack_top <= (uint64_t)((uint8_t *)child->kstack_bottom + STACK_SIZE)) {
-        PROC_REGS *regs = (PROC_REGS *)child->tstack_top;
-        offset = regs->rsp - (uint64_t)parent->kstack_bottom;
+    if ((uint64_t)child->tstack_top >= (uint64_t)parent->kstack_bottom &&
+        (uint64_t)child->tstack_top <= (uint64_t)(parent->kstack_bottom + STACK_SIZE)) {
+        offset = (uint64_t)child->tstack_top - (uint64_t)parent->kstack_bottom;
+        child->tstack_top = (void *)((uint64_t)child->kstack_bottom + offset);
+
+        PROC_REGS *regs = (PROC_REGS *)(child->tstack_top);
+
+        offset = (uint64_t)regs->rsp - (uint64_t)parent->kstack_bottom;
         regs->rsp = (uint64_t)child->kstack_bottom + offset;
-        offset = regs->rbp - (uint64_t)parent->kstack_bottom;
+
+        offset = (uint64_t)regs->rbp - (uint64_t)parent->kstack_bottom;
         regs->rbp = (uint64_t)child->kstack_bottom + offset;
     }
 
-    /* Duplicate open file descriptors with deep copy */
-    memcpy(&child->open_files, &parent->open_files, sizeof(HASH));
-    for (size_t i = 0; i < child->open_files.size; i++) {
-        if (child->open_files.entries[i].key == -1 ||
-            child->open_files.entries[i].data == NULL) {
-            continue;
-        }
-        VFS_NODE_DESC *desc = kmalloc(sizeof(VFS_NODE_DESC));
-        if (!desc) {
-            kloge("Failed to allocate memory for open file descriptor duplication!\n");
-            goto fork_error_cleanup;
-        }
-        memcpy(desc, child->open_files.entries[i].data, sizeof(VFS_NODE_DESC));
-        child->open_files.entries[i].data = desc;
-        desc->inode->references++;
-    }
-
     vector_append(&parent->child_list, child->id);
-    klogd("PROCESS FORKED: Parent: %d | New ID: %d\n", child->parent_id, child->id);
+    klogi("PROCESS FORKED: Parent: %d | New ID: %d\n", child->parent_id, child->id);
     return child;
 
 fork_error_cleanup:

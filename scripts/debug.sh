@@ -21,11 +21,10 @@ if ! [ -d "./.gdb" ]; then
     mkdir ./.gdb
 fi
 
-
 # Generate the GDB script
 cat > .gdb/.gdb_script.gdb << EOF
     file kernel/bin/kernel
-    add-symbol-file userspace/bin/init
+    add-symbol-file userspace/bin/init 0xffff800040000000
 EOF
 
 # If GEF is installed, add remote-safe GEF commands

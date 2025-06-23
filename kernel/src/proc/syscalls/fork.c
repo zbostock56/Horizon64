@@ -23,6 +23,7 @@
  * @return int64_t On success, child process returns 0 and pid of child process
  * returns in the parent process; -1 on failure
  */
+void print_process_table();
 int64_t sys_fork() {
     PROCESS *p = sched_get_curr_proc();
     cpu_set_errno(0);
@@ -37,22 +38,21 @@ int64_t sys_fork() {
     }
 
     PROC_ID pchild_id = sched_fork();
-    klogd("sys_fork: Parent id (%d), pcurr (%d), return val (%d)\n",
-          p->id, sched_get_pid(), pchild_id);
+    PROC_ID curr_pid = sched_get_pid();
 
     if (pchild_id == process_get_max_processes()) {
         cpu_set_errno(ECHILD);
         return -1;
-    } else if (p->id == sched_get_pid()) {
+    } else if (p->id == curr_pid) {
         /*
             This should be the parent process and returning the child pid, but
             current it returns the parent process id
         */
-       klogd("sys_fork: returning %d from parent process (%d)\n", pchild_id, p->id);
-       return pchild_id;
+        klogi("sys_fork: returning %d from parent process (%d)\n", pchild_id, p->id);
+        return pchild_id;
     } else {
         /* This *should be* the child process and returning 0 */
-        klogd("k_fork: returning 0 from child process (%d)\n", pchild_id);
+        klogi("sys_fork: returning 0 from child process (%d)\n", pchild_id);
         return 0;
     }
     return -1;
