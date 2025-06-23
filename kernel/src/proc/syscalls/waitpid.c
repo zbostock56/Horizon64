@@ -39,7 +39,7 @@ int64_t sys_waitpid(int64_t pid, int32_t *status, int32_t flags) {
         return -1;
     }
 
-    if (pid == -1) {
+    if (((uint32_t) pid) == ((uint32_t) -1)) {
         uint8_t all_dead = TRUE;
         for (size_t i = 0; i < vector_len(&(pcurr->child_list)); i++) {
             PROC_ID pchild_id = vector_at(&(pcurr->child_list), i);

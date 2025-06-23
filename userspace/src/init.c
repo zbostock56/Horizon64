@@ -46,7 +46,10 @@ int main() {
         } else {
             /* Parent process */
             printf("Parent Process: Waiting...\n");
-            wait(-1);
+            if (wait(-1) < 0) {
+                perror("waitpid");
+                exit(1);
+            }
         }
     }
 
