@@ -29,3 +29,4 @@ scripts/memory_plotter/mem_map.txt
 texts
 initrd*
 sysroot
+kernel/include/sys/ksymbols.h
