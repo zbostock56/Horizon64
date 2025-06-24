@@ -324,7 +324,7 @@ PROCESS *process_fork(PROCESS *parent) {
     }
 
     vector_append(&parent->child_list, child->id);
-    klogi("PROCESS FORKED: Parent: %d | New ID: %d\n", child->parent_id, child->id);
+    klogd("PROCESS FORKED: Parent: %d | New ID: %d\n", child->parent_id, child->id);
     return child;
 
 fork_error_cleanup:

@@ -303,7 +303,6 @@ PROC_ID sched_fork() {
 
     fork_ctxsw();
 
-    klogi("sched_fork: returning %d\n", pid);
     return pid;
 }
 
@@ -623,7 +622,7 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
         }
     }
 
-    klogi("EXECVE: New Process (%s)\n", pname);
+    klogd("EXECVE: New Process (%s)\n", pname);
 
     LOCK_LOCK(&ctxsw_lock);
 

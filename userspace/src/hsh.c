@@ -526,7 +526,6 @@ CMD *parse_cmd(char *s) {
 }
 
 int main() {
-    printf("Shell started...\n");
     char *buf = (char *)(malloc(CMD_MAX_LEN));
     if (!buf) {
         panic("hsh: failed to allocate memory for the command buffer\n");

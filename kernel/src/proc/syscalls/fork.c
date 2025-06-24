@@ -48,11 +48,11 @@ int64_t sys_fork() {
             This should be the parent process and returning the child pid, but
             current it returns the parent process id
         */
-        klogi("sys_fork: returning %d from parent process (%d)\n", pchild_id, p->id);
+        klogd("sys_fork: returning %d from parent process (%d)\n", pchild_id, p->id);
         return pchild_id;
     } else {
         /* This *should be* the child process and returning 0 */
-        klogi("sys_fork: returning 0 from child process (%d)\n", pchild_id);
+        klogd("sys_fork: returning 0 from child process (%d)\n", pchild_id);
         return 0;
     }
     return -1;
