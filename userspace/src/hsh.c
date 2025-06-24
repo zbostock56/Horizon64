@@ -256,7 +256,11 @@ void run_cmd(CMD *cmd) {
  * @return int 0 if success, -1 if failure
  */
 int get_cmd(char *buf, int count) {
-    write(STDOUT, CMD_PROMPT, strlen(CMD_PROMPT));
+    if (write(STDOUT, CMD_PROMPT, strlen(CMD_PROMPT) < 0)) {
+        hsh_error("write error");
+        return -1;
+    }
+
     memset(buf, 0, count);
     for (int i = 0;;) {
         if (read(STDIN, &buf[i], 1) != 1) {
@@ -272,8 +276,10 @@ int get_cmd(char *buf, int count) {
             continue;
         }
 
-        if (i >= count - 1 || buf[i] == (char)(EOF)) {
+        if (i >= count - 1) {
             break;
+        } else if (buf[i] == (char)(EOF)) {
+            break; 
         } else if (buf[i] == '\n') {
             buf[i] = '\0';
             break;

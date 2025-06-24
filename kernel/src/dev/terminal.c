@@ -48,13 +48,14 @@ static TERM_MODE term_mode = TERM_MODE_UNSET;
 static uint8_t term_need_redrawn = FALSE;
 static TERMINAL term_info = {0};
 static TERMINAL term_cli = {0};
+static uint8_t term_cursor = 0;
 #if FRAMEBUFFER_LOGGING
 static uint8_t term_char_print = 1;
 #else
 static uint8_t term_char_print = 0;
 #endif
 
-TERM_CURSOR_STATUS cursor_visible = 0;
+TERM_CURSOR_STATUS cursor_visible = TERM_CURSOR_INVISIBLE;
 
 /**
  * @brief Used for ANSI Escape Sequences
@@ -211,7 +212,7 @@ STATUS terminal_refresh(TERM_MODE mode) {
     } else if (mode == TERM_MODE_TERM) {
         curr = &term_cli;
 
-        if (cursor_visible != 0) {
+        if (term_cursor != 0) {
             if (curr->state != TERM_STATE_UNKNOWN && mode == term_mode) {
                 fb_refresh(&(curr->framebuffer));
             }
@@ -221,7 +222,7 @@ STATUS terminal_refresh(TERM_MODE mode) {
             if (x < curr->width && y < curr->height) {
                 fb_putc(&(curr->framebuffer), x * PSF1_FONT_WIDTH,
                         y * font.header->character_size, curr->foreground_color,
-                        curr->background_color, cursor_visible, curr->is_bold);
+                        curr->background_color, term_cursor, curr->is_bold);
                 if (mode == term_mode) {
                     fb_refresh(&(curr->framebuffer));
                 }
@@ -291,7 +292,7 @@ void terminal_print(TERM_MODE mode, uint8_t c) {
                 return;
             case '\n':
                 /* New line character */
-                cursor_visible = ' ';
+                term_cursor = ' ';
                 terminal_refresh(mode);
                 curr->cursor_pos.x = 0;
                 curr->cursor_pos.y++;
@@ -835,7 +836,7 @@ void terminal_scroll(TERMINAL *t) {
  */
 void terminal_set_cursor(uint8_t c) {
     LOCK_LOCK(&term_lock);
-    cursor_visible = c;
+    term_cursor = c;
     UNLOCK_LOCK(&term_lock);
 }
 

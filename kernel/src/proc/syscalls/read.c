@@ -63,7 +63,7 @@ int64_t sys_read(int64_t fh, void *buff, size_t count) {
 
         if (found) {
             int64_t ret = vfs_read(oldfh, count, buff);
-            klogd("sys_read: reda from handle %d instead of %d and read %d bytes",
+            klogd("sys_read: read from handle %d instead of %d and read %d bytes",
                   oldfh, fh, ret);
             return ret;
         } else {

@@ -58,7 +58,7 @@ __attribute__((noreturn)) void kcursor(PROC_ID id) {
     while (TRUE) {
         sched_sleep(500);
         if (cursor_visible == TERM_CURSOR_INVISIBLE) {
-            terminal_set_cursor(219);
+            terminal_set_cursor(0xDB);
             cursor_visible = TERM_CURSOR_VISIBLE;
         } else if (cursor_visible == TERM_CURSOR_VISIBLE) {
             terminal_set_cursor(' ');
