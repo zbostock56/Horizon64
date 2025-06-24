@@ -89,8 +89,8 @@
  * @return CMD* New exec cmd
  */
 static inline CMD *exec_cmd() {
-    EXEC_CMD *cmd = (EXEC_CMD *)(malloc(sizeof(CMD)));
-    memset(cmd, 0, sizeof(CMD));
+    EXEC_CMD *cmd = (EXEC_CMD *)(malloc(sizeof(EXEC_CMD)));
+    memset(cmd, 0, sizeof(EXEC_CMD));
     cmd->type = EXEC;
     return (CMD *) cmd;
 }

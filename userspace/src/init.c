@@ -32,20 +32,17 @@ int main() {
     for (;;) {
         printf("init: starting shell...\n");
         pid = fork();
-        printf("Return value of fork: %d\n", pid);
         if (pid < 0) {
             /* Failure */
             perror("fork");
             exit(1);
         } else if (pid == 0) {
             /* Child process */
-            printf("Child process: Going to execute shell\n");
             execv("/bin/hsh", argv);
             printf("init: execution of shell failed\n");
             exit(1);
         } else {
             /* Parent process */
-            printf("Parent Process: Waiting...\n");
             if (wait(-1) < 0) {
                 perror("waitpid");
                 exit(1);
