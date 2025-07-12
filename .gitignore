@@ -30,3 +30,4 @@ texts
 initrd*
 sysroot
 kernel/include/sys/ksymbols.h
+kernel/include/sys/ksymbols.h

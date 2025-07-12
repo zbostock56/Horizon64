@@ -16,9 +16,9 @@
 #define MAX_PATH_LEN    (4096)
 
 typedef struct {
-    INO ino;
-    OFFSET off;
-    uint16_t rec_len;
-    uint8_t type;
-    char name[MAX_PATH_LEN];
+    INO d_ino;
+    OFFSET D_off;
+    uint16_t d_reclen;
+    uint8_t d_type;
+    char d_name[MAX_PATH_LEN];
 } DIRENT;

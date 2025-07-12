@@ -42,7 +42,7 @@ int64_t sys_getcwd(char *buffer, size_t size) {
 
     size_t len = strlen(pcurr->cwd);
     if (len < size - 1) {
-        strcpy(buffer, pcurr->cwd);
+        strncpy(buffer, pcurr->cwd, len);
     } else {
         cpu_set_errno(ENAMETOOLONG);
         return -1;

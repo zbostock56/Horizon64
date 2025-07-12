@@ -850,7 +850,7 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
         }
         if (!req) {
             UNLOCK_LOCK(&vfs_lock);
-            kloge("VFS: Open: Failed to open %s with mode %x", path, mode);
+            kloge("VFS: Open: Failed to open %s with mode %x\n", path, mode);
             return VFS_INVALID_HANDLE;
         }
     } else {
@@ -914,9 +914,6 @@ int64_t vfs_close(VFS_HANDLE h) {
         return -1;
     }
 
-    if (!strcmp(nd->path, "/dev/tty")) {
-        klogd("VFS: close /dev/tty with file handle %d\n", h);
-    }
     nd->inode->references--;
 
     /* Remove from current process */

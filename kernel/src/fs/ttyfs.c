@@ -213,7 +213,7 @@ int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
 
     for (int64_t i = 0; i < rlen; i++) {
         int64_t index = (id->icursor + i) % TTY_BUFFER_SIZE;
-        ((char *) buff)[i] = id->ibuff[i];
+        ((char *) buff)[i] = id->ibuff[index];
 
         cursor_visible = TERM_CURSOR_HIDE;
         terminal_set_cursor(' ');

@@ -22,9 +22,6 @@
 
 extern LOCK vfs_lock;
 
-static PROC_ID last_write_pid = DEFAULT_MAX_PROCESSES + 1;
-static uint64_t last_write_ticks = 0;
-
 /**
  * @brief System call implementation for writing to a file
  *
@@ -40,7 +37,6 @@ int64_t sys_write(int64_t fh, void *buff, size_t count) {
     }
 
     PROCESS *pcurr = sched_get_curr_proc();
-    uint64_t ticks = sched_get_ticks();
 
     cpu_set_errno(0);
 
@@ -70,28 +66,14 @@ int64_t sys_write(int64_t fh, void *buff, size_t count) {
                   count, fh, oldfh);
             return vfs_write(oldfh, buff, count);
         } else {
-            if (last_write_pid != (DEFAULT_KMODE_CODE + 1) &&
-                last_write_pid != pcurr->id) {
-                while (TRUE) {
-                    if (ticks > last_write_ticks &&
-                        ticks - last_write_ticks > 250) {
-                        break;
-                    }
-                    sched_sleep(100);
-                    ticks = sched_get_ticks();
-                }
-            }
-
-            LOCK_LOCK(&vfs_lock);
-            last_write_pid = pcurr->id;
-            last_write_ticks = ticks;
-            UNLOCK_LOCK(&vfs_lock);
-
             VFS_HANDLE ttyfh = vfs_open("/dev/tty", VFS_READ_WRITE);
             if (ttyfh != VFS_INVALID_HANDLE) {
                 int64_t len = vfs_write(ttyfh, buff, count);
                 vfs_close(ttyfh);
                 return len;
+            } else {
+                kloge("ttyfs file handle is invalid!\n");
+                halt();
             }
             return 0;
         }

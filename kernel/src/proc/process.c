@@ -372,15 +372,18 @@ void process_free(PROCESS *p) {
 
     /* Free all memory mapping entries */
     
-    for (size_t i = 0; i < vector_len(&p->memmap_list); i++) {
-        MEM_MAP m = vector_at(&p->memmap_list, i);
-        vm_unmap(p->addrspace, m.virt_addr, m.num_pages);
+    /*
+        Causing page fault
+    */
+    // for (size_t i = 0; i < vector_len(&p->memmap_list); i++) {
+        // MEM_MAP m = vector_at(&p->memmap_list, i);
+        // vm_unmap(p->addrspace, m.virt_addr, m.num_pages);
         /*
             TODO: Fix kfree error when trying to free certain parts
                   of memory maps.
         */
         // kfree((void *)PHYS_TO_VIRT(m.phys_addr));
-    }
+    // }
     vector_free(&p->memmap_list);
     vector_free(&p->child_list);
     vector_free(&p->dup_list);

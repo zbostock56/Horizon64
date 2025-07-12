@@ -164,6 +164,10 @@ static inline CMD *back_cmd(CMD *subcmd) {
     return (CMD *) cmd;
 }
 
+#define CWD_BUFF_SIZE   (4096)
+
+static char cwd_buff[CWD_BUFF_SIZE] = {0};
+
 /**
  * @brief Runs a command
  *
@@ -256,8 +260,13 @@ void run_cmd(CMD *cmd) {
  * @return int 0 if success, -1 if failure
  */
 int get_cmd(char *buf, int count) {
-    if (write(STDOUT, CMD_PROMPT, strlen(CMD_PROMPT) < 0)) {
-        hsh_error("write error");
+    if (getcwd(cwd_buff, CWD_BUFF_SIZE) < 0) {
+        perror("getcwd");
+    }
+
+    if (write(STDOUT, cwd_buff, strlen(cwd_buff)) < 0 ||
+        write(STDOUT, CMD_PROMPT, strlen(CMD_PROMPT)) < 0) {
+        hsh_error("write error\n");
         return -1;
     }
 
@@ -269,8 +278,7 @@ int get_cmd(char *buf, int count) {
 
         if (buf[i] == '\b') {
             if (i > 0) {
-                buf[i - 1] = '\0';
-                i--;
+                buf[--i] = '\0';
             }
             buf[i] = '\0';
             continue;
@@ -314,7 +322,7 @@ int get_token(char **ps, char *es, char **q, char **eq) {
     while (s < es && strchr(whitespace, *s)) {
         s++;
     }
-    if (1) {
+    if (q) {
         *q = s;
     }
     ret = *s;
@@ -390,14 +398,14 @@ CMD *nul_terminate(CMD *cmd) {
             ecmd = (EXEC_CMD *) cmd;
             int i = 0;
             while (ecmd->eargv[i]) {
-                ecmd->eargv[i] = NULL;
+                *ecmd->eargv[i] = '\0';
                 i++;
             }
             break;
         case REDIR:
             rcmd = (REDIR_CMD *) cmd;
             nul_terminate(rcmd->cmd);
-            rcmd->efile = NULL;
+            *rcmd->efile = '\0';
             break;
         case PIPE:
             pcmd = (PIPE_CMD *) cmd;
@@ -451,8 +459,8 @@ CMD *parse_exec(char **ps, char *es) {
         ret = parse_redir(ret, ps, es);
     }
 
-    cmd->argv[argc] = NULL;
-    cmd->eargv[argc] = NULL;
+    cmd->argv[argc] = '\0';
+    cmd->eargv[argc] = '\0';
     return ret;
 }
 
@@ -541,7 +549,7 @@ int main() {
 
     /* Read and run the inputted commands */
     while (get_cmd(buf, CMD_MAX_LEN) >= 0) {
-        if (!strncmp(buf, "cd", sizeof("cd"))) {
+        if (!strncmp(buf, "cd", 2)) {
             /* Change directory must be called by the parent */
             if (buf[strlen(buf) - 1] == '\n') {
                 /* remove the \n */
@@ -550,6 +558,7 @@ int main() {
             if (chdir(buf + 3) < 0) {
                 fprintf(STDERR, "hsh: cd: %s: no such file or directory\n", buf + 3);
             }
+            memset(cwd_buff, 0, CWD_BUFF_SIZE);
             continue;
         } else if (!strncmp(buf, "mem", sizeof("mem"))) {
             if (meminfo() < 0) {

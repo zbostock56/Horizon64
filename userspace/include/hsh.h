@@ -18,7 +18,7 @@
 
 #define MAXARGS     (10)
 #define CMD_MAX_LEN (100)
-#define CMD_PROMPT  "\033[32m$ \033[0m"
+#define CMD_PROMPT  " \033[32m$ \033[0m"
 
 static char whitespace[] = " \t\r\b\v";
 static char symbols[] = "<|<&;()";
