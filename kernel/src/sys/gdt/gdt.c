@@ -6,15 +6,29 @@
  * In this file are the initialization functions associated with the Global
  * Descriptor Table (GDT).
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
 #include <sys/gdt/gdt.h>
+#include <common/kprint.h>
 
 /* Global descriptor table */
 static GDT_TABLE g_gdt[NUM_CPUS] = {0};
 static size_t num_gdt = 0;
+
+const char gdt_member_names[10][64] = {
+    "null_desc",
+    "kernel_code_16_bit",
+    "kernel_data_16_bit",
+    "kernel_code_32_bit",
+    "kernel_data_32_bit",
+    "kernel_code_64_bit",
+    "kernel_data_64_bit",
+    "user_data_64_bit",
+    "user_code_64_bit",
+    "tss"
+};
 
 /**
  * @brief Helper for making entry in the GDT.
@@ -44,9 +58,9 @@ void gdt_init_entry(GDT_ENTRY *entry, uint64_t base, uint64_t limit,
  * @brief Initialization function for the GDT
  *
  */
-void gdt_init(/* CPU *cpu_info */) {
-    klogi("INIT GDT: starting...\n");
-    /* TODO: Must be done for each CPU */
+void gdt_init(CPU *cpu_info) {
+    klogs("INIT GDT: starting...\n");
+
     if (num_gdt + 1 > NUM_CPUS) {
         kloge("Trying to initialize a GDT for non-existance CPU!\n");
         halt();
@@ -93,16 +107,16 @@ void gdt_init(/* CPU *cpu_info */) {
         GDT_ACCESS_DATA_SEGMENT | GDT_ACCESS_DATA_WRITEABLE,
         GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
 
-    /* User code 64-bit */
-    gdt_init_entry(&(gdt->user_code_64_bit), 0, 0xFFFFFFFF,
-        GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 | GDT_ACCESS_EXECUTABLE |
-        GDT_ACCESS_CODE_SEGMENT | GDT_ACCESS_CODE_READABLE,
-        GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
-
     /* User data 64-bit */
     gdt_init_entry(&(gdt->user_data_64_bit), 0, 0xFFFFFFFF,
         GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 |
         GDT_ACCESS_DATA_SEGMENT | GDT_ACCESS_DATA_WRITEABLE,
+        GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
+
+    /* User code 64-bit */
+    gdt_init_entry(&(gdt->user_code_64_bit), 0, 0xFFFFFFFF,
+        GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 | GDT_ACCESS_EXECUTABLE |
+        GDT_ACCESS_CODE_SEGMENT | GDT_ACCESS_CODE_READABLE,
         GDT_FLAG_64BIT | GDT_FLAG_GRANULARITY_4K);
 
     GDT_DESCRIPTOR g = {
@@ -110,17 +124,52 @@ void gdt_init(/* CPU *cpu_info */) {
         .offset = (uint64_t) gdt
     };
 
+    /* Call assembly to perform the lgdt instruction */
     gdt_load(&g);
-    klogi("GDT initialized for CPU: %d at %x\n", num_gdt - 1, gdt);
-    klogi("INIT GDT (CPU %d): finished...\n", num_gdt - 1);
+
+    if (cpu_info) {
+        klogi("INIT GDT: initialized gdt for CPU: %d at %x\n",
+              cpu_info->cpu_id, gdt);
+    }
+    klogs("INIT GDT: finished...\n");
 }
 
-/* TODO: Complete for each CPU */
-void gdt_init_tss(/* CPU *cpu_info */) {
-    // GDT_DESCRIPTOR gdtr;
-    // __asm__ volatile("sgdt %0"
-    //                  :
-    //                  : "m"(gdtr)
-    //                  : "memory");
-    // GDT_TABLE *gt = (GDT_TABLE *) (gdtr.offset);
+/**
+ * @brief Loads the Task State Segment in the GDT
+ *
+ * @param cpu_info CPU to load the TSS on
+ */
+void gdt_init_tss(CPU *cpu_info) {
+    klogs("INIT TSS: starting...\n");
+
+    GDT_DESCRIPTOR gdtr;
+    __asm__ volatile("sgdt %0"
+                     :
+                     : "m"(gdtr)
+                     : "memory");
+    GDT_TABLE *gt = (GDT_TABLE *) (gdtr.offset);
+    uint64_t base_addr = (uint64_t) (&cpu_info->tss);
+
+    gt->tss.segment_base_low = base_addr & 0xFFFF;
+    gt->tss.segment_base_mid = (base_addr >> 16) & 0xFF;
+    gt->tss.segment_base_mid_2 = (base_addr >> 24) & 0xFF;
+    gt->tss.segment_base_high = (base_addr >> 32) & 0xFFFFFFFF;
+    gt->tss.segment_limit_low = 0x67;
+    gt->tss.segment_present = 1;
+    gt->tss.segment_type = 0b1001;
+
+    klogd("INIT TSS: Load TSS with base address at %x\n", base_addr);
+
+    /* Load TSS at 0x48 since that is the next avaiable descriptor in GDT */
+    __asm__ volatile("ltr %%ax"
+                     :
+                     : "a"(0x48));
+
+    if (cpu_info) {
+        klogd("INIT TSS: Loaded TSS for CPU %d\n", cpu_info->cpu_id);
+    } else {
+        klogd("INIT TSS: Loaded TSS\n");
+    }
+
+    klogs("INIT TSS: finished...\n");
 }

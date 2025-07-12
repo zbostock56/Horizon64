@@ -4,11 +4,12 @@
  * @brief Helper for printing out the stack if exception occurs.
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
 #include <util/stack_walk.h>
+#include <common/kprint.h>
 
 /**
  * @brief Helper to print out the stack.

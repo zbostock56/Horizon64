@@ -4,7 +4,7 @@
  * @brief Helpers for getting scancodes for the keyboard
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 

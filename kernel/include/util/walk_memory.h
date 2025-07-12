@@ -18,4 +18,5 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void walk_memory(void *rsp, uint8_t depth);
+void walk_memory(unsigned long rsp, uint8_t depth);
+void stack_print(unsigned long start, unsigned long end);

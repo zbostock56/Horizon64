@@ -10,6 +10,7 @@
 #pragma once
 
 #include <globals.h>
+#include <dev/terminal.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 
@@ -21,4 +22,3 @@
 
 /* --------------------------- EXTERNALLY DEFINED --------------------------- */
 void system_init();
-void terminal_puts(TERMINAL *t, const char *s);

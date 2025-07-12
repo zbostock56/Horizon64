@@ -107,3 +107,6 @@ void apic_init();
 void apic_send_end_of_interrupt();
 void apic_timer_init();
 uint8_t apic_timer_int_is_delivered();
+void apic_enable();
+void apic_send_ipi(uint8_t processor, uint8_t vector, uint32_t mtype);
+uint32_t apic_read_reg(uint64_t offset);

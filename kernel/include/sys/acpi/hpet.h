@@ -2,9 +2,9 @@
  * @file hpet.h
  * @author Zack Bostock
  * @brief Information pertaining to the High Precision Event Timer (HPET)
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -12,9 +12,11 @@
 #include <const.h>
 
 #include <common/kprint.h>
+#include <common/time.h>
 
 #include <sys/mmu.h>
 #include <sys/acpi/acpi.h>
+
 #include <structs/hpet_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
@@ -59,6 +61,13 @@
 #define TMR_INT_ENB_CNF     (2)
 #define TMR_INT_TYPE_CNF    (1)
 
+/**
+ * @brief Represents the counter clock period
+ * @note This is the starting bit of the field which is housed in the general
+ * capabilities register from bits 32 to 64.
+ */
+#define HPET_COUNTER_CLK_PERIOD     (32)
+
 /* -------------------------------- GLOBALS --------------------------------- */
 extern HPET *hpet;
 
@@ -99,3 +108,6 @@ extern HPET *hpet;
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 STATUS hpet_init();
+uint64_t hpet_get_nanos();
+uint64_t hpet_get_millis();
+void hpet_sleep(uint64_t millis);

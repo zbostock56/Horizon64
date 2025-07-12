@@ -26,4 +26,4 @@ typedef struct {
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void ivec2_scale(IVEC2 dest, int scale, IVEC2 source);
+// void ivec2_scale(IVEC2 dest, int scale, IVEC2 source);

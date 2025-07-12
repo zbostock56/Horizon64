@@ -4,20 +4,21 @@
  * @brief Helpers for reading from files in the system image
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
 #include <init/iso_file.h>
+#include <common/kprint.h>
 
 /**
  * @brief Helper to see if the string ends which a specific string sequence.
  *
  * @param str String to search through
  * @param end Ending to look for
- * @return int 1 if the specified ending, 0 otherwise
+ * @return STATUS SYS_OK if the specified ending, SYS_ERR otherwise
  */
-int check_string_ending(const char *str, const char *end) {
+STATUS check_string_ending(const char *str, const char *end) {
     const char *_str = str;
     const char *_end = end;
 
@@ -40,15 +41,15 @@ int check_string_ending(const char *str, const char *end) {
         end--;
 
         if (end == _end || (str == _str && end == _end)) {
-            return 1;
+            return SYS_OK;
         }
 
         if (str == _str) {
-            return 0;
+            return SYS_ERR;
         }
     }
 
-    return 0;
+    return SYS_ERR;
 }
 
 /*
@@ -72,7 +73,7 @@ void get_iso_file(const char *name, LIMINE_MODULE_REQ module_request,
 
     /* Check bootloader provided return value */
     if (!module_response) {
-        kloge("FONT INIT: request's response for font file is NULL!\n");
+        kloge("GET ISO FILE: request's response is NULL!\n");
         halt();
     }
 

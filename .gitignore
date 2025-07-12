@@ -26,3 +26,8 @@ scripts/memory_plotter/plots
 scripts/memory_plotter/__pycache__
 scripts/memory_plotter/mem_map.txt
 .gdb
+texts
+initrd*
+sysroot
+kernel/include/sys/ksymbols.h
+kernel/include/sys/ksymbols.h

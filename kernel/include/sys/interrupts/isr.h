@@ -31,3 +31,5 @@
 void isr_handler(REGISTERS *regs);
 void isr_init();
 void isr_register_handler(int interrupt, ISR_HANDLER handler);
+void isr_enable_system_calls();
+int isr_get_avaiable_vector();

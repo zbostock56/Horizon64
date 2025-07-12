@@ -4,7 +4,7 @@
  * @brief Initializes CPU specific features
  * @verbatim
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
@@ -77,56 +77,55 @@ void get_cpu_vendor(char *copy_to) {
 }
 
 /**
- * @brief Get the cpu model name
+ * @brief Get the CPU family, stepping, and model number.
  *
- * @param copy_to Buffer to copy model name into
- */
-void get_cpu_model_name(char *copy_to) {
-    uint32_t registers[4];
-    __cpuid(0x80000002, registers[CPUID_EAX], registers[CPUID_EBX],
-            registers[CPUID_ECX], registers[CPUID_EDX]);
-    ((uint32_t *) copy_to)[0] = registers[CPUID_EAX];
-    ((uint32_t *) copy_to)[1] = registers[CPUID_EBX];
-    ((uint32_t *) copy_to)[2] = registers[CPUID_ECX];
-    ((uint32_t *) copy_to)[3] = registers[CPUID_EDX];
-    __cpuid(0x80000004, registers[CPUID_EAX], registers[CPUID_EBX],
-            registers[CPUID_ECX], registers[CPUID_EDX]);
-    ((uint32_t *) copy_to)[4] = registers[CPUID_EAX];
-    ((uint32_t *) copy_to)[5] = registers[CPUID_EBX];
-    ((uint32_t *) copy_to)[6] = registers[CPUID_ECX];
-    ((uint32_t *) copy_to)[7] = registers[CPUID_EDX];
-    __cpuid(0x80000004, registers[CPUID_EAX], registers[CPUID_EBX],
-            registers[CPUID_ECX], registers[CPUID_EDX]);
-    ((uint32_t *) copy_to)[8] = registers[CPUID_EAX];
-    ((uint32_t *) copy_to)[9] = registers[CPUID_EBX];
-    ((uint32_t *) copy_to)[10] = registers[CPUID_ECX];
-    ((uint32_t *) copy_to)[11] = registers[CPUID_EDX];
-    copy_to[48] = '\0';
-}
-
-/**
- * @brief Get the CPU family, stepping, and model number
- *
- * @param f Family of the CPU
- * @param stepping Stepping of the CPU
- * @param mn Model number of the CPU
+ * @param f Family of the CPU.
+ * @param stepping Stepping of the CPU.
+ * @param mn Model number of the CPU.
  */
 void get_cpu_family(int *f, int *stepping, int *mn) {
     uint32_t registers[4];
     __cpuid(0x1, registers[CPUID_EAX], registers[CPUID_EBX],
             registers[CPUID_ECX], registers[CPUID_EDX]);
+
     uint32_t family = (registers[CPUID_EAX] >> 8) & 0xF;
     uint32_t model_num = (registers[CPUID_EAX] >> 4) & 0xF;
     *stepping = registers[CPUID_EAX] & 0xF;
     uint32_t ext_model = (registers[CPUID_EAX] >> 16) & 0xF;
     uint32_t ext_family = (registers[CPUID_EAX] >> 20) & 0xFF;
 
-    if (family == 0xF) {
-        *f += ext_family;
-    }
-    if (family == 0x6 || family == 0xF) {
-        *mn = (model_num + (ext_model << 4));
-    }
+    /* Set family number */
+    *f = (family == 0xF) ? (family + ext_family) : family;
+
+    /* Set model number */
+    *mn = (family == 0x6 || family == 0xF) ? (model_num + (ext_model << 4)) : model_num;
+}
+
+/**
+ * @brief Retrieve the full CPU model name
+ *
+ * @param model_name Buffer to store the model name
+ */
+void get_cpu_model_name(char *model_name) {
+    uint32_t registers[4];
+
+    /* First part of brand string */
+    __cpuid(0x80000002, registers[CPUID_EAX], registers[CPUID_EBX],
+            registers[CPUID_ECX], registers[CPUID_EDX]);
+    memcpy(model_name, registers, sizeof(registers));
+
+    /* Second part of brand string */
+    __cpuid(0x80000003, registers[CPUID_EAX], registers[CPUID_EBX],
+            registers[CPUID_ECX], registers[CPUID_EDX]);
+    memcpy(model_name + 16, registers, sizeof(registers));
+
+    /* Third part of brand string */
+    __cpuid(0x80000004, registers[CPUID_EAX], registers[CPUID_EBX],
+            registers[CPUID_ECX], registers[CPUID_EDX]);
+    memcpy(model_name + 32, registers, sizeof(registers));
+
+    // Null-terminate the string
+    model_name[48] = '\0';
 }
 
 /**
@@ -165,14 +164,14 @@ void print_cpu_info() {
     get_cpu_model_name(brand);
     get_cpu_cache_info(&cache_line_size, &l2_cache_size, &l3_cache_size);
 
-    klogi("Vendor ID:   %s\n", vendor);
-    klogi("CPU family:  %d\n", family);
-    klogi("Model:       %d\n", model_number);
-    klogi("Model name:  %s\n", brand);
-    klogi("Stepping:    %d\n", stepping);
-    klogi("Cache Lines: %d Bytes\n", cache_line_size);
-    klogi("L2 cache:    %d KB\n", l2_cache_size);
-    klogi("L3 cache:    %d KB\n", l3_cache_size);
+    klogt("Vendor ID:   %s\n", vendor);
+    klogt("CPU family:  %d\n", family);
+    klogt("Model:       %d\n", model_number);
+    klogt("Model name:  %s\n", brand);
+    klogt("Stepping:    %d\n", stepping);
+    klogt("Cache Lines: %d Bytes\n", cache_line_size);
+    klogt("L2 cache:    %d KB\n", l2_cache_size);
+    klogt("L3 cache:    %d KB\n", l3_cache_size);
 }
 
 /**
@@ -182,7 +181,7 @@ void print_cpu_info() {
  */
 void cpu_init(size_t cpu_number) {
 
-    klogi("INIT CPU %d: starting...\n", cpu_number);
+    klogs("INIT CPU %d: starting...\n", cpu_number);
 
     /* Check for PAT support and enable */
     /*
@@ -221,5 +220,5 @@ void cpu_init(size_t cpu_number) {
     /* Print out the CPU manufacturer */
     klogi("Printing out CPU %d's info\n", cpu_number);
     print_cpu_info();
-    klogi("INIT CPU %d: finished...\n", cpu_number);
+    klogs("INIT CPU %d: finished...\n", cpu_number);
 }

@@ -11,6 +11,8 @@
 
 #include <globals.h>
 
+#include <common/kprint.h>
+
 #include <dev/terminal.h>
 #include <dev/keyboard/keyboard.h>
 #include <dev/serial.h>
@@ -26,6 +28,12 @@
 #include <sys/interrupts/idt.h>
 #include <sys/interrupts/irq.h>
 #include <sys/acpi/apic.h>
+#include <sys/smp.h>
+
+#include <proc/syscall.h>
+
+#include <fs/vfs.h>
+#include <fs/initrd.h>
 
 #include <init/psf.h>
 #include <init/boot_info.h>
@@ -36,7 +44,7 @@
 
 /* -------------------------------- GLOBALS --------------------------------- */
 static volatile LIMINE_BASE_REVISION(2);
-static volatile struct limine_module_request psf_file_request = {
+static volatile struct limine_module_request file_request = {
     .id = LIMINE_MODULE_REQUEST,
     .revision = 0
 };
@@ -75,6 +83,3 @@ static volatile struct limine_bootloader_info_request bl_info_req = {
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void system_init();
-
-/* --------------------------- EXTERNALLY DEFINED --------------------------- */
-void init_terminal(FRAMEBUFFER fb);

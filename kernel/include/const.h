@@ -32,7 +32,7 @@
 
 /* SMP */
 #define NUM_CPUS (1)
-#define MAX_CPUS (256)
+#define MAX_CPUS (32)
 
 /* Keyboard */
 #define ARROW_UP        (0x48)
@@ -53,7 +53,7 @@
 #define LEVEL_DEBUG (2)
 
 /* System Status */
-#define SYS_OK    (1)
+#define SYS_OK  (1)
 #define SYS_ERR (0)
 
 /* Common */

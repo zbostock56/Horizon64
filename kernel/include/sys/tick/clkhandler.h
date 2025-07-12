@@ -20,5 +20,6 @@
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 uint64_t get_pit_time();
+void pit_sleep(uint64_t offset);
 void system_timer_sleep(uint64_t offset);
 void clkhandler(REGISTERS *reg);

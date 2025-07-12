@@ -55,6 +55,22 @@ typedef struct {
     uint32_t _reserved_2         : 19;
 } __attribute__((packed)) SYSTEM_SEGMENT_SELECTOR;
 
+/* Locations within the GDT to specfic segments */
+#define GDT_KERNEL_CODE_16_BIT      (0x8)
+#define GDT_KERNEL_DATA_16_BIT      (0x10)
+#define GDT_KERNEL_CODE_32_BIT      (0x18)
+#define GDT_KERNEL_DATA_32_BIT      (0x20)
+#define GDT_KERNEL_CODE_64_BIT      (0x28)
+#define GDT_KERNEL_DATA_64_BIT      (0x30)
+#define GDT_USER_DATA_64_BIT        (0x38)
+#define GDT_USER_CODE_64_BIT        (0x40)
+#define GDT_TSS                     (0x48)
+
+/**
+ * @brief Global Descriptor Table Layout
+ * @note For correct functionality of system call layer, the 64-bit segments
+ *       must be ordered kcode, kdata, udata, ucode
+ */
 typedef struct {
     GDT_ENTRY null_desc;
     GDT_ENTRY kernel_code_16_bit;
@@ -63,10 +79,12 @@ typedef struct {
     GDT_ENTRY kernel_data_32_bit;
     GDT_ENTRY kernel_code_64_bit;
     GDT_ENTRY kernel_data_64_bit;
-    GDT_ENTRY user_code_64_bit;
     GDT_ENTRY user_data_64_bit;
-    //SYSTEM_SEGMENT_SELECTOR tss;
+    GDT_ENTRY user_code_64_bit;
+    SYSTEM_SEGMENT_SELECTOR tss;
 } __attribute__((packed)) GDT_TABLE;
+
+extern const char gdt_member_names[10][64];
 
 typedef enum {
     GDT_FLAG_64BIT                      = 0x20,

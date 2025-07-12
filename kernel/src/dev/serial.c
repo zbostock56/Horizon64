@@ -3,13 +3,19 @@
  * @author Zack Bostock
  * @brief Functionality pertaining to serial port operation
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
+#include <common/string.h>
+#include <common/kprint.h>
+
 #include <dev/serial.h>
 
-static ERRNO serial_enabled = ERR_NO_ERR;
+#define NO_ERROR        (0)
+#define SERIAL_FAULTY   (1)
+
+static uint8_t serial_enabled = NO_ERROR;
 
 /**
  * @brief Initialization function for serial port
@@ -45,17 +51,17 @@ STATUS serial_init() {
     /* Step 6 */
     outb(COM1 + 4, 0x0B);
     /* Step 7 */
-    outb(COM1 + 4, 0xAE);
+    outb(COM1 + 4, 0x1E);
     /* Step 8 */
     outb(COM1 + 0, 0xAE);
     if (inb(COM1 + 0) != 0xAE) {
-        serial_enabled = ERR_SERIAL_FAULTY;
+        serial_enabled = SERIAL_FAULTY;
         return SYS_ERR;
     }
     /* Set in normal operation mode */
     outb(COM1 + 4, 0x0F);
+    klogi("INIT SERIAL: starting...\n");
     return SYS_OK;
-    klogi("INIT SERIAL: finished...\n");
 }
 
 /**
@@ -83,11 +89,11 @@ uint8_t is_transmit_empty() {
  * @return STATUS SYS_ERR if error, SYS_OK if successful
  */
 STATUS serial_write(char c) {
-    if (serial_enabled == ERR_SERIAL_FAULTY) {
+    if (serial_enabled == SERIAL_FAULTY) {
         return SYS_ERR;
     }
 
-    /* Wait until communication can be sent*/
+    /* Wait until communication can be sent */
     while(!is_transmit_empty());
 
     outb(COM1, c);
@@ -111,7 +117,7 @@ char serial_read() {
  * @return STATUS SYS_OK if success, SYS_ERR if failed
  */
 STATUS serial_puts(const char *str) {
-  for (size_t i = 0; i < __builtin_strlen(str); i++) {
+  for (size_t i = 0; i < strlen(str); i++) {
     if (serial_write(str[i]) == SYS_ERR) {
         return SYS_ERR;
     }

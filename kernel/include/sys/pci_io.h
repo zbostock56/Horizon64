@@ -10,7 +10,10 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <sys/pci.h>
+
+#include <common/kprint.h>
 
 #define NOT_IN_TABLE    (-1)
 
@@ -249,6 +252,24 @@ static inline void pci_outb(uint32_t bus, uint32_t slot, uint32_t func,
 }
 
 /**
+ * @brief Prints out the information of a PCI device
+ *
+ * @param dev Device to print out
+ * @param dev_number Device number
+ */
+static inline void pci_dev_info(PCI_DEVICE dev, int64_t dev_number) {
+    if (dev_number == NOT_IN_TABLE) {                                       \
+        klogi("PCI: %2x:%2x.%1x - %4x:%4x %s\n",                            \
+              dev.info.bus, dev.info.device, dev.info.func, dev.vendor_id,  \
+              dev.device_id, "Unknown Device");                             \
+    } else {                                                                \
+        klogi("PCI: %2x:%2x.%1x - %4x:%4x %s\n",                            \
+              dev.info.bus, dev.info.device, dev.info.func, dev.vendor_id,  \
+              dev.device_id, table[dev_number].description);                \
+    }
+}
+
+/**
  * @brief Helper macro to check if a function exists for a specific device
  * @verbatim
  * When checking if a function exists, if the readback does not come back
@@ -312,6 +333,7 @@ static inline void pci_outb(uint32_t bus, uint32_t slot, uint32_t func,
 #define PCI_IS_DEV_MULTIFUNCTION(bus, slot, func)                           \
     ((pci_ind(bus, slot, func, PCI_CLASS_SERIAL_BUS) >> 16) & 0x80)
 
+#if 0
 #define PCI_DEV_INFO(dev, dev_number) {                                     \
     if (dev_number == NOT_IN_TABLE) {                                       \
         klogi("PCI: %2x:%2x.%1x - %4x:%4x %s\n",                            \
@@ -323,3 +345,4 @@ static inline void pci_outb(uint32_t bus, uint32_t slot, uint32_t func,
               dev.device_id, table[dev_number].description);                \
     }                                                                       \
 }
+#endif

@@ -13,6 +13,8 @@
 #include <structs/control_registers_str.h>
 #include <structs/cpu_str.h>
 
+#include <common/kprint.h>
+
 /* GCC built-in cpuid headers */
 #include <cpuid.h>
 

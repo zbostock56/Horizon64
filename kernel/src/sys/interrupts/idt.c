@@ -6,11 +6,12 @@
  * In this file is the initialization code and helpers for the Interrupt
  * Descriptor Table (IDT).
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
 #include <sys/interrupts/idt.h>
+#include <common/kprint.h>
 
 /* Interrupt descriptor table */
 __attribute__((aligned(0x10))) static IDT_ENTRY g_idt[X86_64_IDT_ENTRIES] = {0};
@@ -41,16 +42,16 @@ void idt_init_entry(int interrupt, void *base, uint16_t segment, uint8_t type) {
  * @brief Main initialization function for the IDT.
  */
 void idt_init() {
-  klogi("INIT IDT: starting...\n");
+  klogs("INIT IDT: starting...\n");
   /* Zero out all IDT entries */
   for (size_t i = 0; i < X86_64_IDT_ENTRIES; i++) {
     memset(&g_idt[i], 0, sizeof(IDT_ENTRY));
   }
 
   /* Load the IDT */
-  klogi("Loading IDT\n");
+  klogd("Loading IDT\n");
   asm volatile("lidt %0" : : "m"(g_idt_descriptor));
-  klogi("INIT IDT: finished...\n");
+  klogs("INIT IDT: finished...\n");
 }
 
 /**

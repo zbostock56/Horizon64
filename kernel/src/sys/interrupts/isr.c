@@ -7,11 +7,20 @@
  * Interrupt Service Routines (ISR). In addition, there is the generic ISR
  * handler. Plus, the initialization function for the ISRs.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
+#include <common/kprint.h>
+
 #include <sys/interrupts/isr.h>
+#include <sys/asm.h>
+#include <sys/panic.h>
+
+#include <util/gpf_decode.h>
+#include <util/pf_decode.h>
+
+#include <proc/ctxsw.h>
 
 static char* exceptions[] = {
     [0] = "Division by Zero",
@@ -62,6 +71,7 @@ static char* exceptions[] = {
 };
 
 static ISR_HANDLER g_isr_handlers[X86_64_IDT_ENTRIES] = {0};
+static int available_vectors = 0x81;
 
 /* From the auto generated file */
 void isr_init_entries();
@@ -70,16 +80,41 @@ void isr_init_entries();
  * @brief Initialization of ISRs.
  */
 void isr_init() {
-  klogi("INIT ISR: starting...\n");
-  isr_init_entries();
-  /* Set all to open (will cause #GP if a gate is not open and is accessed) */
-  for (int i = 0; i < 256; i++) {
-    idt_enable_gate(i);
-  }
-  idt_disable_gate(0x80);
-  enable_interrupts();
-  klogi("ISR's are initialized, interrupts are enabled\n");
-  klogi("INIT ISR: finished...\n");
+    klogs("INIT ISR: starting...\n");
+    isr_init_entries();
+
+    /* Set all to open (will cause #GP if a gate is not open and is accessed) */
+    for (int i = 0; i < 256; i++) {
+        idt_enable_gate(i);
+    }
+
+    idt_disable_gate(0x80);
+    klogs("INIT ISR: finished...\n");
+}
+
+/**
+ * @brief Helper to get an available ISR vector
+ * @note Starts at 0x81 (129)
+ *
+ * @return int Available ISR vector number
+ */
+int isr_get_avaiable_vector() {
+    while (available_vectors < 256) {
+        if (!g_isr_handlers[available_vectors]) {
+            return available_vectors;
+        }
+        available_vectors++;
+    }
+    kloge("ISR: No more available vectors!\n");
+    halt();
+}
+
+/**
+ * @brief Helper to enable the IDT gate for system calls
+ */
+void isr_enable_system_calls() {
+    klogd("ISR: Opening gate 0x80 (128) for system calls\n");
+    idt_enable_gate(0x80);
 }
 
 /**
@@ -92,42 +127,72 @@ void isr_init() {
  *
  * IRQ's are remapped to start at 0x20 (interrupt 32)
  *
+ * NOTE: If ISR is from different ring, then SS will be set to 0x0
+ *
  * @param regs Information about the calling process.
  */
 void isr_handler(REGISTERS *regs) {
+  /* Check for spurious interrupt or system call interrupt */
+  if (regs->interrupt == 39 || regs->interrupt == 128) {
+    klogd("ISR: Received spurious or system call interrupt\n");
+    return;
+  }
 
-  /* TODO: Check for spurious interrupt */
-
-  /* TODO: Set aside an ISR for dispatching system calls */
-
-  /* TODO: Set aside an ISR for scheduling */
+  if (regs->interrupt > 128) {
+    klogd("ISR: received software interrupt for scheduling\n");
+  }
 
   /* Process interrupt */
   if (g_isr_handlers[regs->interrupt] != NULL) {
     /* Call general vector to service interrupt */
     g_isr_handlers[regs->interrupt](regs);
+    return;
   } else if (regs->interrupt >= 32) {
     /* Unreserved interrupt with no handler, hang the system */
-    klogi("Unhandled interupt %d!\n\n", regs->interrupt);
-    walk_memory((void *) regs->rbp, 8);
+    kloge("Unhandled interrupt %d!\n\n", regs->interrupt);
+    backtrace(0x0);
     halt();
   } else {
     /* Reserved interrupt, hang the system */
-    kloge("Unhandled Exception!\n");
-    klogi("%s.\nError code: %d (%x)\n\n",
-          exceptions[regs->interrupt], regs->error_code, regs->error_code);
-    walk_memory((void *) regs->rbp, 8);
-    stack_walk((void *) regs->rbp, 4);
-    klogi("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
+    PROCESS *p = sched_get_curr_proc();
+
+    uint64_t cr2 = read_cr(cr2);
+    uint64_t cr3 = read_cr(cr3);
+    uint64_t cr4 = read_cr(cr4);
+    if (p->mode == PROC_UMODE && regs->interrupt == 14) {
+        kloge("#PF: Killing usermode process %d (%s)!\n", p->id, p->name);
+        pf_decode(regs->error_code, cr2);
+        problematic_instruction(regs->rip);
+        sched_exit(0);
+    }
+    if (p) {
+        kloge("Unhandled Exception for process %d (%s)! %s with error code %x (%d).\n\n",
+              p->id, p->name, exceptions[regs->interrupt], regs->error_code,
+              regs->error_code);
+    } else {
+        kloge("Unhandled Exception! %s with error code %x (%d).\n\n",
+              exceptions[regs->interrupt], regs->error_code, regs->error_code);
+    }
+
+    if (regs->interrupt == 13) {
+        gpf_decode(regs->error_code);
+    } else if (regs->interrupt == 14) {
+        pf_decode(regs->error_code, cr2);
+    }
+
+    problematic_instruction(regs->rip);
+    backtrace();
+    klogn("\nRIP   : (%x)\nCS    : (%x)\nRFLAGS: (%x)\n"
             "RSP   : (%x)\nSS    : (%x)\n"
             "RAX   : %x\nRBX   : %x\nRCX   : %x\nRDX   : %x\n"
             "RSI   : %x\nRDI   : %x\nRBP   : %x\n"
             "R8    : %x\nR9    : %x\nR10   : %x\nR11   : %x\n"
-            "R12   : %x\nR13   : %x\nR14   : %x\nR15   : %x\n\n",
+            "R12   : %x\nR13   : %x\nR14   : %x\nR15   : %x\n"
+            "CR2   : %x\nCR3   : %x\nCR4   : %x\n\n",
             regs->rip, regs->cs, regs->rflags, regs->rsp, regs->ss, regs->rax,
             regs->rbx, regs->rcx, regs->rdx, regs->rsi, regs->rdi, regs->rbp,
             regs->r8, regs->r9, regs->r10, regs->r11, regs->r12, regs->r13,
-            regs->r14, regs->r15);
+            regs->r14, regs->r15, cr2, cr3, cr4);
     halt();
   }
 }

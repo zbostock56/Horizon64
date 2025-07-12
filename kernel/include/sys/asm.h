@@ -78,6 +78,28 @@ static inline uint32_t ind(uint16_t port) {
 }
 
 /**
+ * @brief C-wrapped function for the insw x86 assembly instruction
+ *
+ * @param port Port to read from
+ * @param addr Place to copy string into
+ * @param count Size of string
+ */
+static inline void insw(uint16_t port, void* addr, uint32_t count) {
+    __asm__ volatile("rep insw" : "+D" (addr), "+c" (count) : "d" (port) : "memory");
+}
+
+/**
+ * @brief C-wrapped function for the outsw x86 assembly instruction
+ *
+ * @param port Port to read from
+ * @param addr Place to copy string into
+ * @param count Size of string
+ */
+static inline void outsw(uint16_t port, const void* addr, uint32_t count) {
+    __asm__ volatile("rep outsw" : "+S" (addr), "+c" (count) : "d" (port));
+}
+
+/**
  * @brief Used for waiting on specific operations when doing port
  *        manipulations.
  */

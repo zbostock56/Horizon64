@@ -5,7 +5,7 @@
  * Implementation of Advanced Configuration and Power Interface (ACPI)
  * functions.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
@@ -50,17 +50,16 @@ ACPI_SDT *acpi_get_sdt(const char *signature) {
     /* Turnary operator here is for compatibility with ver 2.0 or greater */
     size_t length = (sdt->header.length - sizeof(ACPI_SDT_HEADER)) /
                       (use_xsdt ? 8 : 4);
-    size_t i = 0;
-    for (; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
         ACPI_SDT *table = (ACPI_SDT *) PHYS_TO_VIRT((use_xsdt ?
                           ((uint64_t *) sdt->data)[i] :
                           ((uint32_t *) sdt->data)[i]));
         if (!memcmp(table->header.signature, signature, strlen(signature))) {
-            klogi("INIT ACPI: found SDT \"%s\" %x\n", signature, table);
+            klogd("INIT ACPI: found SDT \"%s\" in table %x\n", signature, table);
             return table;
         }
     }
-    klogi("INIT ACPI: SDT \"%s\" not found\n", signature);
+    kloge("INIT ACPI: SDT \"%s\" not found\n", signature);
     return NULL;
 }
 
@@ -70,7 +69,7 @@ ACPI_SDT *acpi_get_sdt(const char *signature) {
  * @param req RSDP request from the bootloader
  */
 void acpi_init(LIMINE_RSDP_REQ req) {
-    klogi("INIT ACPI: starting...\n");
+    klogs("INIT ACPI: starting...\n");
     LIMINE_RSDP_RES *res = req.response;
 
     /* Parameter check before moving on */
@@ -104,25 +103,23 @@ void acpi_init(LIMINE_RSDP_REQ req) {
     }
 
     /* Check RSDP and print out information about it for visual check */
-    klogi("INIT ACPI: RSDP signature: (");
-    for (uint8_t i = 0; i < 8; i++) {
-        klogi("%c", rsdp->signature[i]);
-    }
-    klogi(")\n");
+    char buffer[9] = {0};
+    memcpy(buffer, rsdp->signature, 8);
+    klogi("INIT ACPI: RSDP signature: (%s)\n", buffer);
 
     /* Check to make sure the signature is correct for extra insurance */
-    if (memcmp(rsdp->signature, "RSD PTR ", 8)) {
-        kloge("INIT ACPI: RSDP signature is not correct! Should be 'RSD PTR '.");
-        return;
+    if (memcmp(buffer, "RSD PTR ", 8)) {
+        kloge("INIT ACPI: RSDP signature is not correct! Should be 'RSD PTR '"
+              " but is (%s)\n", rsdp->signature);
+        halt();
     }
 
-    klogi("INIT ACPI: RSDP OEM ID: (");
-    for (uint8_t i = 0; i < 6; i++) {
-        klogi("%c", rsdp->signature[i]);
-    }
-    klogi(")\n");
+    memset(buffer, 0, 9);
+    memcpy(buffer, rsdp->oemid, 6);
+    buffer[7] = '\0';
+    klogi("INIT ACPI: RSDP OEM ID: (%s)\n", buffer);
 
     /* Initialize Multiple APIC Description Table (MADT) */
     madt_init();
-    klogi("INIT ACPI: finished...\n");
+    klogs("INIT ACPI: finished...\n");
 }

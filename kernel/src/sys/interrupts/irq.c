@@ -7,7 +7,7 @@
  * interrupts are setup. There are also helpers for registering handlers for
  * those hardware interrupts.
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
@@ -17,6 +17,7 @@
 static IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS] = {0};
 static const PIC_DRIVER *pic = NULL;
 static const PIT_DRIVER *pit = NULL;
+int timer_enabled = FALSE;
 
 /**
  * @brief Generic hardware interrupt handler. Calls specific interrupt handler
@@ -25,6 +26,7 @@ static const PIT_DRIVER *pit = NULL;
  * @param regs Structure which has information about the calling process
  */
 void irq_handler(REGISTERS *regs) {
+
   /* Translate between the vector number to hardware interrupt number */
   int irq = regs->interrupt - PIC_REMAP_OFFSET;
 
@@ -62,7 +64,7 @@ void irq_unregister_handler(int irq) {
  * @brief Main hardware interrupt initization function.
  */
 void irq_init() {
-  klogi("INIT IRQ: starting...\n");
+  klogs("INIT IRQ: starting...\n");
   disable_interrupts();
 
   pic = pic_get_driver();
@@ -71,7 +73,7 @@ void irq_init() {
   /* Check to make sure the PIC exists*/
 
   if (!pic->probe()) {
-    kloge("WARNING: No PIC found!\n");
+    klogw("IRQ INIT: No PIC found!\n");
     return;
   }
 
@@ -83,9 +85,10 @@ void irq_init() {
 
   pic->initialize(PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8);
 
-  klogi("PIC master offset: %x (%d)...\nPIC slave offset: %x (%d)...\n",
-        PIC_REMAP_OFFSET, PIC_REMAP_OFFSET, PIC_REMAP_OFFSET + 8,
-        PIC_REMAP_OFFSET + 8);
+  klogi("PIC master offset: %x (%d)...\n",
+        PIC_REMAP_OFFSET, PIC_REMAP_OFFSET);
+  klogi("PIC slave offset: %x (%d)...\n",
+        PIC_REMAP_OFFSET + 8, PIC_REMAP_OFFSET + 8);
 
   /* Set the programmable interrupt timer */
   pit->initialize(PIT_1MS);
@@ -99,5 +102,6 @@ void irq_init() {
   }
 
   enable_interrupts();
-  klogi("INIT IRQ: finished...\n");
+  klogd("Interrupts enabled\n");
+  klogs("INIT IRQ: finished...\n");
 }
