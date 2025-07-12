@@ -21,10 +21,24 @@ Horizon64 is a hobbyist operating system designed for the x86_64 architecture. I
   - Keyboard
   - Serial
   - PSF Fonts
+  - Symmetric Multi Processing (SMP)
 - Physicial and virtual memory management
 - Bitmap allocator
+- Round-robin Scheduler
+- FAT32, ttyfs, pipefs, initrd, ramfs, vfs
+- System Calls
+- Userspace
+    - Basic Terminal
+        - cat
+        - ls
+        - echo
+    - libc (h64libc)
+    - ELF loader
 
 ## Future Plans
 
-- Process management
 - Booting on bare metal
+- Switching to Multi-Level Feedback Queue Scheduler
+    - Multicore friendly
+- Signals
+- Text Editors: [bim](https://github.com/klange/bim)
