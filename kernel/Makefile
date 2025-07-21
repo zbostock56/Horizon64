@@ -54,7 +54,7 @@ CONDITIONALS :=	\
 	-DKERNEL_BUILD
 
 override CPPFLAGS := \
-    -I ./include -I ../h64libc \
+    -I ./include -I ../h64libc -I ../limine \
     $(CPPFLAGS) \
     -MMD \
     -MP
@@ -104,10 +104,7 @@ KMAP := bin/kernel.map
 
 # Default target.
 .PHONY: all
-all: dir include/limine.h bin/$(KERNEL) $(SYMBOLS_OUTPUT)
-
-include/limine.h:
-	curl -Lo $@ https://github.com/limine-bootloader/limine/raw/trunk/limine.h
+all: dir bin/$(KERNEL) $(SYMBOLS_OUTPUT)
 
 # Kernel linking target
 bin/$(KERNEL): linker.ld $(ALL_OBJS)

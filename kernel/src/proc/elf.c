@@ -64,6 +64,91 @@ void *elf_find_symbol(const char *name, ELF_SHEADER *sheader, ELF_SHEADER *sym,
 }
 
 /**
+ * @brief Convert ELF class identifier to a human-readable string.
+ *
+ * @param class ELF class identifier (e.g., 0x1 for 32-bit, 0x2 for 64-bit)
+ * @return const char* Human-readable string describing the ELF class
+ */
+const char* elf_class_to_str(uint8_t class) {
+    switch (class) {
+        case 0x1: return "ELF32";
+        case 0x2: return "ELF64";
+        default:  return "Unknown";
+    }
+}
+
+/**
+ * @brief Convert ELF data encoding to a human-readable string.
+ *
+ * @param data ELF data encoding (e.g., BITS_LE or BITS_BE)
+ * @return const char* Human-readable string describing the encoding
+ */
+const char* elf_data_to_str(uint8_t data) {
+    switch (data) {
+        case BITS_LE: return "Little Endian";
+        case BITS_BE: return "Big Endian";
+        default:      return "Unknown";
+    }
+}
+
+/**
+ * @brief Convert ELF OS ABI to a human-readable string.
+ *
+ * @param osabi ELF OS ABI value
+ * @return const char* Human-readable string describing the ABI
+ */
+const char* elf_osabi_to_str(uint8_t osabi) {
+    switch (osabi) {
+        case ABI_SYSV: return "UNIX System V ABI";
+        default:       return "Unknown";
+    }
+}
+
+/**
+ * @brief Convert ELF machine architecture to a human-readable string.
+ *
+ * @param machine ELF machine architecture value
+ * @return const char* Human-readable string describing the architecture
+ */
+const char* elf_machine_to_str(uint16_t machine) {
+    switch (machine) {
+        case ARCH_X86_64: return "x86-64";
+        case ARCH_X86:    return "x86";
+        case ARCH_ARM:    return "ARM";
+        case ARCH_AARCH64:return "AArch64";
+        default:          return "Unknown";
+    }
+}
+
+/**
+ * @brief Print key fields of the ELF header with enum string descriptions.
+ *
+ * This function is useful for debugging ELF header mismatches.
+ * It uses kloge() to log the information.
+ *
+ * @param h Pointer to the ELF_HEADER structure to debug
+ */
+void print_elf_header_debug(const ELF_HEADER* h) {
+    kloge("ELF Header Debug Info:");
+
+    kloge("  Magic: 0x%08X (%s)", h->magic,
+          h->magic == ELF_MAGIC ? "Correct" : "Invalid");
+
+    kloge("  Class: 0x%02X (%s)", h->elf[EI_CLASS],
+          elf_class_to_str(h->elf[EI_CLASS]));
+
+    kloge("  Data Encoding: 0x%02X (%s)", h->elf[EI_DATA],
+          elf_data_to_str(h->elf[EI_DATA]));
+
+    kloge("  OS ABI: 0x%02X (%s)", h->elf[EI_OSABI],
+          elf_osabi_to_str(h->elf[EI_OSABI]));
+
+    kloge("  Machine: 0x%04X (%s)", h->machine,
+          elf_machine_to_str(h->machine));
+}
+
+
+/**
  * @brief Loads and ELF executable
  *
  * @param p Process to load
@@ -130,6 +215,7 @@ size_t elf_load(PROCESS *p, const char *path_name, uint64_t *entry_point,
     if (h.magic != ELF_MAGIC || h.elf[EI_CLASS] != 0x2 ||
         h.elf[EI_DATA] != BITS_LE || h.elf[EI_OSABI] != ABI_SYSV ||
         h.machine != ARCH_X86_64) {
+        print_elf_header_debug(&h);
         goto error;
     }
 
