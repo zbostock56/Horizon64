@@ -24,18 +24,24 @@ $(eval $(call DEFAULT_VAR,HOST_LIBS,$(DEFAULT_HOST_LIBS)))
 
 MEMORY := 4G
 TIME := -rtc base=localtime
+UNAME_S := $(shell uname -s)
 
 .PHONY: all all-hdd run run-uefi run-hdd run-hdd-uefi kernel clean distclean
 
 all: $(IMAGE_NAME).iso
 
 all-hdd: $(IMAGE_NAME).hdd
-
 # Normal run
 run: $(IMAGE_NAME).iso
+ifeq ($(UNAME_S),Darwin)
+	qemu-system-x86_64													\
+	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 			    	\
+	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
+else
 	qemu-system-x86_64	-enable-kvm										\
 	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 			    	\
 	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
+endif
 
 # Run with debug output
 rund: $(IMAGE_NAME).iso
@@ -46,9 +52,15 @@ rund: $(IMAGE_NAME).iso
 
 # Run with multiple cores
 runmc: $(IMAGE_NAME).iso
+ifeq ($(UNAME_S),Darwin)
+	qemu-system-x86_64 -cpu host -smp 4,sockets=1,cores=2				\
+	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 		      		\
+	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
+else
 	qemu-system-x86_64 -enable-kvm -cpu host -smp 4,sockets=1,cores=2	\
 	-serial stdio -M q35,smm=off -m $(MEMORY) $(TIME) 		      		\
 	-cdrom $(IMAGE_NAME).iso -boot d -display default,show-cursor=on -no-reboot
+endif
 
 # Debug with GDB
 debug: $(IMAGE_NAME).iso
@@ -121,8 +133,13 @@ $(IMAGE_NAME).iso: ./ext limine libc us kernel
 	@mkdir -p initrd/etc											\
 		initrd/usr													\
 		initrd/root
+ifeq ($(UNAME_S),Darwin)
+	@rsync -a sysroot/ initrd/
+	@gtar --format=ustar -cvpf initrd.tar -C initrd bin etc root
+else
 	@cp -rf sysroot/* initrd
 	@tar -cvpf initrd.tar -C $(shell pwd)/initrd bin etc root
+endif
 	@cp -v kernel/bin/kernel iso_root/boot/
 	@cp -v ext/* initrd.tar iso_root/modules
 	@mv iso_root/boot/kernel iso_root/boot/horizon

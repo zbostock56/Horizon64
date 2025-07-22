@@ -11,10 +11,18 @@ define DEFAULT_VAR =
     endif
 endef
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+override DEFAULT_CC := x86_64-elf-gcc
+override DEFAULT_LD := x86_64-elf-ld
+else
 override DEFAULT_CC := ../toolchain/x86_64-elf/bin/x86_64-elf-gcc
-$(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
 override DEFAULT_LD := ../toolchain/x86_64-elf/bin/x86_64-elf-ld
+endif
+
+$(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
 $(eval $(call DEFAULT_VAR,LD,$(DEFAULT_LD)))
+
 override DEFAULT_CFLAGS := -g -O0 -pipe -lgcc
 $(eval $(call DEFAULT_VAR,CFLAGS,$(DEFAULT_CFLAGS)))
 override DEFAULT_CPPFLAGS :=

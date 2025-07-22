@@ -20,7 +20,12 @@ override USERBIN_DIR := bin
 LIBC_OBJ_DIR := ../h64libc/obj
 
 # Compiler and assembler setup
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+override DEFAULT_CC := x86_64-elf-gcc
+else
 override DEFAULT_CC := ../toolchain/x86_64-elf/bin/x86_64-elf-gcc
+endif
 $(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
 override DEFAULT_ASM := nasm
 
