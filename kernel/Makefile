@@ -167,6 +167,7 @@ dir:
 	@mkdir -p obj/src/fs
 	@mkdir -p obj/src/proc
 	@mkdir -p obj/src/proc/syscalls
+	@mkdir -p obj/src/mm
 	@mkdir -p bin
 	@echo "Created obj and bin directories"
 
