@@ -15,7 +15,12 @@ override LIBCSRC_DIR := ./src
 override LIBCOBJ_DIR := ./obj
 
 # Compiler setup
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+override DEFAULT_CC := x86_64-elf-gcc
+else
 override DEFAULT_CC := ../toolchain/x86_64-elf/bin/x86_64-elf-gcc
+endif
 $(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
 
 # Common flags for libc functionality
