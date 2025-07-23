@@ -24,7 +24,6 @@
 #define GET_SLAB(ptr) ((SLAB *)(ROUND_DOWN((uintptr_t)(ptr), PAGE_SIZE) + SLAB_PAGE_OFFSET))
 
 static uint8_t selfcache_init = FALSE;
-static SCACHE selfcache;
 static SCACHE selfcache = {
     .size = sizeof(SCACHE),
     .alignment = 8,
@@ -211,4 +210,41 @@ void slab_freecache(SCACHE *cache) {
         s = next;
     }
     UNLOCK_LOCK(&cache->lock);
+}
+
+SCACHE *slab_newcache(uint64_t size,
+                        uint64_t alignment,
+                        void (*ctor)(SCACHE *, void *),
+                        void (*dtor)(SCACHE *, void *)) {
+    if (alignment == 0) {
+        alignment = 8;
+    }
+    if (!selfcache_init) {
+        selfcache_init = TRUE;
+        memset((void *) &selfcache.lock, 0, sizeof(LOCK));
+    }
+
+    SCACHE *cache = slab_allocate(&selfcache);
+    if (!cache) {
+        return NULL;
+    }
+
+    cache->size = size;
+    cache->alignment = alignment;
+    uint64_t freeptrsize = size < SLAB_INDIRECT_CUTOFF ? sizeof(void **) : 0;
+    cache->truesize = ROUND_UP(size + freeptrsize, alignment);
+    cache->ctor = ctor;
+    cache->dtor = dtor;
+    cache->slabobjcount = size < SLAB_INDIRECT_CUTOFF ?
+        SLAB_DATA_SIZE / cache->truesize : SLAB_INDIRECT_COUNT;
+    cache->full = NULL;
+    cache->empty = NULL;
+    cache->partial = NULL;
+
+    memset((void *) &cache->lock, 0, sizeof(LOCK));
+
+    klogd("SLAB: new cache: size %d | align %d | true size %d | obj count %d\n",
+            cache->size, cache->alignment, cache->truesize, cache->slabobjcount);
+
+    return cache;
 }

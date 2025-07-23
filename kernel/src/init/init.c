@@ -56,6 +56,7 @@ void system_init() {
 
     /* Memory initialization */
     pm_init(mem_req);
+    alloc_init();
     vm_init(mem_req, kernel_addr_request);
 
 

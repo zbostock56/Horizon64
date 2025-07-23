@@ -37,7 +37,7 @@ static uint64_t allocsizes[CACHE_COUNT] = {
     8192, 16384, 32768, ALLOC_MAX_SIZE
 };
 
-static SCACHE *caches[CACHE_COUNT];
+static SCACHE *caches[CACHE_COUNT] = {0};
 
 static void initarea(SCACHE *cache, void *obj) {
     uint64_t *header = obj;
@@ -69,12 +69,14 @@ static SCACHE *getcachefromsize(uint64_t size) {
 
 /** Initialize all slab caches. Must be called before any alloc/free */
 void alloc_init() {
+    klogs("ALLOC: starting...\n");
     for (int i = 0; i < CACHE_COUNT; ++i) {
         uint64_t obj_size = allocsizes[i] + sizeof(uint64_t)*2 + USE_POISON*sizeof(uint64_t);
         caches[i] = slab_newcache(obj_size, 0, initarea, dtor);
         ASSERT(caches[i]);
     }
-    klogi("alloc: initialized %d slab caches", CACHE_COUNT);
+    klogi("ALLOC: initialized %d slab caches\n", CACHE_COUNT);
+    klogs("ALLOC: finished...\n");
 }
 
 /**
