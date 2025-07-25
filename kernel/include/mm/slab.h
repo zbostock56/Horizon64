@@ -17,6 +17,6 @@ void *slab_allocate(SCACHE *cache);
 void  slab_free(SCACHE *cache, void *addr);
 SCACHE *slab_newcache(uint64_t size,
                         uint64_t alignment,
-                        void (*ctor)(SCACHE *, void *),
-                        void (*dtor)(SCACHE *, void *));
+                        void (*constructor)(SCACHE *, void *),
+                        void (*destructor)(SCACHE *, void *));
 void slab_freecache(SCACHE *cache);

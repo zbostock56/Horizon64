@@ -11,6 +11,7 @@
 #include <common/kprint.h>
 #include <common/string.h>
 #include <common/math.h>
+#include <common/klib.h>
 #include <sys/mmu.h>
 #include <mm/slab.h>
 
@@ -35,9 +36,12 @@ static SCACHE selfcache = {
 static void init_direct(SCACHE *cache, SLAB *slab, void *base) {
     slab->free = NULL;
     slab->used = 0;
+    slab->base = base;
     for (uint32_t offset = 0; offset < cache->truesize * cache->slabobjcount; offset += cache->truesize) {
         void *obj = (uint8_t *)base + offset;
-        if (cache->ctor) cache->ctor(cache, obj);
+        if (cache->constructor) {
+            cache->constructor(cache, obj);
+        }
         void **link = (void **)((uint8_t *)obj + cache->size);
         *link = slab->free;
         slab->free = link;
@@ -50,16 +54,20 @@ static void init_indirect(SCACHE *cache, SLAB *slab, void *ptr, void *obj_base) 
     slab->base = obj_base;
     for (uint32_t i = 0; i < cache->slabobjcount; ++i) {
         void *obj = (uint8_t *)obj_base + i * cache->truesize;
-        if (cache->ctor) cache->ctor(cache, obj);
+        if (cache->constructor) {
+            cache->constructor(cache, obj);
+        }
         void **link = &((void **)ptr)[i];
         *link = slab->free;
         slab->free = link;
     }
 }
 
-static uint8_t growcache(SCACHE *cache) {
+static uint8_t grow_cache(SCACHE *cache) {
     void *slab_mem = (void *)PHYS_TO_VIRT(pm_get(1, 0, __func__, __LINE__));
-    if (!slab_mem) return FALSE;
+    if (!slab_mem) {
+        return FALSE;
+    }
     SLAB *slab = GET_SLAB(slab_mem);
     if (cache->size < SLAB_INDIRECT_CUTOFF) {
         init_direct(cache, slab, slab_mem);
@@ -74,48 +82,72 @@ static uint8_t growcache(SCACHE *cache) {
         init_indirect(cache, slab, slab_mem, obj_mem);
     }
 
-    // insert into empty list
+    /* Insert into empty list */
     slab->next = cache->empty;
     slab->prev = NULL;
-    if (cache->empty) cache->empty->prev = slab;
+    if (cache->empty) {
+        cache->empty->prev = slab;
+    }
     cache->empty = slab;
     return TRUE;
 }
 
 static void *take_object(SCACHE *cache, SLAB *slab) {
     void **link = slab->free;
-    if (!link) return NULL;
+    if (!link) {
+        return NULL;
+    }
     slab->free = *link;
     slab->used++;
     *link = NULL;
     if (cache->size < SLAB_INDIRECT_CUTOFF) {
         return (void *)((uint8_t *)link - cache->size);
     } else {
-        uintptr_t idx = ((uintptr_t)link - ROUND_DOWN((uintptr_t)slab, PAGE_SIZE)) / sizeof(void *);
+        uintptr_t idx = ((uintptr_t)link -
+                         ROUND_DOWN((uintptr_t)slab, PAGE_SIZE)) /
+                         sizeof(void *);
         return (uint8_t *)slab->base + idx * cache->truesize;
     }
 }
 
 static SLAB *return_object(SCACHE *cache, void *obj) {
-    SLAB *slab;
-    void **link;
+    SLAB *slab = NULL;
+    void **link = NULL;
     if (cache->size < SLAB_INDIRECT_CUTOFF) {
         slab = GET_SLAB(obj);
         link = (void **)((uint8_t *)obj + cache->size);
+        ASSERT(*link == NULL);
     } else {
         slab = cache->partial ?: cache->full;
-        // find correct slab
+        /* Find correct slab */
         for (; slab; slab = slab->next) {
             uintptr_t start = (uintptr_t)slab->base;
             uintptr_t end = start + cache->slabobjcount * cache->truesize;
-            if ((uintptr_t)obj >= start && (uintptr_t)obj < end) break;
-            if (!slab->next && cache->partial) slab = cache->partial;
+            if ((uintptr_t)obj >= start && (uintptr_t)obj < end) {
+                break;
+            }
+            if (!slab->next && cache->partial) {
+                slab = cache->partial;
+            }
         }
+        kloge("slab free: obj=%x not found in any slab (cache=%x, size=%d)\n",
+            obj, cache, cache->size);
+
+        for (SLAB *s = cache->partial; s; s = s->next) {
+            uintptr_t start = (uintptr_t)s->base;
+            uintptr_t end   = start + cache->slabobjcount * cache->truesize;
+            klogd("slab @%x owns [%x - %x)\n", s, (void *)start, (void *)end);
+        }
+
+
+        ASSERT(slab);
         uint32_t idx = ((uintptr_t)obj - (uintptr_t)slab->base) / cache->truesize;
         void **base = (void **)ROUND_DOWN((uintptr_t)slab, PAGE_SIZE);
         link = &base[idx];
     }
-    if (cache->dtor) cache->dtor(cache, obj);
+    if (cache->destructor) {
+        cache->destructor(cache, obj);
+    }
     *link = slab->free;
     slab->free = link;
     slab->used--;
@@ -129,35 +161,47 @@ void *slab_allocate(SCACHE *cache) {
         selfcache.alignment = sizeof(void *);
         selfcache.truesize = ROUND_UP(selfcache.size + sizeof(void *), selfcache.alignment);
         selfcache.slabobjcount = SLAB_DATA_SIZE / selfcache.truesize;
-        selfcache.ctor = NULL;
-        selfcache.dtor = NULL;
+        selfcache.constructor = NULL;
+        selfcache.destructor = NULL;
         selfcache.full = selfcache.partial = selfcache.empty = NULL;
         memset(&selfcache.lock, 0, sizeof(selfcache.lock));
         selfcache_init = TRUE;
     }
 
-    // allocate cache metadata if needed
+    /* Allocate cache metadata if needed */
     void *ret = NULL;
     SLAB *slab = cache->partial ?: cache->empty;
-    if (!slab && !growcache(cache)) goto out;
-    if (!slab) slab = cache->empty;
+    if (!slab && !grow_cache(cache)) {
+        goto out;
+    }
+    if (!slab) {
+        slab = cache->empty;
+    }
 
     ret = take_object(cache, slab);
 
-    // move slab between lists
+    /* Move slab between lists */
     if (slab == cache->empty) {
         cache->empty = slab->next;
-        if (cache->empty) cache->empty->prev = NULL;
+        if (cache->empty) {
+            cache->empty->prev = NULL;
+        }
         slab->next = cache->partial;
         slab->prev = NULL;
-        if (cache->partial) cache->partial->prev = slab;
+        if (cache->partial) {
+            cache->partial->prev = slab;
+        }
         cache->partial = slab;
     } else if (slab->used == cache->slabobjcount) {
         cache->partial = slab->next;
-        if (cache->partial) cache->partial->prev = NULL;
+        if (cache->partial) {
+            cache->partial->prev = NULL;
+        }
         slab->next = cache->full;
         slab->prev = NULL;
-        if (cache->full) cache->full->prev = slab;
+        if (cache->full) {
+            cache->full->prev = slab;
+        }
         cache->full = slab;
     }
 out:
@@ -166,56 +210,138 @@ out:
 }
 
 void slab_free(SCACHE *cache, void *addr) {
-    if (!addr) return;
+    if (!addr) {
+        return;
+    }
+
     LOCK_LOCK(&cache->lock);
     SLAB *slab = return_object(cache, addr);
+    ASSERT(slab);
 
-    // slab empty?
+    /* Is slab empty? */
     if (slab->used == 0) {
-        // unlink
-        if (slab->prev) slab->prev->next = slab->next; else cache->partial = slab->next;
-        if (slab->next) slab->next->prev = slab->prev;
-        // insert into empty
+        /* Unlink it */
+        if (slab->prev) {
+            slab->prev->next = slab->next;
+        } else {
+            cache->partial = slab->next;
+        }
+
+        if (slab->next) {
+            slab->next->prev = slab->prev;
+        }
+
+        /* Insert into empty */
         slab->next = cache->empty;
         slab->prev = NULL;
         if (cache->empty) cache->empty->prev = slab;
         cache->empty = slab;
-    }
-    // slab was full, now partial?
-    else if (slab->used == cache->slabobjcount - 1) {
-        if (slab->prev) slab->prev->next = slab->next; else cache->full = slab->next;
-        if (slab->next) slab->next->prev = slab->prev;
-        // insert into partial
+    } else if (slab->used == cache->slabobjcount - 1) {
+        /* Slab was full, now partial */
+        if (slab->prev) {
+            slab->prev->next = slab->next;
+        } else {
+            cache->full = slab->next;
+        }
+        if (slab->next) {
+            slab->next->prev = slab->prev;
+        }
+
+        /* Insert into partial */
         slab->next = cache->partial;
         slab->prev = NULL;
-        if (cache->partial) cache->partial->prev = slab;
+        if (cache->partial) {
+            cache->partial->prev = slab;
+        }
         cache->partial = slab;
     }
 
     UNLOCK_LOCK(&cache->lock);
 }
 
-void slab_freecache(SCACHE *cache) {
-    if (!cache) return;
-    LOCK_LOCK(&cache->lock);
-    // free all empty slabs
-    SLAB *s = cache->empty;
-    while (s) {
-        SLAB *next = s->next;
+/**
+ * @brief Purge up to maxcount empty slabs from a cache
+ *
+ * @param cache     The slab cache to purge
+ * @param maxcount  Maximum number of slabs to free (use (uint64_t)-1 for all)
+ * @return Number of slabs actually freed
+ */
+static uint64_t purge(SCACHE *cache, uint64_t maxcount) {
+    uint64_t freed = 0;
+    SLAB *slab = cache->empty;
+
+    while (slab && freed < maxcount) {
+        SLAB *next = slab->next;
+
+        /* Sanity: unlink from empty list */
+        if (next)
+            next->prev = NULL;
+        cache->empty = next;
+
+#if USE_POISON
+        /* validate poison on each object */
         if (cache->size >= SLAB_INDIRECT_CUTOFF) {
-            pm_free(VIRT_TO_PHYS(s->base),
-                    NUM_PAGES(cache->slabobjcount * cache->truesize));
+            for (uint32_t i = 0; i < cache->slabobjcount; ++i) {
+                uint8_t *obj = (uint8_t *)slab->base + i * cache->truesize;
+                uint64_t *poison = (uint64_t *)(obj + cache->size - sizeof(uint64_t));
+                ASSERT(*poison == POISON_VALUE);
+            }
+        } else {
+            uint8_t *base = (uint8_t *)ROUND_DOWN((uintptr_t)slab, PAGE_SIZE);
+            for (uint32_t i = 0; i < cache->slabobjcount; ++i) {
+                uint8_t *obj = base + i * cache->truesize;
+                uint64_t *poison = (uint64_t *)(obj + cache->size - sizeof(uint64_t));
+                ASSERT(*poison == POISON_VALUE);
+            }
         }
-        pm_free(VIRT_TO_PHYS(ROUND_DOWN((uintptr_t)s, PAGE_SIZE)), 1);
-        s = next;
+#endif
+
+        /* Free indirect slab backing storage */
+        if (cache->size >= SLAB_INDIRECT_CUTOFF) {
+            pm_free(VIRT_TO_PHYS(slab->base),
+                    NUM_PAGES(cache->slabobjcount * cache->truesize));
+            slab->base = NULL;
+        }
+
+        /* Free slab itself */
+        pm_free(VIRT_TO_PHYS(ROUND_DOWN((uintptr_t)slab, PAGE_SIZE)), 1);
+
+        slab = next;
+        ++freed;
     }
-    UNLOCK_LOCK(&cache->lock);
+
+    return freed;
 }
+
+/**
+ * @brief Free all memory associated with a slab cache
+ *
+ * @param cache The cache to destroy
+ */
+void slab_freecache(SCACHE *cache) {
+    if (!cache)
+        return;
+
+    LOCK_LOCK(&cache->lock);
+
+    /* Sanity: ensure no live objects remain */
+    ASSERT(cache->partial == NULL);
+    ASSERT(cache->full == NULL);
+
+    /* Free all empty slabs */
+    purge(cache, (uint64_t)-1);
+
+    UNLOCK_LOCK(&cache->lock);
+
+    /* Return SCACHE metadata to selfcache */
+    slab_free(&selfcache, cache);
+}
+
 
 SCACHE *slab_newcache(uint64_t size,
                         uint64_t alignment,
-                        void (*ctor)(SCACHE *, void *),
-                        void (*dtor)(SCACHE *, void *)) {
+                        void (*constructor)(SCACHE *, void *),
+                        void (*destructor)(SCACHE *, void *)) {
     if (alignment == 0) {
         alignment = 8;
     }
@@ -233,8 +359,8 @@ SCACHE *slab_newcache(uint64_t size,
     cache->alignment = alignment;
     uint64_t freeptrsize = size < SLAB_INDIRECT_CUTOFF ? sizeof(void **) : 0;
     cache->truesize = ROUND_UP(size + freeptrsize, alignment);
-    cache->ctor = ctor;
-    cache->dtor = dtor;
+    cache->constructor = constructor;
+    cache->destructor = destructor;
     cache->slabobjcount = size < SLAB_INDIRECT_CUTOFF ?
         SLAB_DATA_SIZE / cache->truesize : SLAB_INDIRECT_COUNT;
     cache->full = NULL;

@@ -28,8 +28,8 @@ typedef struct SLAB {
  */
 typedef struct SCACHE {
     LOCK     lock;        /**< Protects all lists and counters below */
-    void    (*ctor)(struct SCACHE *cache, void *obj);  /**< Called on each new object */
-    void    (*dtor)(struct SCACHE *cache, void *obj);  /**< Called on each object return */
+    void    (*constructor)(struct SCACHE *cache, void *obj);  /**< Called on each new object */
+    void    (*destructor)(struct SCACHE *cache, void *obj);  /**< Called on each object return */
     SLAB   *full;        /**< Slabs with no free objects */
     SLAB   *partial;     /**< Slabs with some free and some used objects */
     SLAB   *empty;       /**< Slabs with all objects free */

@@ -11,7 +11,7 @@
 
 #include <stddef.h>
 
-#define ALLOC_MAX_SIZE (16384U)
+#define ALLOC_MAX_SIZE (65536U)
 
 void alloc_init();
 void *alloc(uint64_t s);

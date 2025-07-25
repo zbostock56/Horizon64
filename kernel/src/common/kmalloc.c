@@ -13,6 +13,8 @@
 #include <common/kmalloc.h>
 #include <common/kprint.h>
 #include <common/string.h>
+#include <common/math.h>
+#include <common/klib.h>
 #include <sys/mmu.h>
 #include <mm/alloc.h>
 
@@ -37,7 +39,7 @@ void *kmalloc_impl(uint64_t size, const char *func, size_t line) {
               (unsigned)size, func, (unsigned)line);
     }
 
-    // chunk-based allocation
+    /* Chunk based allocation */
     KMEM_METADATA *mem = (KMEM_METADATA *)
         PHYS_TO_VIRT(pm_get(NUM_PAGES(size) + 1, 0, func, line));
 
@@ -69,19 +71,17 @@ void *kmalloc_impl(uint64_t size, const char *func, size_t line) {
  * @param line Line number in the function which is freeing the memory
  */
 void kfree_impl(void *address, const char *func, size_t line) {
-    (void) func;
-    (void) line;
     if (!address)
         return;
 
     KMEM_METADATA *mem = (KMEM_METADATA *)((uint8_t *)address - PAGE_SIZE);
 
-    if (mem->magic == KMEM_MAGIC_NUMBER && mem->size >= ALLOC_MAX_SIZE) {
-        // chunk free path
+    if (mem->magic == KMEM_MAGIC_NUMBER) {
+        /* Chunk free path */
         pm_free(VIRT_TO_PHYS(mem), mem->num_pages + 1);
         mem->magic = 0;
     } else {
-        // slab free path
+        klogd("Freeing chunk from (%s:%d)\n", func, line);
         free(address);
     }
 }
@@ -100,23 +100,34 @@ void *krealloc_impl(void *address, size_t new_size, const char *func,
     if (!address) {
         return kmalloc_impl(new_size, func, line);
     }
-
-    if (new_size > 0 && new_size < ALLOC_MAX_SIZE) {
-        return realloc(address, new_size);
+    if (new_size >= ALLOC_MAX_SIZE) {
+        klogd("kmalloc: realloc %d bytes (>= %d limit) (%s:%d)\n", new_size,
+                ALLOC_MAX_SIZE, func, line);
     }
 
-    // hybrid path: allocate new, copy, free old
-    KMEM_METADATA *old = (KMEM_METADATA *)((uint8_t *)address - PAGE_SIZE);
-    void *new_ptr = kmalloc_impl(new_size, func, line);
-    if (!new_ptr)
+    size_t old_size = 0;
+
+    /* Detect chunk allocations via magic number */
+    KMEM_METADATA *chunk = (KMEM_METADATA *)((uint8_t *)address - PAGE_SIZE);
+    if (chunk->magic == KMEM_MAGIC_NUMBER) {
+        old_size = chunk->size;
+    } else {
+        /* Slab: objects have headers two uint64_t values before ptr */
+        uint64_t *header = (uint64_t *)address - 2;
+
+        /* Current size field */
+        old_size = header[1];
+    }
+
+    ASSERT(old_size < ALLOC_MAX_SIZE * 100);
+
+    void *new_addr = kmalloc_impl(new_size, func, line);
+    if (!new_addr)
         return NULL;
 
-    size_t copy_sz = (old && old->magic == KMEM_MAGIC_NUMBER)
-                     ? (old->size < new_size ? old->size : new_size)
-                     : new_size;
-    memcpy(new_ptr, address, copy_sz);
+    memcpy(new_addr, address, MIN(old_size, new_size));
     kfree_impl(address, func, line);
-    return new_ptr;
+    return new_addr;
 }
 
 /**
