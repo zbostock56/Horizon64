@@ -56,8 +56,17 @@ void system_init() {
 
     /* Memory initialization */
     pm_init(mem_req);
+    alloc_init();
     vm_init(mem_req, kernel_addr_request);
 
+    /* ACPI (and MADT) initialization */
+    acpi_init(rsdp_request);
+
+    /* High Precision Event Timer (HPET) initialization */
+    hpet_init();
+
+    /* Intialize CMOS/RTC */
+    cmos_init();
 
     /* Set up .psf1 font */
     psf1_font_init(file_request, "zap-vga16.psf");
@@ -76,18 +85,6 @@ void system_init() {
     klogd("SYSTEM INIT: Memory used after initial mapping\n");
     pm_used();
 
-    /* Initialize keyboard driver */
-    keyboard_init();
-
-    /* ACPI (and MADT) initialization */
-    acpi_init(rsdp_request);
-
-    /* High Precision Event Timer (HPET) initialization */
-    hpet_init();
-
-    /* Intialize CMOS/RTC */
-    cmos_init();
-
     /* Intialize PCI device list */
     pci_init();
     
@@ -105,6 +102,9 @@ void system_init() {
 
     /* Load and initialize Initial Ram Disk */
     initrd_init(file_request);
+
+    /* Initialize keyboard driver */
+    keyboard_init();
 
     klogs("SYSTEM INIT: System initialized successfully...\n");
 }

@@ -133,3 +133,7 @@ void vm_map(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t phys_addr,
             uint64_t num_pages, uint64_t flags);
 void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req);
 ADDR_SPACE *create_address_space();
+
+#if KMEM_DEBUG
+void mem_debug();
+#endif

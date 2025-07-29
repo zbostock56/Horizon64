@@ -30,6 +30,8 @@
 #include <sys/acpi/apic.h>
 #include <sys/smp.h>
 
+#include <mm/alloc.h>
+
 #include <proc/syscall.h>
 
 #include <fs/vfs.h>

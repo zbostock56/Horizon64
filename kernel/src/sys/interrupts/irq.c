@@ -17,7 +17,6 @@
 static IRQ_HANDLER g_irq_handler[NUM_HARDWARE_INTERRUPTS] = {0};
 static const PIC_DRIVER *pic = NULL;
 static const PIT_DRIVER *pit = NULL;
-int timer_enabled = FALSE;
 
 /**
  * @brief Generic hardware interrupt handler. Calls specific interrupt handler

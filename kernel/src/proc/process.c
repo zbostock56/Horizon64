@@ -74,7 +74,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         }
 
         /* Allocate the kernel stack */
-        p->kstack_bottom = kmalloc(STACK_SIZE);
+        p->kstack_bottom = kcmalloc(STACK_SIZE);
         if (!p->kstack_bottom) {
             kloge("Failed to allocate space for kernel stack!\n");
             goto error_cleanup;
@@ -82,7 +82,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         p->kstack_top = (void *)((uint8_t *)p->kstack_bottom + STACK_SIZE);
 
         /* Allocate the user stack */
-        p->ustack_bottom = kmalloc(STACK_SIZE);
+        p->ustack_bottom = kcmalloc(STACK_SIZE);
         if (!p->ustack_bottom) {
             kloge("Failed to allocate space for user stack!\n");
             goto error_cleanup;
@@ -121,7 +121,7 @@ PROCESS *process_create(const char *name, void (*entry)(PROC_ID), PROC_PRIO prio
         klogd("KSTACK TOP: %x | KSTACK BOTTOM: %x\n", p->kstack_top, p->kstack_bottom);
     } else {
         /* Kernel-mode process: allocate only the kernel stack */
-        p->kstack_bottom = kmalloc(STACK_SIZE);
+        p->kstack_bottom = kcmalloc(STACK_SIZE);
         if (!p->kstack_bottom) {
             kloge("Failed to allocate space for kernel stack!\n");
             goto error_cleanup;
@@ -200,7 +200,7 @@ static STATUS process_dup_memmap(PROCESS *parent, PROCESS *child) {
     }
     for (size_t i = 0; i < vector_len(&parent->memmap_list); i++) {
         MEM_MAP m = vector_at(&parent->memmap_list, i);
-        void *temp = kmalloc(m.num_pages * PAGE_SIZE);
+        void *temp = kcmalloc(m.num_pages * PAGE_SIZE);
         if (!temp) {
             kloge("Failed to allocate memory during memmap duplication!\n");
             return SYS_ERR;
@@ -297,7 +297,7 @@ PROCESS *process_fork(PROCESS *parent) {
     }
 
     /* Duplicate the kernel stack by allocating a new one and copying content */
-    child->kstack_bottom = kmalloc(STACK_SIZE);
+    child->kstack_bottom = kcmalloc(STACK_SIZE);
     if (!child->kstack_bottom) {
         kloge("Failed to allocate kernel stack for forked process!\n");
         goto fork_error_cleanup;
@@ -382,14 +382,14 @@ void process_free(PROCESS *p) {
             TODO: Fix kfree error when trying to free certain parts
                   of memory maps.
         */
-        // kfree((void *)PHYS_TO_VIRT(m.phys_addr));
+        // kcfree((void *)PHYS_TO_VIRT(m.phys_addr));
     // }
     vector_free(&p->memmap_list);
     vector_free(&p->child_list);
     vector_free(&p->dup_list);
 
     if (p->kstack_bottom)
-        kfree(p->kstack_bottom);
+        kcfree(p->kstack_bottom);
 
     /* Free all memory in the address space memory list */
     for (size_t i = 0; i < vector_len(&p->addrspace->memory_list); i++) {
@@ -400,7 +400,7 @@ void process_free(PROCESS *p) {
 
     klogd("FREEING PROCESS: Process ID: %d\n", p->id);
 
-    kfree(p->addrspace->pml4);
+    kcfree(p->addrspace->pml4);
     kfree(p->addrspace);
     kfree(p);
 }

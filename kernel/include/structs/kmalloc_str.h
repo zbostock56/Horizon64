@@ -11,9 +11,11 @@
 
 typedef struct {
     size_t magic;
-    size_t checkno;
     size_t num_pages;
     size_t size;
-    char file_name[512];
     size_t lineno;
+#if KMEM_DEBUG
+    size_t checkno;
+#endif
+    char file_name[128];
 } KMEM_METADATA;

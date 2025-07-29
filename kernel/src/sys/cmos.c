@@ -25,7 +25,7 @@ static CMOS boot_time = {0};
 static STD_TIME std_time_boot_time = {0};
 static uint64_t boot_time_seconds = 0;
 
-extern int timer_enabled;
+int boot_time_set = FALSE;
 
 /**
  * @brief Get the value of a register
@@ -178,6 +178,6 @@ void cmos_init() {
            boot_time.month, boot_time.day, boot_time.year, boot_time.hours,
            boot_time.minutes, boot_time.seconds);
     klogd("Enabling timed logging\n");
-    timer_enabled = TRUE;
+    boot_time_set = TRUE;
     klogs("INIT CMOS: finished...\n");
 }
