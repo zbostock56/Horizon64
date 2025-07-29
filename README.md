@@ -23,7 +23,7 @@ Horizon64 is a hobbyist operating system designed for the x86_64 architecture. I
   - PSF Fonts
   - Symmetric Multi Processing (SMP)
 - Physicial and virtual memory management
-- Bitmap allocator
+- Bitmap and slab allocator
 - Round-robin Scheduler
 - FAT32, ttyfs, pipefs, initrd, ramfs, vfs
 - System Calls
