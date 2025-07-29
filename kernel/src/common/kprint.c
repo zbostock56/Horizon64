@@ -39,7 +39,7 @@ static uint64_t klog_putchar_times = 0;
 
 static int print_prefix = TRUE;
 
-extern int timer_enabled;
+extern int boot_time_set;
 
 /**
  * @brief Main initialization function for kernel logging
@@ -69,7 +69,7 @@ void klog_print_debug_stats() {
 
 /**
  * @brief Helper to toggle printing prefix
- * 
+ *
  * @param toggle TRUE to enable, FALSE to disable
  */
 void klog_toggle_print_prefix(int toggle) {
@@ -411,7 +411,7 @@ void klog_vprintf(uint8_t level, const char *s, ...) {
     out.term = NULL;
 
     if (level < KLOG_LVL_UNKNOWN) {
-        if (timer_enabled && level != KLOG_LVL_NONE) {
+        if (boot_time_set && level != KLOG_LVL_NONE) {
             CPU *cpu = smp_get_curr_cpu(NO_FORCE_GET_CPU);
             uint64_t nanos = hpet_get_nanos();
             uint64_t nsecs = NANOS_TO_SECONDS(nanos);

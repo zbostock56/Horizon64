@@ -23,18 +23,25 @@
 
 /**
  * @brief Enables the printing of debug level logs
- *
  */
-#define ENABLE_KLOG_DEBUG   (1)
+#define ENABLE_KLOG_DEBUG   (0)
 
 /**
  * @brief Prints kernel logs to the framebuffer
- *
  */
 #define FRAMEBUFFER_LOGGING (0)
 
 /**
- * @brief Denotes if memory allocator should use poison values or not
- *
+ * @brief Denotes if memory debugging is enabled
  */
-#define USE_POISON          (1)
+ #define KMEM_DEBUG         (0)
+
+/**
+ * @brief Denotes if the slab allocator is being used
+ */
+#define SLAB_ALLOCATOR      (1)
+
+/**
+ * @brief Denotes if memory allocator should use poison values or not
+ */
+#define SLAB_POISON         (0)

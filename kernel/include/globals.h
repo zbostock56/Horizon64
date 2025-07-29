@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <const.h>
 #include <limine.h>
+#include <kconfig.h>
 #include <structs/psf_structs.h>
 
 /* Used to as a status message response after function completion */

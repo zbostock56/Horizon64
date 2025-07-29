@@ -117,8 +117,6 @@ void terminal_start() {
 
     #if CLI
     terminal_clear((term_mode = TERM_MODE_TERM));
-    fb_draw_characters(&(term_cli.framebuffer), COLOR_BRIGHT_GREEN, DEFAULT_BG,
-                       "Horizon64");
     terminal_refresh(term_mode);
     #else
     term_mode = TERM_MODE_INFO;
@@ -749,7 +747,7 @@ void terminal_putc(TERM_MODE mode, uint8_t c) {
         return;
     }
 
-    if (curr->state == TERM_STATE_UNKNOWN) {
+    if (curr->framebuffer.base == NULL || curr->state == TERM_STATE_UNKNOWN) {
         return;
     }
 

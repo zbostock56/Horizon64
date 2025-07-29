@@ -15,6 +15,11 @@
 #include <sys/mmu.h>
 #include <common/lock.h>
 
+#if KMEM_DEBUG
+#include <common/kmalloc.h>
+#include <common/math.h>
+#endif
+
 static KERNEL_MEM_INFO kmem = {0};
 vector_new_static(MEM_MAP, global_mem_map);
 ADDR_SPACE kernel_addr_space = {0};
@@ -88,19 +93,6 @@ void pm_init(LIMINE_MEM_REQ req) {
 }
 
 /**
- * @brief Helper function for printing out physical memory usage
- */
-void pm_used() {
-    int squared = 1024 * 1024;
-    klogi("Memory Total: %d MB\n", kmem.total_size / squared);
-    klogd("Physical Base: %x\n", kmem.physical_limit);
-    klogd("Virtual Base: %x\n", kmem.physical_limit + MEM_VIRT_OFFSET);
-    klogd("Free: %d MB\n", kmem.free_size / squared);
-    klogd("Used: %d MB\n",
-          (kmem.total_size - kmem.free_size) / squared);
-}
-
-/**
  * @brief Sets bits in the physical memory bitmap to mark pages
  *        as used
  *
@@ -135,6 +127,65 @@ static inline BITMAP_STATUS bitmap_free(uint64_t address,
         }
     }
     return FREE;
+}
+
+#if KMEM_DEBUG
+/**
+ * @brief Helper for debugging memory allocations tagged with the current checkno.
+ *
+ * Scans physical pages and logs all allocations whose metadata matches the current
+ * debug `kmalloc_checkno`.
+ */
+void mem_debug(void) {
+    klogi("=== MEMORY DEBUG START ===\n");
+    klogi("Current checkno: %d\n", kmalloc_checkno);
+
+    const int max_pages = MIN(NUM_PAGES(kmem.physical_limit), 1024 * 256);
+    const uint64_t end_addr = (uint64_t)max_pages * PAGE_SIZE;
+
+    for (uint64_t addr = 0; addr < end_addr; addr += PAGE_SIZE) {
+        if (bitmap_free(addr, 1) == FREE) {
+            continue;
+        }
+
+        KMEM_METADATA *meta = (KMEM_METADATA *) PHYS_TO_VIRT(addr);
+        if (meta->magic != KMEM_MAGIC_NUMBER) {
+            continue;
+        }
+
+        if (meta->checkno == kmalloc_checkno && kmalloc_checkno > 0) {
+            klogi("%x %s():%d - %d bytes (%d MB)\n",
+                  (void *)meta,
+                  meta->file_name,
+                  meta->lineno,
+                  meta->size,
+                  meta->size / 1024 / 1024);
+        }
+    }
+
+    klogi("Advancing checkno to: %d\n", kmalloc_checkno + 1);
+    ++kmalloc_checkno;
+
+    klogi("=== MEMORY DEBUG END ===\n");
+}
+#endif
+
+
+/**
+ * @brief Helper function for printing out physical memory usage
+ */
+void pm_used() {
+    int squared = 1024 * 1024;
+    klogi("Memory Total: %d MB\n", kmem.total_size / squared);
+    klogd("Physical Base: %x\n", kmem.physical_limit);
+    klogd("Virtual Base: %x\n", kmem.physical_limit + MEM_VIRT_OFFSET);
+    klogi("Free: %d MB\n", kmem.free_size / squared);
+    klogi("Used: %d MB\n",
+          (kmem.total_size - kmem.free_size) / squared);
+
+#if KMEM_DEBUG
+    mem_debug();
+#endif
 }
 
 /**
@@ -549,7 +600,7 @@ ADDR_SPACE *create_address_space() {
     LOCK_LOCK(&vmm_lock);
     memset(as, 0, sizeof(ADDR_SPACE));
 
-    as->pml4 = kmalloc(PAGE_SIZE * DEFAULT_PAGES);
+    as->pml4 = kcmalloc(PAGE_SIZE * DEFAULT_PAGES);
     if (!as->pml4) {
         kloge("VM: Cannot give address space default pages, out of memory!\n");
         kfree(as);

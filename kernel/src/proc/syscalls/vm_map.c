@@ -74,7 +74,7 @@ uint64_t sys_vm_map(uint64_t *hint, uint64_t len, uint64_t prot,
         vm_unmap(as, ptr, np);
     }
 
-    uint64_t phys_ptr = VIRT_TO_PHYS(kmalloc(np * PAGE_SIZE));
+    uint64_t phys_ptr = VIRT_TO_PHYS(kcmalloc(np * PAGE_SIZE));
 
     /* On real hardward, the bits might not be zeroed out */
     memset((void *)(PHYS_TO_VIRT(phys_ptr)), 0, np * PAGE_SIZE);

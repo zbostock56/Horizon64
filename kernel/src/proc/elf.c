@@ -179,7 +179,7 @@ size_t elf_load(PROCESS *p, const char *path_name, uint64_t *entry_point,
     VFS_HANDLE f = vfs_open((char *)fn, VFS_READ);
     if (f != VFS_INVALID_HANDLE) {
         elf_len = vfs_tell(f);
-        elf_buff = (uint8_t *)(kmalloc(elf_len));
+        elf_buff = (uint8_t *)(kcmalloc(elf_len));
         if (!elf_buff) {
             kloge("ELF LOAD: Failed to allocate memory!\n");
             goto error;
@@ -229,7 +229,7 @@ size_t elf_load(PROCESS *p, const char *path_name, uint64_t *entry_point,
     aux->phnum = h.phnum;
     aux->phentsize = h.phentsize;
 
-    pheader = kmalloc(h.phnum * sizeof(ELF_PHEADER));
+    pheader = kcmalloc(h.phnum * sizeof(ELF_PHEADER));
     if (!pheader) {
         kloge("ELF LOAD: Failed to allocate memory for pheader!\n");
         goto error;
@@ -242,7 +242,7 @@ size_t elf_load(PROCESS *p, const char *path_name, uint64_t *entry_point,
 
     vector_append(&p->memmap_list, m);
 
-    phaddr = (uint64_t *)(kmalloc(h.phnum * sizeof(uint64_t)));
+    phaddr = (uint64_t *)(kcmalloc(h.phnum * sizeof(uint64_t)));
     if (!phaddr) {
         kloge("ELF LOAD: Failed to allocate memory phaddr!\n");
         goto error;
@@ -290,7 +290,7 @@ size_t elf_load(PROCESS *p, const char *path_name, uint64_t *entry_point,
         size_t misalign = pheader[i].vaddr & (PAGE_SIZE - 1);
         size_t page_count = DIV_ROUNDUP(misalign + pheader[i].memsz, PAGE_SIZE);
 
-        uint64_t addr = VIRT_TO_PHYS(kmalloc(page_count * PAGE_SIZE));
+        uint64_t addr = VIRT_TO_PHYS(kcmalloc(page_count * PAGE_SIZE));
         if (!addr) {
             kloge("ELF LOAD: Failed to allocate memory!\n");
             goto error;
@@ -324,7 +324,7 @@ size_t elf_load(PROCESS *p, const char *path_name, uint64_t *entry_point,
                 pheader[i].filesz);
     }
 
-    sheader = kmalloc(h.shnum * sizeof(ELF_SHEADER));
+    sheader = kcmalloc(h.shnum * sizeof(ELF_SHEADER));
     if (!sheader) {
         kloge("ELF OPEN: Failed to allocate memory for sheader!\n");
         goto error;
