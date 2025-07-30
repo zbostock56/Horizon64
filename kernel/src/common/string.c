@@ -321,3 +321,59 @@ char *strrchr(const char *s, int c) {
     }
     return (char *)last;
 }
+
+/**
+ * @brief Tokenizes a string using a set of delimiter characters.
+ *
+ * This function splits the input string into a sequence of tokens separated
+ * by any of the characters in the delimiter string. On the first call,
+ * `str` should be the string to tokenize. On subsequent calls to extract
+ * additional tokens from the same string, `str` should be NULL.
+ *
+ * The input string is modified in-place: delimiters are replaced by null
+ * terminators (`'\0'`). The function maintains internal state and is
+ * therefore not thread-safe.
+ *
+ * @param str The string to tokenize, or NULL to continue tokenizing the previous string.
+ * @param delim A null-terminated string of delimiter characters.
+ * @return A pointer to the next token, or NULL if there are no more tokens.
+ *
+ * @note This function is not thread-safe.
+ *
+ * @warning The input string must be writable. This function modifies it in-place.
+ */
+
+char *strtok(char *str, const char *delim) {
+    static char *saved = NULL;
+
+    if (str)
+        saved = str;
+    else if (!saved)
+        return NULL;
+
+    // Skip leading delimiters
+    char *token_start = saved;
+    while (*token_start && strchr(delim, *token_start)) {
+        token_start++;
+    }
+
+    if (*token_start == '\0') {
+        saved = NULL;
+        return NULL;
+    }
+
+    // Find the end of the token
+    char *token_end = token_start;
+    while (*token_end && !strchr(delim, *token_end)) {
+        token_end++;
+    }
+
+    if (*token_end) {
+        *token_end = '\0';
+        saved = token_end + 1;
+    } else {
+        saved = NULL;
+    }
+
+    return token_start;
+}

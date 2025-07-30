@@ -30,3 +30,4 @@ int isupper(int c);
 int isalpha(int c);
 long strtol(const char *nptr, char **endptr, register int base);
 char *strrchr(const char *s, int c);
+char *strtok(char *str, const char *delim);

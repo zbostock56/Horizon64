@@ -305,6 +305,10 @@ static void map_page_entry(ADDR_SPACE *address_space, uint64_t virt_addr,
     /* Map physical address into page table entry */
     pt[pte] = MAKE_TABLE_ENTRY(phys_addr & ~(0xFFF), flags);
 
+    if (!addr_space->is_init) {
+        return;
+    }
+
     /* Invalidate the TLB entry if this address space is currently active */
     if (__builtin_expect(read_cr(cr3) == VIRT_TO_PHYS(addr_space->pml4), 1)) {
         __asm__ volatile ("invlpg (%0)" : : "r"(virt_addr) : "memory");
@@ -344,8 +348,10 @@ static void unmap_page_entry(ADDR_SPACE *addr_space, uint64_t virt_addr) {
     pt[pte] = 0;
 
     /* Invalidate the TLB entry if this address space is active */
-    if (__builtin_expect(read_cr(cr3) == VIRT_TO_PHYS(as->pml4), 1)) {
-        __asm__ volatile ("invlpg (%0)" : : "r"(virt_addr) : "memory");
+    if (as->is_init) {
+        if (__builtin_expect(read_cr(cr3) == VIRT_TO_PHYS(as->pml4), 1)) {
+            __asm__ volatile ("invlpg (%0)" : : "r"(virt_addr) : "memory");
+        }
     }
 
     /* Clear the PD entry for the page table and free it */
@@ -579,6 +585,7 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
         }
     }
 
+    kernel_addr_space.is_init = TRUE;
     write_cr(cr3, VIRT_TO_PHYS(kernel_addr_space.pml4));
     klogs("INIT VM: finished...\n");
 }
@@ -618,6 +625,7 @@ ADDR_SPACE *create_address_space() {
     }
     UNLOCK_LOCK(&vmm_lock);
 
+    as->is_init = TRUE;
     klogd("VMM: Created address space at %x (%d pages)\n", as, len);
     return as;
 }

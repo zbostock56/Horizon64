@@ -11,7 +11,7 @@ define DEFAULT_VAR =
 endef
 
 # List of executables to be compiled
-EXECUTABLES := echo cat hsh init ls
+EXECUTABLES := echo cat hsh init ls rm pwd
 
 # Directory setup
 override USERSRC_DIR := src
@@ -72,6 +72,9 @@ USER_CFILES := $(foreach exec,$(EXECUTABLES),$(USERSRC_DIR)/$(exec).c)
 USER_ASMFILES := $(wildcard $(USERSRC_DIR)/*.asm)
 USER_OBJS := $(addprefix obj/,$(notdir $(USER_CFILES:.c=.o)) $(notdir $(USER_ASMFILES:.asm=.o)))
 
+# Prevent Make from deleting intermediate object files
+.PRECIOUS: $(USER_OBJS)
+
 # Collect all libc object files
 LIBC_OBJS := $(shell find $(LIBC_OBJ_DIR) -name '*.o')
 
@@ -79,8 +82,8 @@ LIBC_OBJS := $(shell find $(LIBC_OBJ_DIR) -name '*.o')
 HEADER_DEPS := $(USER_OBJS:.o=.d)
 
 # Default target: build all executables
-.PHONY: all
-all: dir $(USER_OBJS) $(EXECUTABLES)
+.PHONY: all dir
+all: dir $(addprefix $(USERBIN_DIR)/,$(EXECUTABLES))
 	@echo "Moving userspace binaries into initrd/bin..."
 	@mkdir -p ../initrd/bin
 	@cp $(wildcard bin/*) ../initrd/bin
@@ -88,8 +91,8 @@ all: dir $(USER_OBJS) $(EXECUTABLES)
 # Rule to build each executable
 # Manually specify the name of the executable using $< and also include crt0.o
 # to build each individual user space executable
-$(EXECUTABLES): %: obj/%.o
-	@$(CC) $< obj/crt0.o $(LIBC_OBJS) $(LDFLAGS) -o $(USERBIN_DIR)/$@
+$(USERBIN_DIR)/%: obj/%.o obj/crt0.o $(LIBC_OBJS)
+	@$(CC) $^ $(LDFLAGS) -o $@
 	@echo "Created binary --> $@"
 
 # Rule to compile the C files into object files

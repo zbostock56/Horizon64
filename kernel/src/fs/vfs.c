@@ -61,6 +61,231 @@ VFS_TNODE vfs_root = {0};
 vector_new_static(VFS_FS *, vfs_fs_list);
 
 /**
+ * @brief Configurable paths for debug logging
+ */
+static const char *log_paths[] = {"usr/local", "usr/bin"};
+static const size_t num_log_paths = sizeof(log_paths) / sizeof(log_paths[0]);
+
+/**
+ * @brief Normalize a POSIX-style path, resolving '.' and '..' components.
+ *
+ * @param dst Destination buffer for normalized path (no leading slash)
+ * @param src Source path string (no leading slash)
+ * @param dst_size Size of destination buffer
+ * @return int 0 on success, -1 on error (e.g. trying to escape above root)
+ */
+static int normalize_path(char *dst, const char *src, size_t dst_size) {
+    char temp[VFS_MAX_PATH_LEN];
+    char *components[VFS_MAX_PATH_LEN / 2];
+    char *component_storage[VFS_MAX_PATH_LEN / 2];
+    int depth = 0;
+
+    if (!dst || !src || dst_size == 0) {
+        return -1;
+    }
+
+    if (strlen(src) >= sizeof(temp)) {
+        return -1;
+    }
+
+    strcpy(temp, src);
+
+    char *token = strtok(temp, "/");
+    while (token != NULL && depth < (VFS_MAX_PATH_LEN / 2)) {
+        if (strcmp(token, "..") == 0) {
+            if (depth == 0) {
+                /* Trying to go above root */
+                for (int i = 0; i < depth; i++) {
+                    kfree(component_storage[i]);
+                }
+                return -1;
+            }
+            kfree(component_storage[--depth]);
+        } else if (strcmp(token, ".") != 0 && strlen(token) > 0) {
+            component_storage[depth] = kmalloc(strlen(token) + 1);
+            if (!component_storage[depth]) {
+                /* Clean up -- allocation failure */
+                for (int i = 0; i < depth; i++) {
+                    kfree(component_storage[i]);
+                }
+                return -1;
+            }
+            strcpy(component_storage[depth], token);
+            components[depth] = component_storage[depth];
+            depth++;
+        }
+        token = strtok(NULL, "/");
+    }
+
+    /* Rebuild path */
+    dst[0] = '\0';
+    size_t current_len = 0;
+    for (int i = 0; i < depth; i++) {
+        if (i > 0) {
+            if (current_len + 1 >= dst_size) {
+                for (int j = 0; j < depth; j++) {
+                    kfree(component_storage[j]);
+                }
+                return -1;
+            }
+            strncat(dst, "/", dst_size - current_len - 1);
+            current_len++;
+        }
+
+        size_t comp_len = strlen(components[i]);
+        if (current_len + comp_len >= dst_size) {
+            for (int j = 0; j < depth; j++) {
+                kfree(component_storage[j]);
+            }
+            return -1;
+        }
+
+        strncat(dst, components[i], dst_size - current_len - 1);
+        current_len += comp_len;
+    }
+
+    /* Clean up allocated memory */
+    for (int i = 0; i < depth; i++) {
+        kfree(component_storage[i]);
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Extract next path component safely
+ *
+ * @param path Full path string
+ * @param start_index Starting position in path
+ * @param path_len Total length of path
+ * @param token_buffer Buffer to store extracted token
+ * @param buffer_size Size of token buffer
+ * @return size_t Length of extracted token, or 0 if end of path
+ */
+static size_t extract_path_token(const char *path, size_t start_index, size_t path_len,
+                                char *token_buffer, size_t buffer_size) {
+    if (!path || !token_buffer || start_index >= path_len || buffer_size == 0) {
+        if (token_buffer && buffer_size > 0) {
+            token_buffer[0] = '\0';
+        }
+        return 0;
+    }
+
+    size_t token_len = 0;
+    while ((start_index + token_len) < path_len &&
+           path[start_index + token_len] != '/' &&
+           token_len < (buffer_size - 1)) {
+        token_buffer[token_len] = path[start_index + token_len];
+        token_len++;
+    }
+
+    token_buffer[token_len] = '\0';
+    return token_len;
+}
+
+/**
+ * @brief Find child node by name
+ *
+ * @param parent Parent node to search in
+ * @param name Name of child to find
+ * @return VFS_TNODE* Found child or NULL if not found
+ */
+static VFS_TNODE *find_child_node(VFS_TNODE *parent, const char *name) {
+    if (!parent || !name || !IS_TRAVERSABLE(parent->inode)) {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < parent->inode->child.length; i++) {
+        VFS_TNODE *child = vector_at(&(parent->inode->child), i);
+        if (child && strcmp(child->name, name) == 0) {
+            return child;
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Create a new VFS node
+ *
+ * @param parent Parent directory node
+ * @param name Name of new node
+ * @param type Type of node to create
+ * @return VFS_TNODE* Created node or NULL on failure
+ */
+static VFS_TNODE *create_vfs_node(VFS_TNODE *parent, const char *name, VFS_NODE_TYPE type) {
+    if (!parent || !name || !IS_TRAVERSABLE(parent->inode)) {
+        kloge("Cannot create node '%s' in non-directory\n", name ? name : "<null>");
+        cpu_set_errno(ENOTDIR);
+        return NULL;
+    }
+
+    // Allocate new inode with permissions: 777
+    VFS_INODE *new_inode = vfs_alloc_inode(type, 0, 0, parent->inode->fs,
+                                           parent->inode->mount_point);
+    if (!new_inode) {
+        kloge("Failed to allocate inode for '%s'\n", name);
+        cpu_set_errno(ENOSPC);
+        return NULL;
+    }
+
+    /* Set timestamp */
+    uint64_t now_seconds = NANOS_TO_SECONDS(hpet_get_nanos());
+    uint64_t boot_seconds = cmos_get_boot_time_seconds();
+    seconds_to_std_time(now_seconds + boot_seconds, &(new_inode->time));
+
+    /* Allocate new tnode */
+    VFS_TNODE *new_tnode = vfs_alloc_tnode(name, new_inode, parent->inode);
+    if (!new_tnode) {
+        kfree(new_inode);
+        kloge("Failed to allocate tnode for '%s'\n", name);
+        cpu_set_errno(ENOSPC);
+        return NULL;
+    }
+
+    /* Add to parent's children */
+    vector_append(&(parent->inode->child), new_tnode);
+
+    /* Init filesystem-specific data */
+    if (parent->inode->fs && parent->inode->fs->mknode) {
+        if (parent->inode->fs->mknode(new_tnode) != 0) {
+            /* remove parent on filesystem error */
+            parent->inode->child.length--;
+            vfs_free_nodes(new_tnode);
+            kloge("Filesystem failed to create node '%s'\n", name);
+            cpu_set_errno(EIO);
+            return NULL;
+        }
+        new_tnode->inode->fs = parent->inode->fs;
+    }
+
+    /* Set file mode and type */
+    switch (type) {
+        case VFS_DIRECTORY:
+            new_tnode->stat.mode |= S_IFDIR;
+            new_tnode->stat.nlink = 1;
+            break;
+        case VFS_FILE:
+            new_tnode->stat.mode |= S_IFREG;
+            new_tnode->stat.nlink = 1;
+            break;
+        case VFS_SYMLINK:
+            new_tnode->stat.mode |= S_IFLNK;
+            new_tnode->stat.nlink = 1;
+            break;
+        case VFS_MOUNT_POINT:
+            new_tnode->stat.mode |= S_IFLNK;
+            new_tnode->stat.nlink = 1;
+            break;
+        default:
+            kloge("Unknown node type: %d\n", type);
+            break;
+    }
+
+    return new_tnode;
+}
+
+/**
  * @brief Helper for getting a new device ID
  *
  * @return DEVICE New device ID
@@ -96,7 +321,9 @@ INO vfs_new_ino_id() {
  * @param fs Filesystem to add
  */
 void vfs_register_fs(VFS_FS *fs) {
-    vector_append(&vfs_fs_list, fs);
+    if (fs) {
+        vector_append(&vfs_fs_list, fs);
+    }
 }
 
 /**
@@ -106,12 +333,17 @@ void vfs_register_fs(VFS_FS *fs) {
  * @return VFS_FS* Pointer to FS if found, NULL otherwise
  */
 VFS_FS *vfs_search_fs(char *name) {
+    if (!name) {
+        return NULL;
+    }
+
     for (size_t i = 0; i < vfs_fs_list.length; i++) {
-        if (!strncmp(name, vfs_fs_list.data[i]->name, sizeof(((VFS_FS) {0}).name))) {
-            return vfs_fs_list.data[i];
+        VFS_FS *fs = vfs_fs_list.data[i];
+        if (fs && strcmp(name, fs->name) == 0) {
+            return fs;
         }
     }
-    kloge("File system %s was not found!\n");
+    kloge("File system %s was not found!\n", name);
     return NULL;
 }
 
@@ -124,6 +356,10 @@ VFS_FS *vfs_search_fs(char *name) {
  * @return VFS_TNODE* Newly allocated tnode
  */
 VFS_TNODE *vfs_alloc_tnode(const char *name, VFS_INODE *inode, VFS_INODE *parent) {
+    if (!name || !inode) {
+        return NULL;
+    }
+
     VFS_TNODE *tnode = (VFS_TNODE *) (kmalloc(sizeof(VFS_TNODE)));
     if (!tnode) {
         kloge("Failed to allocate a new tnode!\n");
@@ -131,7 +367,13 @@ VFS_TNODE *vfs_alloc_tnode(const char *name, VFS_INODE *inode, VFS_INODE *parent
     }
 
     memset(tnode, 0, sizeof(VFS_TNODE));
-    memcpy(tnode->name, name, sizeof(tnode->name));
+
+    size_t name_len = strlen(name);
+    if (name_len >= sizeof(tnode->name)) {
+        name_len = sizeof(tnode->name) - 1;
+    }
+    memcpy(tnode->name, name, name_len);
+    tnode->name[name_len] = '\0';
 
     tnode->inode = inode;
     tnode->parent = parent;
@@ -186,7 +428,7 @@ STATUS vfs_free_nodes(VFS_TNODE *tnode) {
     VFS_INODE *inode = tnode->inode;
 
     /* If nothing else is referencing the inode, then free it */
-    if (inode->references <= 0) {
+    if (inode && inode->references <= 0) {
         kfree(inode);
     }
     kfree(tnode);
@@ -213,7 +455,6 @@ VFS_NODE_DESC *vfs_handle_to_fd(VFS_HANDLE h) {
     return NULL;
 }
 
-
 /**
  * @brief Gets a VFS_TNODE from a path
  *
@@ -223,147 +464,140 @@ VFS_NODE_DESC *vfs_handle_to_fd(VFS_HANDLE h) {
  * @return VFS_TNODE* Returns the found or created node, or NULL on failure.
  */
 VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE type) {
-    char temp_buff[VFS_MAX_PATH_LEN];
-    char path[VFS_MAX_PATH_LEN];
-    VFS_TNODE *curr = &vfs_root;
+    char temp_buffer[VFS_MAX_PATH_LEN];
+    char normalized_path[VFS_MAX_PATH_LEN];
+    char token_buffer[VFS_MAX_NAME_LEN];
+    VFS_TNODE *current_node = &vfs_root;
+    VFS_TNODE *result = NULL;
 
-    /* Only works with absolute paths */
-    if (path_name[0] != '/') {
-        if (sys_get_full_path(VFS_FW_CWD, path_name, temp_buff) == SYSCALL_FAIL) {
-            kloge("'%s' is not a valid path!\n", path_name);
-            return NULL;
-        }
-        /* Skip the leading slash from the full path */
-        strcpy(path, temp_buff + 1);
-    } else {
-        /* Skip the leading slash */
-        strcpy(path, path_name + 1);
-    }
-
-    /* Remove occurrences of "/../" by backing up to the previous slash */
-    size_t pathlen = strlen(path);
-    for (size_t i = 0; i + 4 < pathlen; i++) {
-        if (path[i] == '/' && path[i + 1] == '.' && path[i + 2] == '.' && path[i + 3] == '/') {
-            int found_parent = 0;
-            for (int64_t k = i - 1; k >= 0; k--) {
-                if (path[k] == '/') {
-                    strcpy(&path[k], &path[i + 3]);
-                    found_parent = 1;
-                    i = 0;  /* restart scanning */
-                    break;
-                }
-            }
-            if (!found_parent) {
-                kloge("'%s' is an invalid path\n", path_name);
-                return NULL;
-            }
-            /* Update path length after modification */
-            pathlen = strlen(path);
-        }
-    }
-
-    if (strlen(path_name) != strlen(path)) {
-        klogd("VFS: \"%s\" -> \"%s\"\n", path_name, path);
-    }
-
-    /* Traverse path tokens */
-    size_t curr_index = 0;
-    uint8_t found_node = TRUE;
-    while (curr_index < pathlen) {
-        /* Extract next token from the path */
-        size_t token_len = 0;
-        while ((curr_index + token_len) < pathlen && path[curr_index + token_len] != '/') {
-            temp_buff[token_len] = path[curr_index + token_len];
-            token_len++;
-        }
-        temp_buff[token_len] = '\0';
-        curr_index += token_len + 1;  /* Skip token and the following slash */
-
-        /* Ignore current directory references */
-        if (!strcmp(temp_buff, ".")) {
-            continue;
-        }
-
-        /* Look for the token among current node's children */
-        found_node = FALSE;
-        if (!IS_TRAVERSABLE(curr->inode)) {
-            break;
-        }
-        for (size_t j = 0; j < curr->inode->child.length; j++) {
-            VFS_TNODE *child = vector_at(&(curr->inode->child), j);
-            if (!strncmp(child->name, temp_buff, sizeof(child->name))) {
-                curr = child;
-                found_node = TRUE;
-                break;
-            }
-        }
-        if (!found_node) {
-            break;
-        }
-    }
-
-    /* Node not found; handle creation if specified */
-    if (!found_node) {
-        if (!IS_TRAVERSABLE(curr->inode)) {
-            kloge("'%s' does not reside in a directory!\n", path);
-            return NULL;
-        }
-
-        /* Create node only if CREATE is specified and we're at the end of the path */
-        if ((mode & CREATE) && curr_index >= pathlen && IS_TRAVERSABLE(curr->inode)) {
-            /* Allocate a new inode for the node with permissions: 777 */
-            VFS_INODE *new_inode = vfs_alloc_inode(type, 0, 0, curr->inode->fs, curr->inode->mount_point);
-
-            uint64_t now_seconds = NANOS_TO_SECONDS(hpet_get_nanos());
-            uint64_t boot_seconds = cmos_get_boot_time_seconds();
-            seconds_to_std_time(now_seconds + boot_seconds, &(new_inode->time));
-
-            VFS_TNODE *new_tnode = vfs_alloc_tnode(temp_buff, new_inode, curr->inode);
-            vector_append(&(curr->inode->child), new_tnode);
-
-            if (curr->inode->fs) {
-                curr->inode->fs->mknode(new_tnode);
-                new_tnode->inode->fs = curr->inode->fs;
-            }
-            if (!strncmp(path, "usr/local", 9) || !strncmp(path, "/usr/bin", 8)) {
-                klogd("VFS: Create \"%s\" node\n", path);
-            }
-
-            /* Set file mode and type */
-            switch (type) {
-                case VFS_DIRECTORY:
-                    new_tnode->stat.mode |= S_IFDIR;
-                    new_tnode->stat.nlink = 1;
-                    break;
-                case VFS_FILE:
-                    new_tnode->stat.mode |= S_IFREG;
-                    new_tnode->stat.nlink = 1;
-                    break;
-                case VFS_SYMLINK:
-                    new_tnode->stat.mode |= S_IFLNK;
-                    new_tnode->stat.nlink = 1;
-                    break;
-                case VFS_MOUNT_POINT:
-                    new_tnode->stat.mode |= S_IFLNK;
-                    new_tnode->stat.nlink = 1;
-                    break;
-                default:
-                    break;
-            }
-            return new_tnode;
-        } else {
-            kloge("VFS: \"%s\" doesn't exist\n", path);
-            cpu_set_errno(ENOENT);
-            return NULL;
-        }
-    } else if (mode & ERR_ON_EXIST) {
-        /* The node should not exist */
-        kloge("VFS: \"%s\" already existed\n", path);
+    if (!path_name) {
+        kloge("NULL path provided\n");
+        cpu_set_errno(EINVAL);
         return NULL;
     }
 
-    /* Node found without needing to create a new one */
-    return curr;
+    /* Handle absolute vs relative paths */
+    if (path_name[0] != '/') {
+        if (sys_get_full_path(VFS_FW_CWD, path_name, temp_buffer) == SYSCALL_FAIL) {
+            kloge("'%s' is not a valid path!\n", path_name);
+            cpu_set_errno(EINVAL);
+            return NULL;
+        }
+        /* Skip leading slash from full path */
+        if (strlen(temp_buffer) == 0 || temp_buffer[0] != '/') {
+            kloge("Invalid full path generated for '%s'\n", path_name);
+            cpu_set_errno(EINVAL);
+            return NULL;
+        }
+
+        if (strlen(temp_buffer + 1) >= sizeof(normalized_path)) {
+            kloge("Path too long: '%s'\n", temp_buffer);
+            cpu_set_errno(ENAMETOOLONG);
+            return NULL;
+        }
+        strcpy(normalized_path, temp_buffer + 1);
+    } else {
+        /* Skip the leading slash */
+        if (strlen(path_name + 1) >= sizeof(normalized_path)) {
+            kloge("Path too long: '%s'\n", path_name);
+            cpu_set_errno(ENAMETOOLONG);
+            return NULL;
+        }
+        strcpy(normalized_path, path_name + 1);
+    }
+
+    /* Normalize the path (resolve .. and . components) */
+    if (normalize_path(normalized_path, normalized_path, sizeof(normalized_path)) < 0) {
+        kloge("'%s' is an invalid path (attempt to escape root or path too long)\n", path_name);
+        cpu_set_errno(EINVAL);
+        return NULL;
+    }
+
+    size_t path_len = strlen(normalized_path);
+    /* +1 for the leading slash that was removed */
+    if (strlen(path_name) != path_len + 1) {
+        klogd("VFS: \"%s\" -> \"/%s\"\n", path_name, normalized_path);
+    }
+
+    /* Handle root directory case */
+    if (path_len == 0) {
+        if ((mode & ERR_ON_EXIST)) {
+            kloge("VFS: Root directory already exists\n");
+            cpu_set_errno(EEXIST);
+            return NULL;
+        }
+        return &vfs_root;
+    }
+
+    size_t current_index = 0;
+    uint8_t found_node = TRUE;
+    char *last_token = NULL;
+
+    while (current_index < path_len) {
+        size_t token_len = extract_path_token(normalized_path, current_index, path_len,
+                                            token_buffer, sizeof(token_buffer));
+
+        if (token_len == 0) {
+            break;
+        }
+
+        if (token_len >= sizeof(token_buffer)) {
+            kloge("Path component too long in '%s'\n", path_name);
+            cpu_set_errno(ENAMETOOLONG);
+            return NULL;
+        }
+
+        current_index += token_len;
+        if (current_index < path_len && normalized_path[current_index] == '/') {
+            /* Skip the slash */
+            current_index++;
+        }
+
+        if (strcmp(token_buffer, ".") == 0) {
+            continue;
+        }
+
+        last_token = token_buffer;
+
+        /* Look for the token among current node's children */
+        VFS_TNODE *child = find_child_node(current_node, token_buffer);
+        if (child) {
+            current_node = child;
+            found_node = TRUE;
+        } else {
+            found_node = FALSE;
+            break;
+        }
+    }
+
+    if (!found_node) {
+        /* Node not found; handle creation if specified */
+        if ((mode & CREATE) && last_token && IS_TRAVERSABLE(current_node->inode)) {
+            result = create_vfs_node(current_node, last_token, type);
+            if (result) {
+                for (size_t i = 0; i < num_log_paths; i++) {
+                    if (strncmp(normalized_path, log_paths[i], strlen(log_paths[i])) == 0) {
+                        klogd("VFS: Created \"%s\" node\n", normalized_path);
+                        break;
+                    }
+                }
+            }
+            /* Error code already set by create_vfs_node if result is NULL */
+        } else {
+            kloge("VFS: \"%s\" doesn't exist\n", normalized_path);
+            cpu_set_errno(ENOENT);
+            result = NULL;
+        }
+    } else if (mode & ERR_ON_EXIST) {
+        kloge("VFS: \"%s\" already exists\n", normalized_path);
+        cpu_set_errno(EEXIST);
+        result = NULL;
+    } else {
+        /* Node found without needing to create a new one */
+        result = current_node;
+    }
+
+    return result;
 }
 
 /**
@@ -374,6 +608,11 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
  * @return STATUS SYS_ERR if failure, SYS_OK if success
  */
 STATUS vfs_create(char *path, VFS_NODE_TYPE type) {
+    if (!path) {
+        cpu_set_errno(EINVAL);
+        return SYS_ERR;
+    }
+
     STATUS s;
     LOCK_LOCK(&vfs_lock);
 
@@ -413,13 +652,16 @@ STATUS vfs_chmod(VFS_HANDLE h, int32_t perms) {
 
     if (fd->mode == VFS_READ) {
         kloge("VFS: Opened as read-only\n");
+        cpu_set_errno(EACCES);
         return SYS_ERR;
     }
 
     /* Set new permissions */
     fd->inode->permissions = perms & (S_IRWXU | S_IRWXG | S_IRWXO);
     fd->tnode->stat.mode |= fd->inode->permissions;
-    fd->inode->fs->sync(fd->inode);
+    if (fd->inode->fs && fd->inode->fs->sync) {
+        fd->inode->fs->sync(fd->inode);
+    }
     return SYS_OK;
 }
 
@@ -439,10 +681,11 @@ int64_t vfs_ioctl(VFS_HANDLE h, int64_t request, int64_t arg) {
         return -1;
     }
 
-    if (fd->inode->fs->ioctl) {
+    if (fd->inode->fs && fd->inode->fs->ioctl) {
         return fd->inode->fs->ioctl(fd->inode, request, arg);
     }
 
+    cpu_set_errno(ENOTTY);
     return -1;
 }
 
@@ -455,6 +698,11 @@ int64_t vfs_ioctl(VFS_HANDLE h, int64_t request, int64_t arg) {
  * @return STATUS SYS_ERR if fail, SYS_OK if success
  */
 STATUS vfs_mount(char *device, char *path, char *fs_name) {
+    if (!path || !fs_name) {
+        cpu_set_errno(EINVAL);
+        return SYS_ERR;
+    }
+
     LOCK_LOCK(&vfs_lock);
 
     /* Get the filesystem information */
@@ -469,6 +717,12 @@ STATUS vfs_mount(char *device, char *path, char *fs_name) {
     /* Get block device if needed */
     VFS_TNODE *dev = NULL;
     if (!fs->is_temp) {
+        if (!device) {
+            cpu_set_errno(EINVAL);
+            UNLOCK_LOCK(&vfs_lock);
+            return SYS_ERR;
+        }
+
         dev = vfs_path_to_node(device, NO_CREATE, 0);
         if (!dev) {
             /* Device could not be found */
@@ -500,12 +754,25 @@ STATUS vfs_mount(char *device, char *path, char *fs_name) {
         return SYS_ERR;
     }
 
-    kfree(at->inode);
-
+    VFS_INODE *old_inode = at->inode;
 
     /* Now, mount the filesystem */
+    if (!fs->mount) {
+        cpu_set_errno(ENOTSUP);
+        UNLOCK_LOCK(&vfs_lock);
+        return SYS_ERR;
+    }
 
     at->inode = fs->mount(dev ? dev->inode : NULL);
+    if (!at->inode) {
+        /* Restore original inode */
+        at->inode = old_inode;
+        cpu_set_errno(EIO);
+        UNLOCK_LOCK(&vfs_lock);
+        return SYS_ERR;
+    }
+
+    kfree(old_inode);
     at->inode->mount_point = at;
 
     klogi("VFS: mounted %s at %s as %s\n",
@@ -525,6 +792,7 @@ int64_t vfs_tell(VFS_HANDLE h) {
 
     if (!fd) {
         kloge("VFS: Cannot find file descriptor for file %d\n", h);
+        cpu_set_errno(EBADF);
         return -1;
     } else {
         return fd->inode->size;
@@ -542,6 +810,12 @@ int64_t vfs_tell(VFS_HANDLE h) {
 int64_t vfs_read(VFS_HANDLE h, size_t len, void *buff) {
     klogd("VFS Read: Reading %d bytes from %d handle into %x address\n", len,
             h, buff);
+
+    if (!buff) {
+        cpu_set_errno(EFAULT);
+        return -1;
+    }
+
     VFS_NODE_DESC *fd = vfs_handle_to_fd(h);
     if (!fd) {
         /* Bad file descriptor */
@@ -555,14 +829,20 @@ int64_t vfs_read(VFS_HANDLE h, size_t len, void *buff) {
         return -1;
     }
 
+    if (fd->mode == VFS_WRITE) {
+        /* File not opened for reading */
+        cpu_set_errno(EBADF);
+        return -1;
+    }
+
     LOCK_LOCK(&vfs_lock);
 
     VFS_INODE *inode = fd->inode;
 
     /* Truncate if asking for more data than available */
     if (fd->seek_position + len > inode->size &&
-        !strcmp(fd->inode->fs->name, "ttyfs") &&
-        !strcmp(fd->inode->fs->name, "pipefs")) {
+        strcmp(fd->inode->fs->name, "ttyfs") != 0 &&
+        strcmp(fd->inode->fs->name, "pipefs") != 0) {
         len = inode->size - fd->seek_position;
         if (len == 0) {
             UNLOCK_LOCK(&vfs_lock);
@@ -570,15 +850,20 @@ int64_t vfs_read(VFS_HANDLE h, size_t len, void *buff) {
         }
     }
 
-    int64_t ret = fd->inode->fs->read(fd->inode, fd->seek_position, len, buff);
+    int64_t ret = -1;
+    if (fd->inode->fs && fd->inode->fs->read) {
+        ret = fd->inode->fs->read(fd->inode, fd->seek_position, len, buff);
+    } else {
+        cpu_set_errno(ENOTSUP);
+    }
+
     if (ret < 0) {
         /* Error occured */
         len = 0;
     } else {
         len = ret;
+        fd->seek_position += len;
     }
-
-    fd->seek_position += len;
 
     UNLOCK_LOCK(&vfs_lock);
     return (int64_t) len;
@@ -594,6 +879,11 @@ int64_t vfs_read(VFS_HANDLE h, size_t len, void *buff) {
 int64_t vfs_unlink(char *path) {
     klogd("VFS: unlinking %s\n", path);
 
+    if (!path) {
+        cpu_set_errno(EINVAL);
+        return -1;
+    }
+
     LOCK_LOCK(&vfs_lock);
 
     /* Find the node and set the nlink parameter */
@@ -601,18 +891,24 @@ int64_t vfs_unlink(char *path) {
     if (!tnode) {
         kloge("VFS: Cannot find tnode for %s\n", path);
         /* Path doesn't relate to any tnode */
-        cpu_set_errno(EINVAL);
+        cpu_set_errno(ENOENT);
+        UNLOCK_LOCK(&vfs_lock);
         return -1;
     } else {
         if (tnode->inode->type == VFS_DIRECTORY) {
             kloge("VFS: Unlink: \"%s\" refers to a directory\n", path);
             cpu_set_errno(EISDIR);
+            UNLOCK_LOCK(&vfs_lock);
             return -1;
         } else if (tnode->stat.nlink > 1) {
             kloge("VFS: Unlink: \"%s\" has links which should be removed first\n", path);
+            cpu_set_errno(EMLINK);
+            UNLOCK_LOCK(&vfs_lock);
             return -1;
         } else if (tnode->stat.nlink == 0) {
             kloge("VFS: Unlink: \"%s\" should only have one link, but has zero\n", path);
+            cpu_set_errno(ENOENT);
+            UNLOCK_LOCK(&vfs_lock);
             return -1;
         }
 
@@ -621,7 +917,7 @@ int64_t vfs_unlink(char *path) {
 
     /* Remove the file if needed */
     if (tnode->inode->references == 0) {
-        if (tnode->inode->fs->rmnode) {
+        if (tnode->inode->fs && tnode->inode->fs->rmnode) {
             tnode->inode->fs->rmnode(tnode);
         }
     }
@@ -636,7 +932,7 @@ int64_t vfs_unlink(char *path) {
  * @param h Handle to write to
  * @param buf Buffer with data to write
  * @param count Number of bytes to write
- * @return int64_t 0 if success, -1 if failure
+ * @return int64_t Number of bytes written if success, -1 if failure
  */
 int64_t vfs_write(VFS_HANDLE h, const void *buf, size_t count) {
     if (!buf) {
@@ -654,6 +950,7 @@ int64_t vfs_write(VFS_HANDLE h, const void *buf, size_t count) {
 
     if (fd->mode == VFS_READ) {
         kloge("VFS: Write: Trying to write to a read-only node with %d handle\n", h);
+        cpu_set_errno(EBADF);
         return -1;
     }
 
@@ -663,15 +960,25 @@ int64_t vfs_write(VFS_HANDLE h, const void *buf, size_t count) {
     /* Expand file if writing more data than its size */
     if (fd->seek_position + count > inode->size) {
         inode->size = fd->seek_position + count;
-        if (inode->fs->sync) {
+        if (inode->fs && inode->fs->sync) {
             inode->fs->sync(inode);
         }
     }
 
-    if (inode->fs->write(inode, fd->seek_position, count, buf) == -1) {
+    int64_t ret = -1;
+    if (inode->fs && inode->fs->write) {
+        ret = inode->fs->write(inode, fd->seek_position, count, buf);
+    } else {
+        cpu_set_errno(ENOTSUP);
+        UNLOCK_LOCK(&vfs_lock);
+        return -1;
+    }
+
+    if (ret == -1) {
         count = 0;
     } else {
         /* Move seek position to tail of writing area */
+        count = ret;
         fd->seek_position += count;
     }
 
@@ -723,7 +1030,7 @@ int64_t vfs_seek(VFS_HANDLE h, size_t offset, int whence) {
     if ((fd->mode == VFS_WRITE || fd->mode == VFS_READ_WRITE) &&
          pos > (int64_t)fd->inode->size) {
         fd->inode->size = pos;
-        if (fd->inode->fs->sync) {
+        if (fd->inode->fs && fd->inode->fs->sync) {
             fd->inode->fs->sync(fd->inode);
         }
     }
@@ -740,7 +1047,7 @@ int64_t vfs_seek(VFS_HANDLE h, size_t offset, int whence) {
 
     int64_t ret = -1;
     /* pos could never be <= to zero due to the check above here */
-    if (pos > 0 && pos <= (int64_t)fd->inode->size) {
+    if (pos >= 0 && pos <= (int64_t)fd->inode->size) {
         fd->seek_position = pos;
         ret = pos;
     }
@@ -810,7 +1117,6 @@ int64_t vfs_get_parent_dir(const char *path, char *parent, char *curr_dir) {
     return 0;
 }
 
-
 /**
  * @brief Open and possibly create a file
  *
@@ -819,6 +1125,11 @@ int64_t vfs_get_parent_dir(const char *path, char *parent, char *curr_dir) {
  * @return VFS_HANDLE Invalid if no openable, otherwise handle related to the file
  */
 VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
+    if (!path) {
+        cpu_set_errno(EINVAL);
+        return VFS_INVALID_HANDLE;
+    }
+
     LOCK_LOCK(&vfs_lock);
 
     /* Find the node */
@@ -832,6 +1143,8 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
         while (TRUE) {
             if (vfs_get_parent_dir(curr_path, parent, NULL) == -1) {
                 kloge("VFS: Open: Failed to get parent directory!\n");
+                UNLOCK_LOCK(&vfs_lock);
+                cpu_set_errno(ENOENT);
                 return VFS_INVALID_HANDLE;
             }
             if (!strcmp(curr_path, parent)) {
@@ -844,20 +1157,24 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
             strcpy(curr_path, parent);
         }
 
-        if (tnode && tnode->inode->fs) {
+        if (tnode && tnode->inode->fs && tnode->inode->fs->open) {
             kloge("VFS: Open: Can not open %s, visit back to %s\n", path, parent);
             req = tnode->inode->fs->open(tnode->inode, path);
         }
         if (!req) {
             UNLOCK_LOCK(&vfs_lock);
             kloge("VFS: Open: Failed to open %s with mode %x\n", path, mode);
+            cpu_set_errno(ENOENT);
             return VFS_INVALID_HANDLE;
         }
     } else {
         /* Move forward to open the file */
-        if (req->inode->fs) {
+        if (req->inode->fs && req->inode->fs->open) {
             klogd("VFS: Open: inode for %s already exists\n", path);
-            req = req->inode->fs->open(req->inode, path);
+            VFS_TNODE *opened_req = req->inode->fs->open(req->inode, path);
+            if (opened_req) {
+                req = opened_req;
+            }
         }
     }
 
@@ -865,9 +1182,22 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
 
     /* Create node descriptor */
     VFS_NODE_DESC *nd = (VFS_NODE_DESC *)(kmalloc(sizeof(VFS_NODE_DESC)));
+    if (!nd) {
+        req->inode->references--;
+        UNLOCK_LOCK(&vfs_lock);
+        cpu_set_errno(ENOMEM);
+        return VFS_INVALID_HANDLE;
+    }
+
     memset(nd, 0, sizeof(VFS_NODE_DESC));
 
-    strcpy(nd->path, path);
+    size_t path_len = strlen(path);
+    if (path_len >= sizeof(nd->path)) {
+        path_len = sizeof(nd->path) - 1;
+    }
+    memcpy(nd->path, path, path_len);
+    nd->path[path_len] = '\0';
+
     nd->tnode = req;
     nd->inode = req->inode;
     nd->seek_position = 0;
@@ -888,6 +1218,11 @@ VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
         hash_insert(&(pcurr->open_files), h, nd);
     } else {
         kloge("VFS: Open: Cannot insert \"%s\" because of invalid process\n", path);
+        kfree(nd);
+        req->inode->references--;
+        UNLOCK_LOCK(&vfs_lock);
+        cpu_set_errno(ESRCH);
+        return VFS_INVALID_HANDLE;
     }
 
     UNLOCK_LOCK(&vfs_lock);
@@ -910,7 +1245,7 @@ int64_t vfs_close(VFS_HANDLE h) {
     VFS_NODE_DESC *nd = vfs_handle_to_fd(h);
     if (!nd) {
         UNLOCK_LOCK(&vfs_lock);
-        cpu_set_errno(EINVAL);
+        cpu_set_errno(EBADF);
         return -1;
     }
 
@@ -926,7 +1261,7 @@ int64_t vfs_close(VFS_HANDLE h) {
 
     /* Remove the file if needed */
     if (nd->inode->references == 0 && nd->tnode->stat.nlink == 0) {
-        if (nd->inode->fs->rmnode) {
+        if (nd->inode->fs && nd->inode->fs->rmnode) {
             klogd("VFS: Close: close \"%s\" and remove tnode\n", nd->path);
             nd->inode->fs->rmnode(nd->tnode);
         }
@@ -946,24 +1281,34 @@ int64_t vfs_close(VFS_HANDLE h) {
 int64_t vfs_refresh(VFS_HANDLE h) {
     VFS_NODE_DESC *nd = vfs_handle_to_fd(h);
     if (!nd) {
+        cpu_set_errno(EBADF);
         return -1;
     }
 
     LOCK_LOCK(&vfs_lock);
-    nd->inode->fs->refresh(nd->inode);
-    for (size_t i = 0;; i++) {
-        VFS_DIR_ENTRY de;
-        if (nd->inode->fs->getdent(nd->inode, i, &de)) {
-            break;
-        }
 
-        char path[VFS_MAX_PATH_LEN] = {0};
-        strcpy(path, nd->path);
-        strcat(path, "/");
-        strcat(path, de.name);
-        VFS_TNODE *tnode = vfs_path_to_node(path, CREATE, de.type);
-        memcpy(&tnode->inode->time, &de.time, sizeof(STD_TIME));
-        tnode->inode->size = de.size;
+    if (nd->inode->fs && nd->inode->fs->refresh) {
+        nd->inode->fs->refresh(nd->inode);
+    }
+
+    if (nd->inode->fs && nd->inode->fs->getdent) {
+        for (size_t i = 0;; i++) {
+            VFS_DIR_ENTRY de;
+            if (nd->inode->fs->getdent(nd->inode, i, &de)) {
+                break;
+            }
+
+            char path[VFS_MAX_PATH_LEN] = {0};
+            strcpy(path, nd->path);
+            strcat(path, "/");
+            strncat(path, de.name, sizeof(path) - strlen(path) - 1);
+
+            VFS_TNODE *tnode = vfs_path_to_node(path, CREATE, de.type);
+            if (tnode) {
+                memcpy(&tnode->inode->time, &de.time, sizeof(STD_TIME));
+                tnode->inode->size = de.size;
+            }
+        }
     }
 
     UNLOCK_LOCK(&vfs_lock);
@@ -971,9 +1316,22 @@ int64_t vfs_refresh(VFS_HANDLE h) {
     return 0;
 }
 
+/**
+ * @brief Get directory entry at current position
+ *
+ * @param h Handle to directory
+ * @param dirent Directory entry structure to fill
+ * @return int64_t 0 if success, -1 if failure or end of directory
+ */
 int64_t vfs_getdent(VFS_HANDLE h, VFS_DIR_ENTRY *dirent) {
+    if (!dirent) {
+        cpu_set_errno(EFAULT);
+        return -1;
+    }
+
     VFS_NODE_DESC *nd = vfs_handle_to_fd(h);
     if (!nd) {
+        cpu_set_errno(EBADF);
         return -1;
     }
 
@@ -983,6 +1341,7 @@ int64_t vfs_getdent(VFS_HANDLE h, VFS_DIR_ENTRY *dirent) {
     if (!IS_TRAVERSABLE(nd->inode)) {
         kloge("VFS: getdent: Node not traversable\n");
         UNLOCK_LOCK(&vfs_lock);
+        cpu_set_errno(ENOTDIR);
         return -1;
     }
 
@@ -996,8 +1355,21 @@ int64_t vfs_getdent(VFS_HANDLE h, VFS_DIR_ENTRY *dirent) {
 
     /* Initialize the directory entry */
     VFS_TNODE *entry = vector_at(&(nd->inode->child), nd->seek_position);
+    if (!entry) {
+        UNLOCK_LOCK(&vfs_lock);
+        cpu_set_errno(EIO);
+        return -1;
+    }
+
     dirent->type = entry->inode->type;
-    memcpy(dirent->name, entry->name, sizeof(entry->name));
+
+    size_t name_len = strlen(entry->name);
+    if (name_len >= sizeof(dirent->name)) {
+        name_len = sizeof(dirent->name) - 1;
+    }
+    memcpy(dirent->name, entry->name, name_len);
+    dirent->name[name_len] = '\0';
+
     memcpy(&dirent->time, &entry->inode->time, sizeof(STD_TIME));
 
     /* Advance the offset */
@@ -1021,6 +1393,11 @@ void vfs_init() {
 
     /* Initialize the root directory */
     vfs_root.inode = vfs_alloc_inode(VFS_DIRECTORY, 0777, 0, NULL, NULL);
+    if (!vfs_root.inode) {
+        kloge("INIT VFS: Failed to allocate root inode!\n");
+        return;
+    }
+
     vfs_root.stat.dev = vfs_new_dev_id();
     vfs_root.stat.ino = vfs_new_ino_id();
     vfs_root.stat.mode |= S_IFDIR;
@@ -1033,20 +1410,33 @@ void vfs_init() {
     vfs_register_fs(&pipefs);
 
     /* Mount RAMFS without device name */
-    vfs_mount(NULL, "/", "ramfs");
+    if (vfs_mount(NULL, "/", "ramfs") != SYS_OK) {
+        kloge("INIT VFS: Failed to mount ramfs at root!\n");
+        return;
+    }
 
     /* Create directory for mounting devices */
-    vfs_path_to_node("/disk", CREATE, VFS_DIRECTORY);
-    vfs_path_to_node("/dev", CREATE, VFS_DIRECTORY);
+    if (vfs_path_to_node("/disk", CREATE, VFS_DIRECTORY) == NULL) {
+        kloge("INIT VFS: Failed to create /disk directory!\n");
+    }
+
+    if (vfs_path_to_node("/dev", CREATE, VFS_DIRECTORY) == NULL) {
+        kloge("INIT VFS: Failed to create /dev directory!\n");
+    }
 
     /* Mount TTYFS with device name "/dev/tty" */
-    vfs_path_to_node("/dev/tty", CREATE, VFS_DIRECTORY);
-    vfs_mount("tty", "/dev/tty", "ttyfs");
+    if (vfs_path_to_node("/dev/tty", CREATE, VFS_DIRECTORY) == NULL) {
+        kloge("INIT VFS: Failed to create /dev/tty directory!\n");
+    } else if (vfs_mount("tty", "/dev/tty", "ttyfs") != SYS_OK) {
+        kloge("INIT VFS: Failed to mount ttyfs at /dev/tty!\n");
+    }
 
     /* Mount PIPEFS with device name "/dev/pipe" */
-    vfs_path_to_node("/dev/pipe", CREATE, VFS_DIRECTORY);
-    vfs_mount("pipe", "/dev/pipe", "pipefs");
-
+    if (vfs_path_to_node("/dev/pipe", CREATE, VFS_DIRECTORY) == NULL) {
+        kloge("INIT VFS: Failed to create /dev/pipe directory!\n");
+    } else if (vfs_mount("pipe", "/dev/pipe", "pipefs") != SYS_OK) {
+        kloge("INIT VFS: Failed to mount pipefs at /dev/pipe!\n");
+    }
 
     klogs("INIT VFS: finished...\n");
 }

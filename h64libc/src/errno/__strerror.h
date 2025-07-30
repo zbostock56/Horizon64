@@ -109,4 +109,5 @@ char *sys_errlist[] = {
     [ENAVAIL] = "Resource not available",
     [EREMOTEIO] = "Remote I/O error",
     [EMULTIHOP] = "Multihop attempted",
+    [ENOTSUP] = "Operation not supported",
 };

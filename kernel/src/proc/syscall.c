@@ -154,48 +154,44 @@ int64_t sys_not_implemented() {
  * @param full_path Buffer to copy full path into
  * @return SYSCALL_RETVAL FAIL if fail, OK if success
  */
-SYSCALL_RETVAL sys_get_full_path(int64_t dirfh, const char *path,
-                                 char *full_path) {
+SYSCALL_RETVAL sys_get_full_path(int64_t dirfh, const char *path, char *full_path) {
     char *fptr = full_path;
 
-    /* Clear full_path */
-    *fptr = '\0';
-
-    /* If the directory file handle is current working directory */
-    if ((int32_t)dirfh == (int32_t)VFS_FW_CWD) {
-        PROCESS *pcurr = sched_get_curr_proc();
-        if (!pcurr || path[0] == '/') {
-            cpu_set_errno(EINVAL);
-            return SYSCALL_FAIL;
-        }
-        /* Copy the cwd into full_path */
-        strcpy(full_path, pcurr->cwd);
-        /* Set pointer to end of string */
-        fptr = full_path + strlen(full_path);
-    } else if ((int32_t)dirfh >= 0) {
-        VFS_NODE_DESC *tnode = vfs_handle_to_fd((VFS_HANDLE)dirfh);
-        if (!tnode) {
-            cpu_set_errno(EINVAL);
-            return SYSCALL_FAIL;
-        }
-        /* When path starts with a dot, use the node's path */
-        if (path[0] == '.') {
-            strcpy(full_path, tnode->path);
-            fptr = full_path + strlen(full_path);
-        }
-    }
-
-    /* If path is just "." then we are done */
-    if (!strcmp(path, "."))
-        return SYSCALL_OK;
-
-    /* If path starts with '/', reset full_path to root */
+    // Absolute path: ignore dirfh
     if (path[0] == '/') {
         strcpy(full_path, "/");
         fptr = full_path + 1;
+    } else {
+        full_path[0] = '\0';
+
+        if ((int32_t)dirfh == (int32_t)VFS_FW_CWD) {
+            PROCESS *pcurr = sched_get_curr_proc();
+            if (!pcurr) {
+                cpu_set_errno(EINVAL);
+                return SYSCALL_FAIL;
+            }
+            strcpy(full_path, pcurr->cwd);
+        } else if ((int32_t)dirfh >= 0) {
+            VFS_NODE_DESC *tnode = vfs_handle_to_fd((VFS_HANDLE)dirfh);
+            if (!tnode) {
+                cpu_set_errno(EINVAL);
+                return SYSCALL_FAIL;
+            }
+            strcpy(full_path, tnode->path);
+        } else {
+            cpu_set_errno(EINVAL);
+            return SYSCALL_FAIL;
+        }
+
+        fptr = full_path + strlen(full_path);
     }
 
-    /* Copy path into a temporary buffer for in-place tokenization */
+    // Early return for "."
+    if (!strcmp(path, ".")) {
+        return SYSCALL_OK;
+    }
+
+    // Tokenize path for normalization
     char temp_path[VFS_MAX_PATH_LEN];
     strncpy(temp_path, path, sizeof(temp_path) - 1);
     temp_path[sizeof(temp_path) - 1] = '\0';
@@ -204,7 +200,6 @@ SYSCALL_RETVAL sys_get_full_path(int64_t dirfh, const char *path,
     char *next;
 
     while (token && *token) {
-        /* Find the next token delimiter */
         next = strchr(token, '/');
         if (next) {
             *next = '\0';
@@ -212,27 +207,27 @@ SYSCALL_RETVAL sys_get_full_path(int64_t dirfh, const char *path,
         }
 
         if (!strcmp(token, "..")) {
-            /* Back up fptr to remove the last component */
-            if (fptr > full_path + 1) { /* ensure not at root */
-                /* Backtrack over any non-slash characters */
+            // Go up one directory
+            if (fptr > full_path + 1) {
                 do { fptr--; } while (fptr > full_path && *(fptr - 1) != '/');
                 *fptr = '\0';
             } else {
-                cpu_set_errno(EINVAL);
-                return SYSCALL_FAIL;
+                // Already at root: stay there
+                strcpy(full_path, "/");
+                fptr = full_path + 1;
             }
         } else if (strcmp(token, ".") && token[0] != '\0') {
-            /* Append separator if needed */
             if (*(fptr - 1) != '/') {
                 *fptr++ = '/';
             }
-            /* Copy token */
             size_t len = strlen(token);
             memcpy(fptr, token, len);
             fptr += len;
             *fptr = '\0';
         }
+
         token = next;
     }
+
     return SYSCALL_OK;
 }

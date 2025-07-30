@@ -16,4 +16,5 @@ typedef struct {
     uint64_t *pml4;
     vector_struct(uint64_t) memory_list;
     LOCK lock;
+    uint8_t is_init;
 } ADDR_SPACE;

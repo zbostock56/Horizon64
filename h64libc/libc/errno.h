@@ -131,6 +131,9 @@
 #define	EISNAM		    120	/* Is a named type file */
 #define	EREMOTEIO	    121	/* Remote I/O error */
 
+/* Added */
+#define ENOTSUP         122 /* Operation not supported */
+
 /* Should never be seen by user programs */
 #define ERESTARTSYS	    512
 #define ERESTARTNOINTR	513
