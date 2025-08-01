@@ -48,7 +48,7 @@ typedef uint8_t BITMAP_STATUS;
 #define VM_USERMODE         (VM_DEFAULT | VM_USER)
 
 #define PAGE_TABLE_ENTRIES  (512)
-#define DEFAULT_PAGES       (8)
+#define DEFAULT_PAGES       (1)
 
 /* -------------------------------- GLOBALS --------------------------------- */
 extern ADDR_SPACE kernel_addr_space;

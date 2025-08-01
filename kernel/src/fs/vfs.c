@@ -607,7 +607,7 @@ VFS_TNODE *vfs_path_to_node(const char *path_name, uint8_t mode, VFS_NODE_TYPE t
  * @param type Node type
  * @return STATUS SYS_ERR if failure, SYS_OK if success
  */
-STATUS vfs_create(char *path, VFS_NODE_TYPE type) {
+STATUS vfs_create(const char *path, VFS_NODE_TYPE type) {
     if (!path) {
         cpu_set_errno(EINVAL);
         return SYS_ERR;
@@ -697,7 +697,7 @@ int64_t vfs_ioctl(VFS_HANDLE h, int64_t request, int64_t arg) {
  * @param fs_name Name of filesystem to mount on
  * @return STATUS SYS_ERR if fail, SYS_OK if success
  */
-STATUS vfs_mount(char *device, char *path, char *fs_name) {
+STATUS vfs_mount(const char *device, char *path, char *fs_name) {
     if (!path || !fs_name) {
         cpu_set_errno(EINVAL);
         return SYS_ERR;
@@ -1124,7 +1124,7 @@ int64_t vfs_get_parent_dir(const char *path, char *parent, char *curr_dir) {
  * @param mode Mode to open file with
  * @return VFS_HANDLE Invalid if no openable, otherwise handle related to the file
  */
-VFS_HANDLE vfs_open(char *path, VFS_OPEN_MODE mode) {
+VFS_HANDLE vfs_open(const char *path, VFS_OPEN_MODE mode) {
     if (!path) {
         cpu_set_errno(EINVAL);
         return VFS_INVALID_HANDLE;

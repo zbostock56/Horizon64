@@ -43,6 +43,7 @@ FAT32_STATUS fat32_sync(VFS_INODE *this);
 FAT32_STATUS fat32_getdent(VFS_INODE *this, size_t pos, VFS_DIR_ENTRY *dirent);
 FAT32_STATUS fat32_refresh(VFS_INODE *this);
 FAT32_STATUS fat32_mknode(VFS_TNODE *this);
+FAT32_STATUS fat32_rmnode(VFS_TNODE *this);
 VFS_TNODE *fat32_open(VFS_INODE *this, const char *path);
 VFS_INODE *fat32_mount(VFS_INODE *at);
 

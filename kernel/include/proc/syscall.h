@@ -103,6 +103,11 @@
 #define O_PATH                  (0x8000)
 
 /**
+ * @brief Represent the current working directory of file
+ */
+#define AT_FDCWD                (-100)
+
+/**
  * @brief EFLAGS bits
  * @ref https://wiki.osdev.org/CPU_Registers_x86
  */
