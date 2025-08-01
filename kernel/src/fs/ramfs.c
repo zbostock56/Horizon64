@@ -475,7 +475,7 @@ void init_ramfs(void *addr, uint64_t size) {
         ptr += RAMFS_BLOCK_SIZE + DIV_ROUNDUP(filesize, RAMFS_BLOCK_SIZE) * RAMFS_BLOCK_SIZE;
     }
 
-    klogs("RAMFS: Initialization complete, processed %zu files\n", files_processed);
+    klogs("RAMFS: Initialization complete, processed %d files\n", files_processed);
 }
 
 /**
