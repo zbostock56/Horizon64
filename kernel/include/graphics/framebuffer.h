@@ -12,11 +12,10 @@
 #include <globals.h>
 
 #include <structs/framebuffer_str.h>
+#include <structs/terminal_str.h>
 
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
-#define DEFAULT_BG (COLOR_BLACK)
-#define DEFAULT_FG (COLOR_WHITE)
 
 /* -------------------------------- GLOBALS --------------------------------- */
 

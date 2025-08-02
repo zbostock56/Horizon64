@@ -2,12 +2,10 @@
  * @file terminal.c
  * @author Zack Bostock
  * @brief Helpers and initialization of the terminal
- * @verbatim
  *
  * @copyright Copyright (c) 2025
  *
  */
-
 
 #include <kconfig.h>
 
@@ -15,6 +13,7 @@
 #include <common/kprint.h>
 #include <common/math.h>
 #include <common/memory.h>
+#include <common/string.h>
 
 #include <graphics/framebuffer.h>
 
@@ -22,99 +21,1260 @@
 #include <dev/serial.h>
 
 /**
- * @brief Basic 4 bit VGA colors in correct order for escape sequence
+ * @brief Global terminal state
  */
-static const uint32_t four_bit_colors[16] = {
-    COLOR_BLACK,
-    COLOR_RED,
-    COLOR_GREEN,
-    COLOR_YELLOW,
-    COLOR_BLUE,
-    COLOR_MAGENTA,
-    COLOR_CYAN,
-    COLOR_WHITE,
-    COLOR_BRIGHT_BLACK,
-    COLOR_BRIGHT_RED,
-    COLOR_BRIGHT_GREEN,
-    COLOR_BRIGHT_YELLOW,
-    COLOR_BRIGHT_BLUE,
-    COLOR_BRIGHT_MAGENTA,
-    COLOR_BRIGHT_CYAN,
-    COLOR_BRIGHT_WHITE
-};
-
 static LOCK term_lock = {0};
 static TERM_MODE term_mode = TERM_MODE_UNSET;
-static uint8_t term_need_redrawn = FALSE;
+static volatile uint8_t term_need_redrawn = FALSE;
 static TERMINAL term_info = {0};
 static TERMINAL term_cli = {0};
 static uint8_t term_cursor = 0;
+static volatile uint8_t term_char_print = 0;
+static TERMINAL_STATS global_stats = {0};
+
+static const uint32_t four_bit_colors[16] = {
+    COLOR_BLACK,          /* 0: Black */
+    COLOR_RED,            /* 1: Red */
+    COLOR_GREEN,          /* 2: Green */
+    COLOR_YELLOW,         /* 3: Yellow */
+    COLOR_BLUE,           /* 4: Blue */
+    COLOR_MAGENTA,        /* 5: Magenta */
+    COLOR_CYAN,           /* 6: Cyan */
+    COLOR_WHITE,          /* 7: White */
+    COLOR_BRIGHT_BLACK,   /* 8: Bright Black (Gray) */
+    COLOR_BRIGHT_RED,     /* 9: Bright Red */
+    COLOR_BRIGHT_GREEN,   /* 10: Bright Green */
+    COLOR_BRIGHT_YELLOW,  /* 11: Bright Yellow */
+    COLOR_BRIGHT_BLUE,    /* 12: Bright Blue */
+    COLOR_BRIGHT_MAGENTA, /* 13: Bright Magenta */
+    COLOR_BRIGHT_CYAN,    /* 14: Bright Cyan */
+    COLOR_BRIGHT_WHITE    /* 15: Bright White */
+};
+
 #if FRAMEBUFFER_LOGGING
-static uint8_t term_char_print = 1;
+static const uint8_t DEFAULT_CHAR_PRINT = 1;
 #else
-static uint8_t term_char_print = 0;
+static const uint8_t DEFAULT_CHAR_PRINT = 0;
 #endif
 
 TERM_CURSOR_STATUS cursor_visible = TERM_CURSOR_INVISIBLE;
 
-/**
- * @brief Used for ANSI Escape Sequences
- */
-#define CSI_START   '\033'
-#define OSC_START   '\007'
+/* Forward declarations */
+static STATUS terminal_validate_params(const TERMINAL *term);
+static void terminal_stats_update(TERMINAL *curr, TERM_OPERATION op);
+static STATUS terminal_handle_control_char(TERMINAL *curr, uint8_t c);
+static void terminal_handle_tab(TERMINAL *curr, uint32_t tab_width);
+static void terminal_handle_backspace(TERMINAL *curr);
+static STATUS terminal_resize_check(TERMINAL *curr);
+static void terminal_update_cursor_visibility(TERMINAL *curr, TERM_MODE mode);
+static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte);
+static STATUS terminal_parse_osc_sequence(TERMINAL *curr, uint8_t byte);
+static STATUS terminal_execute_osc_command(TERMINAL *curr);
+
+/* Terminal command implementations */
+static STATUS terminal_cursor_up(TERMINAL *curr, int count);
+static STATUS terminal_cursor_down(TERMINAL *curr, int count);
+static STATUS terminal_cursor_forward(TERMINAL *curr, int count);
+static STATUS terminal_cursor_backward(TERMINAL *curr, int count);
+static STATUS terminal_cursor_position(TERMINAL *curr, int row, int col);
+static STATUS terminal_save_cursor(TERMINAL *curr);
+static STATUS terminal_restore_cursor(TERMINAL *curr);
+static STATUS terminal_set_graphics(TERMINAL *curr, int *params, int param_count);
+static STATUS terminal_set_mode(TERMINAL *curr, int mode, bool enable);
+static STATUS terminal_set_window_title(TERMINAL *curr, const char *title);
+static STATUS terminal_set_icon_name(TERMINAL *curr, const char *name);
+static STATUS terminal_set_color_palette(TERMINAL *curr, const char *spec);
+static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *color);
 
 /**
- * @brief Main initialization of a terminal
- * @verbatim
- * Initializes a framebuffer for the terminal and sets basic information about
- * the framebuffer and the terminal variable to support text output.
- *
- * @param fb Framebuffer to use with the terminals
+ * @brief Inline helper to check if terminal coordinates are valid
+ */
+static inline bool terminal_coords_valid(const TERMINAL *term, int x, int y) {
+    return term && x >= 0 && y >= 0 &&
+           x < (int)term->width && y < (int)term->height;
+}
+
+/**
+ * @brief Inline helper to clamp coordinates to terminal bounds
+ */
+static inline void terminal_clamp_coords(const TERMINAL *term, int *x, int *y) {
+    if (!term || !x || !y) return;
+    *x = (*x < 0) ? 0 : ((*x >= (int)term->width) ? (int)term->width - 1 : *x);
+    *y = (*y < 0) ? 0 : ((*y >= (int)term->height) ? (int)term->height - 1 : *y);
+}
+
+/**
+ * @brief Inline helper to get terminal cell index from coordinates
+ */
+static inline size_t terminal_coord_to_index(const TERMINAL *term, int x,
+                                             int y) {
+    if (!terminal_coords_valid(term, x, y)) return 0;
+    return (size_t)(y * term->width + x);
+}
+
+/**
+ * @brief Inline helper to get coordinates from terminal cell index
+ */
+static inline void terminal_index_to_coord(const TERMINAL *term, size_t index,
+                                           int *x, int *y) {
+    if (!term || !x || !y) return;
+    *x = (int)(index % term->width);
+    *y = (int)(index / term->width);
+}
+
+/**
+ * @brief Validate terminal parameters
+ */
+static STATUS terminal_validate_params(const TERMINAL *term) {
+    if (!term) {
+        return SYS_ERR;
+    }
+
+    if (term->state == TERM_STATE_UNKNOWN) {
+        return SYS_ERR;
+    }
+
+    if (!term->framebuffer.base) {
+        return SYS_ERR;
+    }
+
+    if (term->width == 0 || term->height == 0) {
+        return SYS_ERR;
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Update terminal operation statistics
+ */
+static void terminal_stats_update(TERMINAL *curr, TERM_OPERATION op) {
+    if (!curr) return;
+
+    switch (op) {
+        case TERM_OP_CHAR_WRITE:
+            curr->stats.chars_written++;
+            global_stats.chars_written++;
+            break;
+        case TERM_OP_LINE_FEED:
+            curr->stats.lines_written++;
+            global_stats.lines_written++;
+            break;
+        case TERM_OP_SCROLL:
+            curr->stats.scroll_operations++;
+            global_stats.scroll_operations++;
+            break;
+        case TERM_OP_ESCAPE_SEQ:
+            curr->stats.escape_sequences++;
+            global_stats.escape_sequences++;
+            break;
+        case TERM_OP_ERROR:
+            curr->stats.errors++;
+            global_stats.errors++;
+            break;
+        case TERM_OP_BELL:
+            curr->stats.bell_operations++;
+            global_stats.bell_operations++;
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief Handle control characters (0x00-0x1F)
+ */
+static STATUS terminal_handle_control_char(TERMINAL *curr, uint8_t c) {
+    if (!curr) return SYS_ERR;
+
+    switch (c) {
+        case '\0':  /* NULL */
+            return SYS_OK;
+
+        case '\a':  /* BELL */
+            /* TODO: Implement bell/beep functionality */
+            terminal_stats_update(curr, TERM_OP_BELL);
+            return SYS_OK;
+
+        case '\b':  /* BACKSPACE */
+            terminal_handle_backspace(curr);
+            return SYS_OK;
+
+        case '\t':  /* HORIZONTAL TAB */
+            terminal_handle_tab(curr, TERMINAL_DEFAULT_TAB_WIDTH);
+            return SYS_OK;
+
+        case '\n':  /* LINE FEED */
+        case '\v':  /* VERTICAL TAB */
+        case '\f':  /* FORM FEED */
+            curr->cursor_pos.x = 0;
+            curr->cursor_pos.y++;
+            terminal_stats_update(curr, TERM_OP_LINE_FEED);
+            return SYS_OK;
+
+        case '\r':  /* CARRIAGE RETURN */
+            curr->cursor_pos.x = 0;
+            return SYS_OK;
+
+        case ESC_START:  /* ESCAPE */
+            curr->state = TERM_STATE_CMD;
+            curr->last_qu_char = TRUE;
+            return SYS_OK;
+
+        default:
+            /* Other control characters are generally ignored */
+            return SYS_OK;
+    }
+}
+
+/**
+ * @brief Handle tab character with proper alignment
+ */
+static void terminal_handle_tab(TERMINAL *curr, uint32_t tab_width) {
+    if (!curr) return;
+
+    uint32_t spaces_to_add = tab_width - (curr->cursor_pos.x % tab_width);
+    curr->cursor_pos.x += spaces_to_add;
+
+    /* Handle line wrap */
+    if (curr->cursor_pos.x >= (int)curr->width) {
+        curr->cursor_pos.x = 0;
+        curr->cursor_pos.y++;
+    }
+}
+
+/**
+ * @brief Handle backspace character
+ */
+static void terminal_handle_backspace(TERMINAL *curr) {
+    if (!curr) return;
+
+    if (curr->cursor_pos.x > 0) {
+        curr->cursor_pos.x--;
+        /* Clear the character at the cursor position */
+        fb_putc(&(curr->framebuffer),
+                curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                curr->cursor_pos.y * font.header->character_size,
+                curr->foreground_color, curr->background_color, ' ', FALSE);
+    } else if (curr->cursor_pos.y > 0) {
+        /* Move to end of previous line */
+        curr->cursor_pos.y--;
+        curr->cursor_pos.x = curr->width - 1;
+    }
+}
+
+/**
+ * @brief Check if terminal needs resizing
+ */
+static STATUS terminal_resize_check(TERMINAL *curr) {
+    if (!curr) return SYS_ERR;
+
+    /* Check if cursor is out of bounds and handle scrolling */
+    while (curr->cursor_pos.y >= (int)curr->height) {
+        terminal_scroll(curr);
+        curr->cursor_pos.y--;
+        terminal_stats_update(curr, TERM_OP_SCROLL);
+    }
+
+    /* Handle horizontal wrapping */
+    while (curr->cursor_pos.x >= (int)curr->width) {
+        curr->cursor_pos.x -= curr->width;
+        curr->cursor_pos.y++;
+        if (curr->cursor_pos.y >= (int)curr->height) {
+            terminal_scroll(curr);
+            curr->cursor_pos.y--;
+            terminal_stats_update(curr, TERM_OP_SCROLL);
+        }
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Update cursor visibility based on mode and settings
+ */
+static void terminal_update_cursor_visibility(TERMINAL *curr, TERM_MODE mode) {
+    if (!curr || mode != term_mode) return;
+
+    switch (cursor_visible) {
+        case TERM_CURSOR_VISIBLE:
+            term_cursor = '_';
+            break;
+        case TERM_CURSOR_BLOCK:
+            term_cursor = 0xDB; /* Block character */
+            break;
+        case TERM_CURSOR_INVISIBLE:
+            term_cursor = ' ';
+            break;
+        default:
+            term_cursor = 0;
+            break;
+    }
+}
+
+/**
+ * @brief Cursor movement commands
+ */
+static STATUS terminal_cursor_up(TERMINAL *curr, int count) {
+    if (!curr) return SYS_ERR;
+
+    curr->cursor_pos.y = MAX(curr->cursor_pos.y - count, curr->scroll_top);
+    return SYS_OK;
+}
+
+static STATUS terminal_cursor_down(TERMINAL *curr, int count) {
+    if (!curr) return SYS_ERR;
+
+    curr->cursor_pos.y = MIN(curr->cursor_pos.y + count, curr->scroll_bottom);
+    return SYS_OK;
+}
+
+static STATUS terminal_cursor_forward(TERMINAL *curr, int count) {
+    if (!curr) return SYS_ERR;
+
+    curr->cursor_pos.x = MIN(curr->cursor_pos.x + count, (int)curr->width - 1);
+    return SYS_OK;
+}
+
+static STATUS terminal_cursor_backward(TERMINAL *curr, int count) {
+    if (!curr) return SYS_ERR;
+
+    curr->cursor_pos.x = MAX(curr->cursor_pos.x - count, 0);
+    return SYS_OK;
+}
+
+static STATUS terminal_cursor_position(TERMINAL *curr, int row, int col) {
+    if (!curr) return SYS_ERR;
+
+    /* ANSI coordinates are 1-based, convert to 0-based */
+    curr->cursor_pos.y = CLAMP(row - 1, 0, (int)curr->height - 1);
+    curr->cursor_pos.x = CLAMP(col - 1, 0, (int)curr->width - 1);
+    return SYS_OK;
+}
+
+static STATUS terminal_save_cursor(TERMINAL *curr) {
+    if (!curr) return SYS_ERR;
+
+    curr->saved_cursor_pos = curr->cursor_pos;
+    return SYS_OK;
+}
+
+static STATUS terminal_restore_cursor(TERMINAL *curr) {
+    if (!curr) return SYS_ERR;
+
+    curr->cursor_pos = curr->saved_cursor_pos;
+    return SYS_OK;
+}
+
+/**
+ * @brief Set graphics mode (colors, bold, etc.)
+ */
+static STATUS terminal_set_graphics(TERMINAL *curr, int *params, int param_count) {
+    if (!curr) return SYS_ERR;
+
+    /* Handle no parameters (reset) */
+    if (param_count == 0) {
+        params = (int[]){0};
+        param_count = 1;
+    }
+
+    for (int i = 0; i < param_count; i++) {
+        int param = params[i];
+
+        switch (param) {
+            case 0:  /* Reset all attributes */
+                curr->foreground_color = DEFAULT_FG;
+                curr->background_color = DEFAULT_BG;
+                curr->is_bold = FALSE;
+                curr->is_underline = FALSE;
+                curr->is_reverse = FALSE;
+                break;
+
+            case 1:  /* Bold */
+                curr->is_bold = TRUE;
+                break;
+
+            case 4:  /* Underline */
+                curr->is_underline = TRUE;
+                break;
+
+            case 7:  /* Reverse video */
+                curr->is_reverse = TRUE;
+                break;
+
+            case 22: /* Normal intensity (not bold) */
+                curr->is_bold = FALSE;
+                break;
+
+            case 24: /* Not underlined */
+                curr->is_underline = FALSE;
+                break;
+
+            case 27: /* Not reversed */
+                curr->is_reverse = FALSE;
+                break;
+
+            /* Foreground colors (30-37, 90-97) */
+            case 30: case 31: case 32: case 33:
+            case 34: case 35: case 36: case 37:
+                curr->foreground_color = four_bit_colors[param - 30];
+                break;
+
+            case 90: case 91: case 92: case 93:
+            case 94: case 95: case 96: case 97:
+                curr->foreground_color = four_bit_colors[(param - 90) + 8];
+                break;
+
+            /* Background colors (40-47, 100-107) */
+            case 40: case 41: case 42: case 43:
+            case 44: case 45: case 46: case 47:
+                curr->background_color = four_bit_colors[param - 40];
+                break;
+
+            case 100: case 101: case 102: case 103:
+            case 104: case 105: case 106: case 107:
+                curr->background_color = four_bit_colors[(param - 100) + 8];
+                break;
+
+            /* 256-color and RGB color support */
+            case 38:  /* Set foreground color (extended) */
+            case 48:  /* Set background color (extended) */
+                /* TODO: Implement 256-color and RGB support */
+                break;
+
+            default:
+                /* Unknown parameter, ignore */
+                break;
+        }
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Set terminal mode
+ */
+static STATUS terminal_set_mode(TERMINAL *curr, int mode, bool enable) {
+    if (!curr) return SYS_ERR;
+
+    switch (mode) {
+        case 25: /* Cursor visibility */
+            curr->cursor_visible = enable;
+            break;
+        case 7:  /* Auto wrap */
+            curr->auto_wrap = enable;
+            break;
+        default:
+            /* Unknown mode, ignore */
+            break;
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief OSC command implementations (stubs for now)
+ */
+static STATUS terminal_set_window_title(TERMINAL *curr, const char *title) {
+    if (!curr || !title) return SYS_ERR;
+    /* TODO: Implement window title setting */
+    return SYS_OK;
+}
+
+static STATUS terminal_set_icon_name(TERMINAL *curr, const char *name) {
+    if (!curr || !name) return SYS_ERR;
+    /* TODO: Implement icon name setting */
+    return SYS_OK;
+}
+
+static STATUS terminal_set_color_palette(TERMINAL *curr, const char *spec) {
+    if (!curr || !spec) return SYS_ERR;
+    /* TODO: Implement color palette setting */
+    return SYS_OK;
+}
+
+static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *color) {
+    if (!curr || !color) return SYS_ERR;
+    /* TODO: Implement dynamic color setting */
+    return SYS_OK;
+}
+
+/**
+ * @brief Parse CSI (Control Sequence Introducer) sequences
+ */
+static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
+    if (!curr) return SYS_ERR;
+
+    // CSI sequences: ESC [ [parameters] [intermediate bytes] final byte
+    // Parameters: 0-9, ; (semicolon)
+    // Intermediate bytes: 0x20-0x2F (space to /)
+    // Final byte: 0x40-0x7E (@ to ~)
+
+    if (byte >= '0' && byte <= '9') {
+        // Parameter digit
+        if (curr->cparamcount == 0) {
+            curr->cparamcount = 1;
+            curr->cparams[0] = 0;
+        }
+
+        int param_idx = curr->cparamcount - 1;
+        if (param_idx < TERMINAL_MAX_PARAMS) {
+            curr->cparams[param_idx] = curr->cparams[param_idx] * 10 + (byte - '0');
+        }
+        return SYS_OK;
+    }
+
+    if (byte == ';') {
+        // Parameter separator
+        if (curr->cparamcount < TERMINAL_MAX_PARAMS) {
+            curr->cparamcount++;
+            curr->cparams[curr->cparamcount - 1] = 0;
+        }
+        return SYS_OK;
+    }
+
+    if (byte >= 0x20 && byte <= 0x2F) {
+        // Intermediate byte - ignore for now
+        return SYS_OK;
+    }
+
+    if (byte >= 0x40 && byte <= 0x7E) {
+        // Final byte - execute the command
+        STATUS result = SYS_OK;
+
+        // Set default parameter if none provided
+        if (curr->cparamcount == 0) {
+            curr->cparamcount = 1;
+            curr->cparams[0] = 1;  // Default for most commands
+        }
+
+        switch (byte) {
+            case 'A': // Cursor Up
+                result = terminal_cursor_up(curr, curr->cparams[0]);
+                break;
+            case 'B': // Cursor Down
+                result = terminal_cursor_down(curr, curr->cparams[0]);
+                break;
+            case 'C': // Cursor Forward
+                result = terminal_cursor_forward(curr, curr->cparams[0]);
+                break;
+            case 'D': // Cursor Backward
+                result = terminal_cursor_backward(curr, curr->cparams[0]);
+                break;
+            case 'H': // Cursor Position
+            case 'f': // Horizontal and Vertical Position
+                {
+                    int row = (curr->cparamcount > 0) ? curr->cparams[0] : 1;
+                    int col = (curr->cparamcount > 1) ? curr->cparams[1] : 1;
+                    result = terminal_cursor_position(curr, row, col);
+                }
+                break;
+            case 'J': // Erase in Display
+                result = terminal_erase_display(curr, curr->cparams[0]);
+                break;
+            case 'K': // Erase in Line
+                result = terminal_erase_line(curr, curr->cparams[0]);
+                break;
+            case 'm': // Select Graphic Rendition (colors/attributes)
+                result = terminal_set_graphics(curr, curr->cparams, curr->cparamcount);
+                break;
+            case 's': // Save Cursor Position
+                result = terminal_save_cursor(curr);
+                break;
+            case 'u': // Restore Cursor Position
+                result = terminal_restore_cursor(curr);
+                break;
+            default:
+                // Unknown CSI sequence - ignore
+                break;
+        }
+
+        // Reset CSI state
+        curr->state = TERM_STATE_IDLE;
+        curr->cparamcount = 0;
+        terminal_stats_update(curr, TERM_OP_ESCAPE_SEQ);
+
+        return result;
+    }
+
+    // Invalid byte in CSI sequence
+    curr->state = TERM_STATE_IDLE;
+    curr->cparamcount = 0;
+    terminal_stats_update(curr, TERM_OP_ERROR);
+    return SYS_ERR;
+}
+
+/**
+ * @brief Parse OSC (Operating System Command) sequences
+ */
+static STATUS terminal_parse_osc_sequence(TERMINAL *curr, uint8_t byte) {
+    if (!curr) return SYS_ERR;
+
+    switch (curr->state) {
+        case TERM_STATE_HYPERLINK_HEADER:
+            if (byte == ';' && curr->cparamcount == 2) {
+                if (curr->cparams[0] == '8' && curr->cparams[1] == ';') {
+                    curr->state = TERM_STATE_HYPERLINK_URL;
+                } else {
+                    goto fail;
+                }
+            } else if (curr->cparamcount < TERMINAL_MAX_PARAMS) {
+                curr->cparams[curr->cparamcount++] = byte;
+            } else {
+                goto fail;
+            }
+            break;
+
+        case TERM_STATE_HYPERLINK_URL:
+            if (byte == OSC_START) {
+                curr->state = TERM_STATE_HYPERLINK_TEXT;
+            }
+            /* Skip URL processing for now */
+            break;
+
+        case TERM_STATE_HYPERLINK_TEXT:
+            if (byte == ESC_START) {
+                curr->cparamcount = 0;
+                curr->state = TERM_STATE_HYPERLINK_TAIL;
+            }
+            /* Skip text processing for now */
+            break;
+
+        case TERM_STATE_HYPERLINK_TAIL:
+            if (byte == OSC_START && curr->cparamcount == 4) {
+                if (curr->cparams[0] == ']' && curr->cparams[1] == '8' &&
+                    curr->cparams[2] == ';' && curr->cparams[3] == ';') {
+                    goto success;
+                } else {
+                    goto fail;
+                }
+            } else if (curr->cparamcount < 4) {
+                curr->cparams[curr->cparamcount++] = byte;
+            } else {
+                goto fail;
+            }
+            break;
+
+        default:
+            goto fail;
+    }
+
+    return SYS_OK;
+
+success:
+    curr->state = TERM_STATE_IDLE;
+    curr->cparamcount = 0;
+    terminal_stats_update(curr, TERM_OP_ESCAPE_SEQ);
+    return SYS_OK;
+
+fail:
+    curr->state = TERM_STATE_IDLE;
+    curr->cparamcount = 0;
+    terminal_stats_update(curr, TERM_OP_ERROR);
+    return SYS_ERR;
+}
+
+/**
+ * @brief Execute OSC command (stub implementation)
+ */
+static STATUS terminal_execute_osc_command(TERMINAL *curr) {
+    if (!curr) return SYS_ERR;
+
+    /* TODO: Implement OSC command execution */
+    curr->state = TERM_STATE_IDLE;
+    terminal_stats_update(curr, TERM_OP_ESCAPE_SEQ);
+    return SYS_OK;
+}
+
+/**
+ * @brief Erase line according to parameter
+ */
+static STATUS terminal_erase_line(TERMINAL *curr, int mode) {
+    if (!curr) return SYS_ERR;
+
+    int fh = font.header->character_size;
+    int fw = PSF1_FONT_WIDTH;
+    int line_start = curr->cursor_pos.y * fh;
+    int line_end = MIN((curr->cursor_pos.y + 1) * fh, (int)curr->framebuffer.height);
+
+    for (int y = line_start; y < line_end; y++) {
+        for (int x = 0; x < (int)curr->framebuffer.width; x++) {
+            bool should_clear = false;
+
+            switch (mode) {
+                case 0:  /* Clear from cursor to end of line */
+                    should_clear = (x >= curr->cursor_pos.x * fw);
+                    break;
+                case 1:  /* Clear from beginning of line to cursor */
+                    should_clear = (x <= curr->cursor_pos.x * fw);
+                    break;
+                case 2:  /* Clear entire line */
+                    should_clear = true;
+                    break;
+                default:
+                    return SYS_ERR;
+            }
+
+            if (should_clear) {
+                fb_putpixel(&(curr->framebuffer), x, y, curr->background_color);
+            }
+        }
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Erase display according to parameter
+ */
+static STATUS terminal_erase_display(TERMINAL *curr, int mode) {
+    if (!curr) return SYS_ERR;
+
+    int fh = font.header->character_size;
+    int fw = PSF1_FONT_WIDTH;
+    int cursor_pixel_x = curr->cursor_pos.x * fw;
+    int cursor_pixel_y = curr->cursor_pos.y * fh;
+
+    for (int y = 0; y < (int)curr->framebuffer.height; y++) {
+        for (int x = 0; x < (int)curr->framebuffer.width; x++) {
+            bool should_clear = false;
+
+            switch (mode) {
+                case 0:  /* Clear from cursor to end of screen */
+                    should_clear = (y > cursor_pixel_y) ||
+                                  (y >= cursor_pixel_y && y < cursor_pixel_y + fh && x >= cursor_pixel_x);
+                    break;
+                case 1:  /* Clear from beginning of screen to cursor */
+                    should_clear = (y < cursor_pixel_y) ||
+                                  (y >= cursor_pixel_y && y < cursor_pixel_y + fh && x <= cursor_pixel_x);
+                    break;
+                case 2:  /* Clear entire screen */
+                    should_clear = true;
+                    break;
+                default:
+                    return SYS_ERR;
+            }
+
+            if (should_clear) {
+                fb_putpixel(&(curr->framebuffer), x, y, curr->background_color);
+            }
+        }
+    }
+
+    if (mode == 2) {
+        curr->cursor_pos = IVEC2_ZERO;
+    }
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Reset terminal to default state
+ */
+static void terminal_reset_state(TERMINAL *curr) {
+    if (!curr) return;
+
+    curr->foreground_color = DEFAULT_FG;
+    curr->background_color = DEFAULT_BG;
+    curr->is_bold = FALSE;
+    curr->is_underline = FALSE;
+    curr->is_reverse = FALSE;
+    curr->cursor_pos = IVEC2_ZERO;
+    curr->saved_cursor_pos = IVEC2_ZERO;
+    curr->state = TERM_STATE_IDLE;
+    curr->auto_wrap = TRUE;
+    curr->cursor_visible = TRUE;
+    curr->insert_mode = FALSE;
+    curr->origin_mode = FALSE;
+    curr->scroll_top = 0;
+    curr->scroll_bottom = curr->height - 1;
+    curr->tab_width = TERMINAL_DEFAULT_TAB_WIDTH;
+    curr->charset = TERM_CHARSET_ASCII;
+    curr->cparamcount = 0;
+    curr->last_qu_char = FALSE;
+    curr->skip_left = 0;
+}
+
+/**
+ * @brief Get terminal by mode
+ */
+TERMINAL *terminal_get_by_mode(TERM_MODE mode) {
+    switch (mode) {
+        case TERM_MODE_INFO:
+            return &term_info;
+        case TERM_MODE_TERM:
+            return &term_cli;
+        default:
+            return NULL;
+    }
+}
+
+/**
+ * @brief Enhanced terminal putc with better error handling
+ */
+void terminal_putc(TERM_MODE mode, uint8_t c) {
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) {
+        kloge("TERMINAL PUTC: Invalid terminal mode %d\n", mode);
+        return;
+    }
+
+    if (terminal_validate_params(curr) != SYS_OK) {
+        return;
+    }
+
+    /* Handle UTF-8 sequences */
+    if ((c & 0x80) && curr->skip_left == 0 && curr->state == TERM_STATE_IDLE) {
+        if ((c & 0xF0) == 0xF0) {
+            curr->skip_left = 3;  /* 4-byte sequence */
+        } else if ((c & 0xE0) == 0xE0) {
+            curr->skip_left = 2;  /* 3-byte sequence */
+        } else if ((c & 0xC0) == 0xC0) {
+            curr->skip_left = 1;  /* 2-byte sequence */
+        }
+        return;
+    } else if (curr->skip_left > 0) {
+        curr->skip_left--;
+        return;
+    }
+
+    /* Handle escape sequences */
+    if (curr->last_qu_char && c != CSI_BRACKET && c != OSC_BRACKET) {
+        curr->state = TERM_STATE_IDLE;
+        curr->last_qu_char = FALSE;
+        terminal_print(mode, ESC_START);  /* Print the escape character */
+        terminal_putc(mode, c);           /* Reprocess current character */
+        return;
+    }
+
+    curr->last_qu_char = FALSE;
+
+    /* Try to parse as command first */
+    if (terminal_parse_cmd(curr, c) == SYS_OK) {
+        return;
+    }
+
+    /* If not a command, print as regular character */
+    terminal_print(mode, c);
+}
+
+/**
+ * @brief Put string to terminal
+ */
+void terminal_puts(TERM_MODE mode, const char *s) {
+    if (!s) return;
+
+    for (size_t i = 0; s[i]; i++) {
+        terminal_putc(mode, s[i]);
+    }
+}
+
+/**
+ * @brief Enhanced terminal scrolling with configurable regions
+ */
+void terminal_scroll(TERMINAL *t) {
+    if (!t) {
+        kloge("TERM SCROLL: Null terminal!\n");
+        return;
+    }
+
+    if (terminal_validate_params(t) != SYS_OK) {
+        return;
+    }
+
+    const uint8_t char_size = font.header->character_size;
+    int scroll_lines = 1;  /* Number of lines to scroll */
+
+    /* Calculate scroll region */
+    int scroll_start_pixel = t->scroll_top * char_size;
+    int scroll_end_pixel = (t->scroll_bottom + 1) * char_size;
+
+    /* Scroll up by moving pixels */
+    for (int y = scroll_start_pixel; y < scroll_end_pixel - (scroll_lines * char_size); y++) {
+        for (size_t x = 0; x < t->framebuffer.width; x++) {
+            uint32_t pixel = fb_getpixel(&(t->framebuffer), x, y + (scroll_lines * char_size));
+            fb_putpixel(&(t->framebuffer), x, y, pixel);
+        }
+    }
+
+    /* Clear the bottom lines */
+    for (int y = scroll_end_pixel - (scroll_lines * char_size); y < scroll_end_pixel; y++) {
+        for (size_t x = 0; x < t->framebuffer.width; x++) {
+            fb_putpixel(&(t->framebuffer), x, y, t->background_color);
+        }
+    }
+
+    /* Update statistics */
+    t->stats.scroll_operations++;
+}
+
+/**
+ * @brief Set terminal colors
+ */
+void terminal_set_foreground(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (curr) {
+        LOCK_LOCK(&term_lock);
+        curr->foreground_color = color;
+        UNLOCK_LOCK(&term_lock);
+    }
+}
+
+void terminal_set_background(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (curr) {
+        LOCK_LOCK(&term_lock);
+        curr->background_color = color;
+        UNLOCK_LOCK(&term_lock);
+    }
+}
+
+/**
+ * @brief Set terminal cursor position
+ */
+void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
+    if (!t) {
+        kloge("SET TERMINAL CURSOR POS: Null terminal!\n");
+        return;
+    }
+
+    LOCK_LOCK(&term_lock);
+
+    /* Handle line wrap */
+    if (x >= t->width) {
+        y += x / t->width;
+        x = x % t->width;
+    }
+
+    /* Clamp to valid range */
+    t->cursor_pos.x = MIN(x, t->width - 1);
+    t->cursor_pos.y = MIN(y, t->height - 1);
+
+    UNLOCK_LOCK(&term_lock);
+}
+
+/**
+ * @brief Move cursor forward
+ */
+void terminal_push_cursor(TERMINAL *t) {
+    if (!t) {
+        kloge("TERMINAL PUSH CURSOR: Null terminal!\n");
+        return;
+    }
+
+    LOCK_LOCK(&term_lock);
+
+    t->cursor_pos.x++;
+
+    if (t->cursor_pos.x >= (int)t->width) {
+        if (t->auto_wrap) {
+            t->cursor_pos.x = 0;
+            t->cursor_pos.y++;
+
+            if (t->cursor_pos.y >= (int)t->height) {
+                terminal_scroll(t);
+                t->cursor_pos.y--;
+            }
+        } else {
+            t->cursor_pos.x = t->width - 1;
+        }
+    }
+
+    UNLOCK_LOCK(&term_lock);
+}
+
+/**
+ * @brief Move cursor backward
+ */
+void terminal_pop_cursor(TERMINAL *t) {
+    if (!t) {
+        kloge("TERMINAL POP CURSOR: Null terminal!\n");
+        return;
+    }
+
+    LOCK_LOCK(&term_lock);
+
+    if (t->cursor_pos.x > 0) {
+        t->cursor_pos.x--;
+    } else if (t->cursor_pos.y > 0) {
+        t->cursor_pos.y--;
+        t->cursor_pos.x = t->width - 1;
+    }
+
+    UNLOCK_LOCK(&term_lock);
+}
+
+/**
+ * @brief Set cursor character
+ */
+void terminal_set_cursor(uint8_t c) {
+    LOCK_LOCK(&term_lock);
+    term_cursor = c;
+    UNLOCK_LOCK(&term_lock);
+}
+
+/**
+ * @brief Get current terminal mode
+ */
+TERM_MODE terminal_get_mode(void) {
+    return term_mode;
+}
+
+/**
+ * @brief Set terminal mode
+ */
+void terminal_set_mode(TERM_MODE mode) {
+    if (mode == TERM_MODE_INFO || mode == TERM_MODE_TERM) {
+        LOCK_LOCK(&term_lock);
+        term_mode = mode;
+        term_need_redrawn = TRUE;
+        UNLOCK_LOCK(&term_lock);
+    }
+}
+
+/* --------------------------- WINSIZE FUNCTIONALITY ------------------------- */
+
+/**
+ * @brief Get window size
+ */
+STATUS terminal_get_winsize(WINDOW_SIZE *ws) {
+    if (!ws) {
+        return SYS_ERR;
+    }
+
+    TERMINAL *curr = &term_cli;  /* Use CLI terminal for window size */
+
+    if (terminal_validate_params(curr) != SYS_OK) {
+        return SYS_ERR;
+    }
+
+    LOCK_LOCK(&term_lock);
+
+    ws->col = curr->width;
+    ws->row = curr->height;
+    ws->xpixel = curr->framebuffer.width;
+    ws->ypixel = curr->framebuffer.height;
+
+    UNLOCK_LOCK(&term_lock);
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Set window size
+ */
+STATUS terminal_set_winsize(WINDOW_SIZE *ws) {
+    if (!ws) {
+        return SYS_ERR;
+    }
+
+    TERMINAL *curr = &term_cli;  /* Use CLI terminal for window size */
+
+    if (terminal_validate_params(curr) != SYS_OK) {
+        return SYS_ERR;
+    }
+
+    LOCK_LOCK(&term_lock);
+
+    /* Check if the requested size is different from current */
+    if (ws->col != curr->width || ws->row != curr->height ||
+        ws->xpixel != curr->framebuffer.width ||
+        ws->ypixel != curr->framebuffer.height) {
+
+        /* For now, we don't support dynamic resizing */
+        kloge("TERMINAL SET WINSIZE: Dynamic resizing not supported\n");
+        klogi("TERMINAL SET WINSIZE: Requested: %dx%d chars (%dx%d px)\n",
+              ws->col, ws->row, ws->xpixel, ws->ypixel);
+        klogi("TERMINAL SET WINSIZE: Current:   %dx%d chars (%dx%d px)\n",
+              curr->width, curr->height, curr->framebuffer.width, curr->framebuffer.height);
+
+        UNLOCK_LOCK(&term_lock);
+        return SYS_ERR;
+    }
+
+    UNLOCK_LOCK(&term_lock);
+    return SYS_OK;
+}
+
+/* --------------------------- STATISTICS AND DEBUGGING ---------------------- */
+
+/**
+ * @brief Get terminal statistics
+ */
+STATUS terminal_get_stats(TERM_MODE mode, TERMINAL_STATS *stats) {
+    if (!stats) return SYS_ERR;
+
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) return SYS_ERR;
+
+    LOCK_LOCK(&term_lock);
+    *stats = curr->stats;
+    UNLOCK_LOCK(&term_lock);
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Get global terminal statistics
+ */
+STATUS terminal_get_global_stats(TERMINAL_STATS *stats) {
+    if (!stats) return SYS_ERR;
+
+    LOCK_LOCK(&term_lock);
+    *stats = global_stats;
+    UNLOCK_LOCK(&term_lock);
+
+    return SYS_OK;
+}
+
+/**
+ * @brief Reset terminal statistics
+ */
+void terminal_reset_stats(TERM_MODE mode) {
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) return;
+
+    LOCK_LOCK(&term_lock);
+    memset(&curr->stats, 0, sizeof(TERMINAL_STATS));
+    UNLOCK_LOCK(&term_lock);
+}
+
+/**
+ * @brief Reset global terminal statistics
+ */
+void terminal_reset_global_stats(void) {
+    LOCK_LOCK(&term_lock);
+    memset(&global_stats, 0, sizeof(TERMINAL_STATS));
+    UNLOCK_LOCK(&term_lock);
+}
+
+/**
+ * @brief Get terminal information for debugging
+ */
+STATUS terminal_get_info(TERM_MODE mode, char *buffer, size_t buffer_size) {
+    if (!buffer || buffer_size == 0) return SYS_ERR;
+
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) return SYS_ERR;
+
+    LOCK_LOCK(&term_lock);
+
+    int written = snprintf(buffer, buffer_size,
+        "Terminal Info (%s):\n"
+        "  Dimensions: %dx%d chars (%dx%d px)\n"
+        "  Cursor: (%d,%d)\n"
+        "  Colors: FG=%8x, BG=0%8x\n"
+        "  State: %d, Bold: %s, Wrap: %s\n"
+        "  Scroll Region: %d-%d\n"
+        "  Stats: %d chars, %d lines, %d scrolls, %d errors\n",
+        (mode == TERM_MODE_INFO) ? "INFO" : "CLI",
+        curr->width, curr->height,
+        curr->framebuffer.width, curr->framebuffer.height,
+        curr->cursor_pos.x, curr->cursor_pos.y,
+        curr->foreground_color, curr->background_color,
+        curr->state, curr->is_bold ? "Yes" : "No", curr->auto_wrap ? "Yes" : "No",
+        curr->scroll_top, curr->scroll_bottom,
+        curr->stats.chars_written, curr->stats.lines_written,
+        curr->stats.scroll_operations, curr->stats.errors);
+
+    UNLOCK_LOCK(&term_lock);
+
+    return (written > 0 && written < (int)buffer_size) ? SYS_OK : SYS_ERR;
+}
+
+/**
+ * @brief Enhanced terminal initialization
  */
 void init_terminal(struct limine_framebuffer *fb) {
     klogs("INIT TERMINAL: starting...\n");
 
-    /* TODO: refactor for better font support */
+    /* Validate font */
     if (!font.header) {
-        kloge("INIT TERMINAL: Trying to use a NULL font header!\n");
+        kloge("INIT TERMINAL: Font header is NULL!\n");
         return;
     }
 
-    /* Set up information terminal */
-    TERMINAL *curr;
+    /* Initialize lock */
+    INIT_LOCK(&term_lock);
+
+    /* Initialize both terminals */
+    TERMINAL *terminals[] = {&term_info, &term_cli};
+    const char *names[] = {"INFO", "CLI"};
+    TERM_MODE modes[] = {TERM_MODE_INFO, TERM_MODE_TERM};
+
     for (int i = 0; i < 2; i++) {
-        curr = (i == 0) ? &term_info : &term_cli;
-        fb_init(&(curr->framebuffer), fb);
+        TERMINAL *curr = terminals[i];
+
+        /* Initialize framebuffer */
+        if (fb_init(&(curr->framebuffer), fb) != SYS_OK) {
+            kloge("INIT TERMINAL: Failed to initialize framebuffer for %s terminal\n", names[i]);
+            continue;
+        }
+
+        /* Calculate terminal dimensions */
         curr->width = curr->framebuffer.width / PSF1_FONT_WIDTH;
         curr->height = curr->framebuffer.height / font.header->character_size;
+
+        /* Set default colors and state */
         curr->foreground_color = DEFAULT_FG;
         curr->background_color = DEFAULT_BG;
         curr->state = TERM_STATE_IDLE;
         curr->cursor_pos = IVEC2_ZERO;
         curr->last_char = 0;
-        curr->mode = (i == 0) ? TERM_MODE_INFO : TERM_MODE_TERM;
-        terminal_clear(curr->mode);
-        terminal_refresh(curr->mode);
-        klogd("INIT TERMINAL: New terminal (term %d)\n", i);
-        klogt("\tWidth:        %d px\n", curr->framebuffer.width);
-        klogt("\tHeight:       %d px\n", curr->framebuffer.height);
-        klogt("\tPitch:        %d\n", curr->framebuffer.pitch);
-        klogt("\tFB Base Addr: %x\n", curr->framebuffer.base);
+        curr->last_qu_char = FALSE;
+        curr->skip_left = 0;
+        curr->mode = modes[i];
+        curr->is_bold = FALSE;
+        curr->cparamcount = 0;
+
+        /* Initialize enhanced features */
+        curr->auto_wrap = TRUE;
+        curr->cursor_visible = TRUE;
+        curr->insert_mode = FALSE;
+        curr->origin_mode = FALSE;
+        curr->charset = TERM_CHARSET_ASCII;
+        curr->tab_width = TERMINAL_DEFAULT_TAB_WIDTH;
+
+        /* Initialize scroll region */
+        curr->scroll_top = 0;
+        curr->scroll_bottom = curr->height - 1;
+
+        /* Initialize statistics */
+        memset(&curr->stats, 0, sizeof(TERMINAL_STATS));
+
+        /* Clear and refresh terminal */
+        terminal_clear(modes[i]);
+        terminal_refresh(modes[i]);
+
+        klogi("INIT TERMINAL: Initialized %s terminal\n", names[i]);
+        klogt("\tDimensions:   %dx%d chars (%dx%d px)\n",
+              curr->width, curr->height,
+              curr->framebuffer.width, curr->framebuffer.height);
+        klogt("\tPitch:        %d bytes\n", curr->framebuffer.pitch);
+        klogt("\tBase Address: %p\n", curr->framebuffer.base);
     }
+
+    /* Set default character printing */
+    term_char_print = DEFAULT_CHAR_PRINT;
 
     klogs("INIT TERMINAL: finished...\n");
 }
 
 /**
- * @brief Function which starts the terminals and sets them up
+ * @brief Start terminal operation
  */
-void terminal_start() {
+void terminal_start(void) {
+    LOCK_LOCK(&term_lock);
+
+    /* Reinitialize framebuffers if needed */
     fb_init(&(term_info.framebuffer), NULL);
     fb_init(&(term_cli.framebuffer), NULL);
 
+    /* Refresh kernel logs */
     klog_refresh(TERM_MODE_TERM);
     klog_refresh(TERM_MODE_INFO);
 
+    /* Set initial mode based on configuration */
     #if CLI
     terminal_clear((term_mode = TERM_MODE_TERM));
     terminal_refresh(term_mode);
@@ -123,122 +1283,118 @@ void terminal_start() {
     #endif
 
     term_need_redrawn = TRUE;
+
+    UNLOCK_LOCK(&term_lock);
 }
 
 /**
- * @brief Helper to enable character printing to framebuffer
- *
+ * @brief Enable character printing to framebuffer
  */
-void terminal_enable_character_printing() {
+void terminal_enable_character_printing(void) {
+    LOCK_LOCK(&term_lock);
     term_char_print = 1;
+    UNLOCK_LOCK(&term_lock);
 }
 
 /**
- * @brief Helper to disable character printing to framebuffer
- *
+ * @brief Disable character printing to framebuffer
  */
-void terminal_disable_character_printing() {
+void terminal_disable_character_printing(void) {
+    LOCK_LOCK(&term_lock);
     term_char_print = 0;
+    UNLOCK_LOCK(&term_lock);
 }
 
 /**
- * @brief Helper used to determine if the terminal needs redrawn
- *
- * @return uint8_t TRUE if yes, FALSE otherwise
+ * @brief Check if terminal needs redraw
  */
-uint8_t terminal_need_redraw() {
+uint8_t terminal_need_redraw(void) {
     return term_need_redrawn;
 }
 
 /**
- * @brief Helper to change whether the terminal needs redrawn
- *
- * @param a TRUE or FALSE
+ * @brief Set terminal redraw flag
  */
-void terminal_set_redraw(uint8_t a) {
-    term_need_redrawn = a;
+void terminal_set_redraw(uint8_t flag) {
+    LOCK_LOCK(&term_lock);
+    term_need_redrawn = flag;
+    UNLOCK_LOCK(&term_lock);
 }
 
 /**
- * @brief Clears the terminal to a known state depending on the terminal mode
- *
- * @param mode Current mode of the terminal
+ * @brief Enhanced terminal clear with validation
  */
 void terminal_clear(TERM_MODE mode) {
-    TERMINAL *curr;
-    if (mode == TERM_MODE_INFO) {
-        curr = &term_info;
-    } else if (mode == TERM_MODE_TERM) {
-        curr = &term_cli;
-    } else {
-        kloge("TERMINAL CLEAR: Trying to clear a terminal which is unknown!\n");
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) {
+        kloge("TERMINAL CLEAR: Invalid terminal mode %d\n", mode);
         return;
     }
 
-    if (curr->state == TERM_STATE_UNKNOWN) {
-        kloge("TERMINAL CLEAR: Trying to clear a terminal whose state is unknown!\n");
+    if (terminal_validate_params(curr) != SYS_OK) {
+        kloge("TERMINAL CLEAR: Terminal validation failed\n");
         return;
     }
 
+    LOCK_LOCK(&term_lock);
+
+    /* Copy background buffer if available */
     if (curr->framebuffer.background_buffer) {
         memcpy(curr->framebuffer.base, curr->framebuffer.background_buffer,
                curr->framebuffer.width * curr->framebuffer.height * 4);
     }
 
+    /* Clear entire screen */
     for (size_t y = 0; y < curr->framebuffer.height; y++) {
         for (size_t x = 0; x < curr->framebuffer.width; x++) {
             fb_putpixel(&(curr->framebuffer), x, y, curr->background_color);
         }
     }
 
+    /* Reset cursor position and state */
     curr->cursor_pos = IVEC2_ZERO;
+    curr->state = TERM_STATE_IDLE;
+    curr->last_qu_char = FALSE;
+    curr->skip_left = 0;
+    curr->cparamcount = 0;
+
+    /* Update statistics */
+    curr->stats.clear_operations++;
+    global_stats.clear_operations++;
+
+    UNLOCK_LOCK(&term_lock);
 }
 
 /**
- * @brief Refresh the terminal framebuffer
- *
- * @param mode Mode of the terminal
- * @return STATUS SYS_OK if success, SYS_ERR if failure
+ * @brief Enhanced terminal refresh with better error handling
  */
 STATUS terminal_refresh(TERM_MODE mode) {
-    TERMINAL *curr;
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) {
+        return SYS_ERR;
+    }
+
+    if (terminal_validate_params(curr) != SYS_OK) {
+        return SYS_ERR;
+    }
 
     LOCK_LOCK(&term_lock);
 
-    if (mode == TERM_MODE_INFO) {
-        curr = &term_info;
-    } else if (mode == TERM_MODE_TERM) {
-        curr = &term_cli;
+    /* Handle cursor display for terminal mode */
+    if (mode == TERM_MODE_TERM && term_cursor != 0) {
+        terminal_update_cursor_visibility(curr, mode);
 
-        if (term_cursor != 0) {
-            if (curr->state != TERM_STATE_UNKNOWN && mode == term_mode) {
-                fb_refresh(&(curr->framebuffer));
-            }
+        uint32_t x = curr->cursor_pos.x;
+        uint32_t y = curr->cursor_pos.y;
 
-            uint32_t x = curr->cursor_pos.x;
-            uint32_t y = curr->cursor_pos.y;
-            if (x < curr->width && y < curr->height) {
-                fb_putc(&(curr->framebuffer), x * PSF1_FONT_WIDTH,
-                        y * font.header->character_size, curr->foreground_color,
-                        curr->background_color, term_cursor, curr->is_bold);
-                if (mode == term_mode) {
-                    fb_refresh(&(curr->framebuffer));
-                }
-                UNLOCK_LOCK(&term_lock);
-                return SYS_OK;
-            }
+        if (x < curr->width && y < curr->height) {
+            fb_putc(&(curr->framebuffer), x * PSF1_FONT_WIDTH,
+                    y * font.header->character_size, curr->foreground_color,
+                    curr->background_color, term_cursor, curr->is_bold);
         }
-    } else {
-        kloge("TERMINAL REFRESH: Trying to refresh a terminal mode which isn't bound!\n");
-        UNLOCK_LOCK(&term_lock);
-        return SYS_ERR;
     }
 
-    if (curr->state == TERM_STATE_UNKNOWN) {
-        UNLOCK_LOCK(&term_lock);
-        return SYS_ERR;
-    }
-
+    /* Refresh framebuffer if this is the active mode */
     if (mode == term_mode) {
         fb_refresh(&(curr->framebuffer));
     }
@@ -247,232 +1403,113 @@ STATUS terminal_refresh(TERM_MODE mode) {
     return SYS_OK;
 }
 
+/**
+ * @brief Enhanced terminal print with better Unicode support
+ */
 void terminal_print(TERM_MODE mode, uint8_t c) {
+    TERMINAL *curr = terminal_get_by_mode(mode);
+    if (!curr) {
+        kloge("TERMINAL PRINT: Invalid terminal mode %d\n", mode);
+        return;
+    }
+
     #if CLI
+    /* Send to serial port */
     serial_write(c);
 
+    /* Skip info mode output if not currently active */
     if (mode == TERM_MODE_INFO && terminal_get_mode() != TERM_MODE_INFO) {
         return;
     }
     #endif
 
-    if (term_char_print) {
-        TERMINAL *curr;
+    if (!term_char_print || terminal_validate_params(curr) != SYS_OK) {
+        return;
+    }
 
-        if (mode == TERM_MODE_INFO) {
-            curr = &term_info;
-        } else if (mode == TERM_MODE_TERM) {
-            curr = &term_cli;
-        } else {
-            kloge("TERMINAL PRINT: Trying to print to a terminal which is unknown!\n");
+    LOCK_LOCK(&term_lock);
+
+    /* Handle control characters */
+    if (c < 0x20) {
+        if (terminal_handle_control_char(curr, c) == SYS_OK) {
+            UNLOCK_LOCK(&term_lock);
             return;
         }
+    }
 
-        if (c == '\b') {
-            terminal_print(mode, ' ');
-            if (curr->cursor_pos.x > 0) {
-                curr->cursor_pos.x--;
-            }
-            if (curr->cursor_pos.x > 0) {
-                curr->cursor_pos.x--;
-            }
-            return;
-        }
+    /* Handle scrolling if at bottom of screen */
+    if (curr->cursor_pos.y >= (int)curr->height) {
+        terminal_scroll(curr);
+        curr->cursor_pos.y--;
+        terminal_stats_update(curr, TERM_OP_SCROLL);
+    }
 
-        if (curr->cursor_pos.y == (int)curr->height && c != '\0') {
-            terminal_scroll(curr);
-            curr->cursor_pos.y--;
-        }
+    /* Handle printable characters */
+    if (c >= 0x20 && c <= 0x7E) {
+        /* Standard ASCII printable characters */
 
-        switch (c) {
-            case '\0':
-                /* Nul byte */
-                return;
-            case '\n':
-                /* New line character */
-                term_cursor = ' ';
-                terminal_refresh(mode);
+        /* Check for line wrap */
+        if (curr->cursor_pos.x >= (int)curr->width) {
+            if (curr->auto_wrap) {
                 curr->cursor_pos.x = 0;
                 curr->cursor_pos.y++;
-                break;
-            case '\t':
-                /* Tab character */
-                curr->cursor_pos.x += (curr->cursor_pos.x % 8 == 0) ? 8 : (8 - curr->cursor_pos.x % 8);
-                if (curr->cursor_pos.x > (int)curr->width) {
-                    curr->cursor_pos.x -= curr->width;
-                    curr->cursor_pos.y++;
-                }
-                break;
-            default:
-                /* Any other character */
-                if (c <= 0xA0 || (c > 0xA0 && curr->last_char == 0)) {
-                    /* CRLF, if needed */
-                    if (curr->cursor_pos.x >= (int)curr->width) {
-                        curr->cursor_pos.x = 0;
-                        curr->cursor_pos.y++;
-                    }
-
-                    /* Check if we need to scroll the screen */
-                    if (curr->cursor_pos.y >= (int)curr->height) {
-                        terminal_scroll(curr);
-                        curr->cursor_pos.y--;
-                    }
-                    fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
-                            curr->cursor_pos.y * font.header->character_size,
-                            curr->foreground_color, curr->background_color,
-                            c, curr->is_bold);
-
-                    /* Push cursor position */
-                    curr->cursor_pos.x++;
-                } else {
-                    /* CRLF, if needed */
-                    if (curr->cursor_pos.x >= (int)(curr->width - 1)) {
-                        curr->cursor_pos.x = 0;
-                        curr->cursor_pos.y++;
-                    }
-
-                    /* Check if we need to scroll the screen */
-                    if (curr->cursor_pos.y >= (int)curr->height) {
-                        terminal_scroll(curr);
-                        curr->cursor_pos.y--;
-                    }
-
-                    curr->last_char = 0;
-
-                    /* Unknown character, print out question marks */
-                    fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
-                            curr->cursor_pos.y * font.header->character_size,
-                            curr->foreground_color, curr->background_color,
-                            '?', FALSE);
-                    curr->cursor_pos.x++;
-                    fb_putc(&(curr->framebuffer), curr->cursor_pos.x * PSF1_FONT_WIDTH,
-                            curr->cursor_pos.y * font.header->character_size,
-                            curr->foreground_color, curr->background_color,
-                            '?', FALSE);
-                    curr->cursor_pos.x++;
-                }
-                break;
-        }
-
-        /* Make sure the cursor is in the correct position */
-        while (TRUE) {
-            if (curr->cursor_pos.x >= (int)curr->width) {
-                curr->cursor_pos.x = 0;
-                curr->cursor_pos.y++;
-            }
-
-            if (curr->cursor_pos.y >= (int)curr->height &&
-                !(curr->cursor_pos.y == (int)curr->height &&
-                curr->cursor_pos.x == 0)) {
-                terminal_scroll(curr);
-                curr->cursor_pos.y--;
+                terminal_resize_check(curr);
             } else {
-                break;
+                curr->cursor_pos.x = curr->width - 1;
             }
         }
+
+        /* Display character */
+        fb_putc(&(curr->framebuffer),
+                curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                curr->cursor_pos.y * font.header->character_size,
+                curr->foreground_color, curr->background_color,
+                c, curr->is_bold);
+
+        /* Advance cursor */
+        curr->cursor_pos.x++;
+        terminal_stats_update(curr, TERM_OP_CHAR_WRITE);
+
+    } else if (c > 0x7E) {
+        /* Extended ASCII or Unicode handling */
+        if (c <= 0xA0 || curr->last_char == 0) {
+            /* Single-byte extended character */
+            if (curr->cursor_pos.x >= (int)curr->width) {
+                if (curr->auto_wrap) {
+                    curr->cursor_pos.x = 0;
+                    curr->cursor_pos.y++;
+                    terminal_resize_check(curr);
+                }
+            }
+
+            fb_putc(&(curr->framebuffer),
+                    curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                    curr->cursor_pos.y * font.header->character_size,
+                    curr->foreground_color, curr->background_color,
+                    c, curr->is_bold);
+
+            curr->cursor_pos.x++;
+            terminal_stats_update(curr, TERM_OP_CHAR_WRITE);
+        } else {
+            /* Multi-byte character (display as placeholder) */
+            fb_putc(&(curr->framebuffer),
+                    curr->cursor_pos.x * PSF1_FONT_WIDTH,
+                    curr->cursor_pos.y * font.header->character_size,
+                    curr->foreground_color, curr->background_color,
+                    '?', FALSE);
+            curr->cursor_pos.x++;
+            terminal_stats_update(curr, TERM_OP_CHAR_WRITE);
+        }
     }
+
+    /* Ensure cursor position is valid */
+    terminal_resize_check(curr);
+
+    UNLOCK_LOCK(&term_lock);
 }
 
 /**
- * @brief Helper to set the foreground of the terminal
- *
- * @param mode Terminal mode which maps to a terminal to change
- * @param color Color to set the foreground to
- */
-void terminal_set_foreground(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
-    if (mode == TERM_MODE_TERM) {
-        term_cli.foreground_color = color;
-    } else if (mode == TERM_MODE_INFO) {
-        term_info.foreground_color = color;
-    }
-    return;
-}
-
-/**
- * @brief Helper for setting the background of the terminal
- *
- * @param mode Terminal mode which maps to a terminal to change
- * @param color Color to set the background to
- */
-void terminal_set_background(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
-    if (mode == TERM_MODE_TERM) {
-        term_cli.foreground_color = color;
-    } else if (mode == TERM_MODE_INFO) {
-        term_info.foreground_color = color;
-    }
-    return;
-}
-
-/**
- * @brief Sets the terminal cursor pos object
- *
- * @param t Terminal to change
- * @param x X-coordinate
- * @param y Y-coordinate
- */
-void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
-  if (!t) {
-    kprintf("Null terminal!\n");
-    return;
-  }
-  if (x >= t->width) {
-    y++;
-    x = 0;
-  }
-  t->cursor_pos.x = x;
-  t->cursor_pos.y = y;
-}
-
-/**
- * @brief Helper to move the terminal cursor forward
- *
- * @param t Terminal to change
- */
-void terminal_push_cursor(TERMINAL *t) {
-    if (!t) {
-        kprintf("Null terminal!\n");
-        return;
-    }
-
-    if (t->cursor_pos.x >= (int)t->width) {
-        t->cursor_pos.x = 0;
-        t->cursor_pos.y++;
-        return;
-    }
-    if (t->cursor_pos.y >= (int)t->height &&
-        !(t->cursor_pos.y == (int)t->height &&
-        t->cursor_pos.x == 0)) {
-        terminal_scroll(t);
-        t->cursor_pos.y--;
-        return;
-    }
-    t->cursor_pos.x++;
-}
-
-/**
- * @brief Helper to move the cursor backwards.
- *
- * @param t Terminal to change
- */
-void terminal_pop_cursor(TERMINAL *t) {
-    if (!t) {
-        kprintf("Null terminal!\n");
-        return;
-    }
-
-    if (--t->cursor_pos.x < 1) {
-        t->cursor_pos.x++;
-    }
-}
-
-/**
- * @brief Parses ANSI escape sequences
- * @ref https://en.wikipedia.org/wiki/ANSI_escape_code
- * @ref https://wiki.osdev.org/Terminals
- *
- * @param curr Current terminal
- * @param byte Byte as part of the ANSI escape sequences
- * @return STATUS SYS_OK if success, SYS_ERR if fail
+ * @brief Enhanced ANSI escape sequence parsing
  */
 STATUS terminal_parse_cmd(TERMINAL *curr, uint8_t byte) {
     if (!curr) {
@@ -484,417 +1521,97 @@ STATUS terminal_parse_cmd(TERMINAL *curr, uint8_t byte) {
         return SYS_ERR;
     }
 
-    if (byte > 0xA0 && curr->last_char == 0) {
-        curr->last_char = byte;
-        goto success;
+    /* Handle multi-byte UTF-8 sequences */
+    if ((byte & 0x80) && curr->skip_left == 0 && curr->state == TERM_STATE_IDLE) {
+        if ((byte & 0xF0) == 0xF0) {
+            curr->skip_left = 3;  /* 4-byte sequence */
+        } else if ((byte & 0xE0) == 0xE0) {
+            curr->skip_left = 2;  /* 3-byte sequence */
+        } else if ((byte & 0xC0) == 0xC0) {
+            curr->skip_left = 1;  /* 2-byte sequence */
+        }
+        return SYS_OK;
+    } else if (curr->skip_left > 0) {
+        curr->skip_left--;
+        return SYS_OK;
     }
 
-    if (curr->state == TERM_STATE_IDLE) {
-        /* Check if started by part of a Control Sequence Introducer (CSI) */
-        if (byte == CSI_START) {
-            if (!(curr->last_qu_char)) {
+    /* Handle escape sequence states */
+    switch (curr->state) {
+        case TERM_STATE_IDLE:
+            if (byte == ESC_START) {
                 curr->state = TERM_STATE_CMD;
                 curr->last_qu_char = TRUE;
-            } else {
-                curr->last_qu_char = FALSE;
-                goto fail;
+                return SYS_OK;
             }
-        } else {
-            goto fail;
-        }
-    } else if (curr->state == TERM_STATE_CMD) {
-        /* Now, we are parsing a ANSI escape sequence when we get here */
-        switch (byte) {
-            case '[':
-                /* This completes the Control Sequence Introducer, set to */
-                /* parameter state to grab the arguments of the CSI       */
-                curr->cparamcount = 1;
-                curr->cparams[0] = 0;
-                curr->state = TERM_STATE_PARAM;
-                break;
-            case ']':
-                /* This ends the entire ANSI sequence */
-                curr->cparamcount = 0;
-                curr->cparams[0] = 0;
-                curr->state = TERM_STATE_HYPERLINK_HEADER;
-                curr->last_qu_char = FALSE;
-                break;
-            default:
-                goto fail;
-        }
-    } else if (curr->state == TERM_STATE_PARAM) {
-        int fh;
-        int fw;
-        switch (byte) {
-            case ';':
-                /* Delimiter between different numbers in a sequence */
-                curr->cparams[curr->cparamcount++] = 0;
-                break;
-            case 'H':
-                /* CUP (Cursor Position) Escape Sequences */
-                /* Forumla: \033[n;mH where n is a row and m is a column */
-                /* If n and m are not present, move the cursor to top left */
-                /* of the screen */
-                curr->cursor_pos = IVEC2_ZERO;
-                goto success;
-            case 'K':
-                /* EL (Erase in Line) Escape Sequences */
-                /* Formula: \033[nK where n can be a number*/
-                /* NOTE: **Cursor position doesn't change** */
-                /* \033[K or \033[0K -> Clear from cursor to the end of the line */
-                /* \033[1K -> Clear from cursor to beginning of line */
-                /* \033[2K -> Clear entire line */
-                int mode = -1;
-                int params = curr->cparamcount;
-                int fparam = curr->cparams[0];
-                if (params == 0 || (params == 1 && fparam == 0)) {
-                    mode = 0;
-                } else if (params == 1 && fparam == 1) {
-                    mode = 1;
-                } else if (params == 1 && fparam == 2) {
-                    mode = 2;
-                }
+            break;
 
+        case TERM_STATE_CMD:
+            switch (byte) {
+                case CSI_BRACKET:  /* CSI sequence */
+                    curr->cparamcount = 1;
+                    curr->cparams[0] = 0;
+                    curr->state = TERM_STATE_PARAM;
+                    return SYS_OK;
 
-                fh = font.header->character_size;
-                fw = PSF1_FONT_WIDTH;
-                int cond = MIN((curr->cursor_pos.y + 1) * fh, curr->framebuffer.height);
-                if (mode > -1) {
-                    for (int y = curr->cursor_pos.y * fh; y < cond; y++) {
-                        for (int x = 0; x < (int) curr->framebuffer.width; x++) {
-                            if (!(mode == 0 && x >= curr->cursor_pos.x * fw)) {
-                                continue;
-                            } else if (!(mode == 1 && x < curr->cursor_pos.x * fw)) {
-                                continue;
-                            }
-                            fb_putpixel(&(curr->framebuffer), x, y,
-                                        curr->background_color);
-                        }
+                case OSC_BRACKET:  /* OSC sequence */
+                    curr->cparamcount = 0;
+                    curr->state = TERM_STATE_HYPERLINK_HEADER;
+                    curr->last_qu_char = FALSE;
+                    return SYS_OK;
+
+                /* Single-character escape sequences */
+                case 'c':  /* Reset terminal */
+                    terminal_reset_state(curr);
+                    goto success;
+
+                case 'D':  /* Line feed */
+                    curr->cursor_pos.y++;
+                    terminal_resize_check(curr);
+                    goto success;
+
+                case 'E':  /* New line */
+                    curr->cursor_pos.x = 0;
+                    curr->cursor_pos.y++;
+                    terminal_resize_check(curr);
+                    goto success;
+
+                case 'M':  /* Reverse line feed */
+                    if (curr->cursor_pos.y > curr->scroll_top) {
+                        curr->cursor_pos.y--;
                     }
-                }
-                goto success;
-            case 'J':
-                /* ED (Erase Display) Escape Sequences */
-                /* Formula: \033[nJ where n can be a number */
-                /* \033[J or \033[0J -> Clear the screen from cursor to the end */
-                /* \033[1J -> Clear the screen from beginning to the cursor */
-                /* \033[2J -> Clear the entire screen */
-                if (curr->cparamcount != 1) {
-                    goto fail;
-                }
-                fh = font.header->character_size;
-                fw = PSF1_FONT_WIDTH;
-                switch (curr->cparams[0]) {
-                    case 0:
-                        /* Clear the screen from cursor to the end */
-                        for (int y = 0; y < (int)(curr->framebuffer.height); y++) {
-                            for (int x = 0; x < (int)(curr->framebuffer.width); x++) {
-                                if (y >= (curr->cursor_pos.y * fh) &&
-                                    y < ((curr->cursor_pos.y + 1) * fh) &&
-                                    x < (curr->cursor_pos.x * fw)) {
-                                        continue;
-                                } else if (y < curr->cursor_pos.y * fh) {
-                                    continue;
-                                }
-                                fb_putpixel(&(curr->framebuffer), x, y,
-                                            curr->background_color);
-                            }
-                        }
-                        break;
-                    case 1:
-                        /* Clear the screen from beginning to cursor */
-                        for (int y = 0; y < (int)(curr->framebuffer.height); y++) {
-                            for (int x = 0; x < (int)(curr->framebuffer.width); x++) {
-                                if (y >= (curr->cursor_pos.y * fh) &&
-                                    y < ((curr->cursor_pos.y + 1) * fh) &&
-                                    x < (curr->cursor_pos.x * fw)) {
-                                        continue;
-                                } else if (y >= (curr->cursor_pos.y + 1) * fh) {
-                                    continue;
-                                }
-                                fb_putpixel(&(curr->framebuffer), x, y,
-                                            curr->background_color);
-                            }
-                        }
-                        break;
-                    case 2:
-                        /* Clear the entire screen */
-                        for (size_t y = 0; y < curr->framebuffer.height; y++) {
-                            for (size_t x = 0; x < curr->framebuffer.width; x++) {
-                                fb_putpixel(&(curr->framebuffer), x, y,
-                                            curr->background_color);
-                            }
-                        }
-                        break;
-                    default:
-                        goto fail;
-                }
-                goto success;
-            case 'm':
-                /* Terminal colors */
-                if (curr->cparamcount > 1) {
-                    curr->is_bold = curr->cparams[0];
-                } else {
-                    curr->is_bold = FALSE;
-                }
+                    goto success;
 
-                size_t i = 0;
-                if (curr->cparamcount > 0) {
-                    i = curr->cparamcount - 1;
-                }
-                if (curr->cparams[curr->cparamcount - 1] == 0) {
-                    /* \033[0m -> Reset all attributes */
-                    curr->foreground_color = DEFAULT_FG;
-                    curr->background_color = DEFAULT_BG;
-                } else if (curr->cparams[i] >= 30 && curr->cparams[i] <= 37) {
-                    /* \033[(30 - 37)m -> Set foreground color (3-bit range) */
-                    curr->foreground_color = four_bit_colors[curr->cparams[i] - 30];
-                } else if (curr->cparams[i] >= 40 && curr->cparams[i] <= 47) {
-                    /* \033[(40 - 47)m -> Set background color (3-bit range) */
-                    curr->foreground_color = four_bit_colors[curr->cparams[i] - 40];
-                } else if (curr->cparams[i] >= 90 && curr->cparams[i] <= 97) {
-                    /* \033[(90 - 97)m -> Set foreground color (4-bit range) */
-                    curr->foreground_color = four_bit_colors[(curr->cparams[i] - 90) + 7];
-                } else if (curr->cparams[i] >= 100 && curr->cparams[i] <= 107) {
-                    /* \033[(100 - 107)m -> Set background color (4-bit range) */
-                    curr->foreground_color = four_bit_colors[(curr->cparams[i] - 100) + 7];
-                }
-                goto success;
-            case '0': case '1': case '2': case '3': case '4':
-            case '5': case '6': case '7': case '8': case '9':
-                /* Capture the numbers from the parameters */
-                curr->cparams[curr->cparamcount - 1] *= 10;
-                curr->cparams[curr->cparamcount - 1] += byte - '0';
-                break;
-            default:
-                goto fail;
-        }
-    } else if (curr->state == TERM_STATE_HYPERLINK_HEADER) {
-        /* Here, we're setting up the hyperlink (Operating System Command Sequences) */
-        if (byte == ';' && curr->cparamcount == 2) {
-            if (curr->cparams[0] == '8' && curr->cparams[1] == ';') {
-                curr->state = TERM_STATE_HYPERLINK_URL;
-            } else if (curr->cparams[1] == ';') {
-                goto fail;
-            } else {
-                curr->cparams[curr->cparamcount++] = byte;
+                default:
+                    goto fail;
             }
-        } else if (curr->cparamcount > 2) {
+            break;
+
+        case TERM_STATE_PARAM:
+            return terminal_parse_csi_sequence(curr, byte);
+
+        case TERM_STATE_HYPERLINK_HEADER:
+        case TERM_STATE_HYPERLINK_URL:
+        case TERM_STATE_HYPERLINK_TEXT:
+        case TERM_STATE_HYPERLINK_TAIL:
+            return terminal_parse_osc_sequence(curr, byte);
+
+        default:
             goto fail;
-        } else {
-            curr->cparams[curr->cparamcount++] = byte;
-        }
-    } else if (curr->state == TERM_STATE_HYPERLINK_URL) {
-        if (byte == OSC_START) {
-            curr->state = TERM_STATE_HYPERLINK_TEXT;
-        } else {
-            /* Skip URL display */
-            return SYS_OK;
-        }
-    } else if (curr->state == TERM_STATE_HYPERLINK_TEXT) {
-        if (byte == CSI_START) {
-            curr->cparams[0] = 0;
-            curr->cparamcount = 0;
-            curr->state = TERM_STATE_HYPERLINK_TAIL;
-        } else {
-            /* Display URL title */
-            return SYS_ERR;
-        }
-    } else if (curr->state == TERM_STATE_HYPERLINK_TAIL) {
-        if (byte == OSC_START && curr->cparamcount == 4) {
-            if (curr->cparams[0] == ']' &&
-                curr->cparams[1] == '8' &&
-                curr->cparams[2] == ';' &&
-                curr->cparams[3] == ';') {
-                goto success;
-            } else {
-                goto fail;
-            }
-        } else if (curr->cparamcount > 4) {
-            goto fail;
-        } else {
-            curr->cparams[curr->cparamcount++] = byte;
-        }
-    } else {
-        goto fail;
     }
+
+    return SYS_ERR;
+
+success:
+    curr->state = TERM_STATE_IDLE;
+    curr->cparamcount = 0;
+    curr->last_qu_char = FALSE;
+    terminal_stats_update(curr, TERM_OP_ESCAPE_SEQ);
     return SYS_OK;
 
-    success:
-        curr->state = TERM_STATE_IDLE;
-        curr->cparamcount = 0;
-        return SYS_OK;
-    fail:
-        curr->state = TERM_STATE_IDLE;
-        curr->cparamcount = 0;
-        return SYS_ERR;
-}
-
-/**
- * @brief Helper to put a character on the screen in the terminal.
- *
- * @param mode Mode is mapped to a terminal
- * @param c Character to put on the screen
- */
-void terminal_putc(TERM_MODE mode, uint8_t c) {
-    TERMINAL *curr;
-    if (mode == TERM_MODE_INFO) {
-        curr = &term_info;
-    } else if (mode == TERM_MODE_TERM) {
-        curr = &term_cli;
-    } else {
-        kloge("TERMINAL PUTC: Trying to print to a terminal which is unknown!\n");
-        return;
-    }
-
-    if (curr->framebuffer.base == NULL || curr->state == TERM_STATE_UNKNOWN) {
-        return;
-    }
-
-    if ((c & 0b10000000) && curr->skip_left == 0 && curr->state == TERM_STATE_IDLE) {
-        if (c & 0b11110000) {
-            curr->skip_left = 2;
-        } else if (c & 0b11100000) {
-            curr->skip_left = 1;
-        } else if (c & 0b11000000) {
-            curr->skip_left = 0;
-        }
-        return;
-    } else if (curr->skip_left != 0) {
-        curr->skip_left--;
-        return;
-    } else if (curr->last_qu_char && c != '[' && c != ']') {
-        curr->state = TERM_STATE_IDLE;
-
-        /* Resend the '\033' character */
-        terminal_print(mode, CSI_START);
-        curr->last_qu_char = FALSE;
-        terminal_putc(mode, c);
-        return;
-    } else {
-        curr->last_qu_char = FALSE;
-        if (terminal_parse_cmd(curr, c)) {
-            return;
-        }
-    }
-    terminal_print(mode, c);
-}
-
-/**
- * @brief Helper to put a string on the screen
- *
- * @param t Terminal to change
- * @param s String to put on the screen
- */
-void terminal_puts(TERM_MODE mode, const char *s) {
-  for (size_t i = 0; s[i]; i++) {
-    terminal_putc(mode, s[i]);
-  }
-}
-
-/**
- * @brief Helper to scroll the terminal down
- *
- * @param t Terminal to scroll
- */
-void terminal_scroll(TERMINAL *t) {
-    if (!t) {
-        kloge("TERM SCROLL: Trying to use a NULL terminal!\n");
-        return;
-    }
-
-    if (t->state == TERM_STATE_UNKNOWN) {
-        return;
-    }
-
-    const uint8_t char_size = font.header->character_size;
-
-    for (size_t y = 0; y < (size_t)(t->cursor_pos.y - 1) * char_size; y++) {
-        for (size_t x = 0; x < t->framebuffer.width; x++) {
-            /* Get the character from *below* and put it in the current position */
-            fb_putpixel(&(t->framebuffer), x, y,
-                        fb_getpixel(&(t->framebuffer), x, y + char_size));
-        }
-    }
-
-
-    for (size_t y = (t->cursor_pos.y - 1) * char_size;
-         y < t->framebuffer.height;
-         y++) {
-        for (size_t x = 0; x < t->framebuffer.width; x++) {
-            fb_putpixel(&(t->framebuffer), x, y, t->background_color);
-        }
-    }
-}
-
-/**
- * @brief Sets the cursor to a specific character
- *
- * @param c Character to set the cursor to
- */
-void terminal_set_cursor(uint8_t c) {
-    LOCK_LOCK(&term_lock);
-    term_cursor = c;
-    UNLOCK_LOCK(&term_lock);
-}
-
-
-/**
- * @brief Returns the current mode that the terminal is set to
- *
- * @return TERM_MODE Terminal mode the terminal is set to
- */
-TERM_MODE terminal_get_mode() {
-    return term_mode;
-}
-
-
-/* --------------------------- WINSIZE FUNCTIONALITY -------------------------*/
-
-/**
- * @brief Gets WINDOW_SIZE
- *
- * @param ws Buffer to copy WINDOW_SIZE into
- */
-void terminal_get_winsize(WINDOW_SIZE *ws) {
-    if (!ws) {
-        return;
-    }
-
-    if (term_cli.state == TERM_STATE_IDLE) {
-        ws->col = term_cli.width;
-        ws->row = term_cli.height;
-        ws->xpixel = term_cli.framebuffer.width;
-        ws->ypixel = term_cli.framebuffer.height;
-    }
-}
-
-
-/**
- * @brief Sets the WINDOW_SIZE
- *
- * @param ws Window size to set
- * @return STATUS SYS_ERR if failure, SYS_OK if success
- */
-STATUS terminal_set_winsize(WINDOW_SIZE *ws) {
-    if (!ws) {
-        return SYS_ERR;
-    }
-
-    if (term_cli.state == TERM_STATE_IDLE) {
-        if (ws->col != term_cli.width ||
-            ws->row != term_cli.height ||
-            ws->xpixel != term_cli.framebuffer.width ||
-            ws->ypixel != term_cli.framebuffer.height) {
-            kloge("TERMINAL SET WINSIZE: Can't support specified terminal window size\n");
-        } else {
-            term_cli.width = ws->col;
-            term_cli.height = ws->row;
-            term_cli.framebuffer.width = ws->xpixel;
-            term_cli.framebuffer.height = ws->ypixel;
-            return SYS_OK;
-        }
-    }
-
+fail:
+    curr->state = TERM_STATE_IDLE;
+    curr->cparamcount = 0;
+    terminal_stats_update(curr, TERM_OP_ERROR);
     return SYS_ERR;
 }

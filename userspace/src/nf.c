@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     }
 
     for (int i = 1; i < argc; i++) {
-        int fd = open(argv[i], AT_FDCWD);
+        int fd = open(argv[i], O_CREAT | O_RDWR);
         if (fd < 0) {
             fprintf(STDERR, "nf: Failed to open '%s'\n", argv[i]);
             perror("open");

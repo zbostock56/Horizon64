@@ -45,3 +45,8 @@
  * @brief Denotes if memory allocator should use poison values or not
  */
 #define SLAB_POISON         (0)
+
+/**
+ * @brief Enables additional checks on the HPET
+ */
+#define HPET_DEBUG          (0)

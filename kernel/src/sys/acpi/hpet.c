@@ -16,6 +16,8 @@
 
 #include <sys/acpi/hpet.h>
 
+#include <kconfig.h>
+
 #include <proc/process.h>
 #include <proc/ctxsw.h>
 
@@ -131,49 +133,66 @@ static inline STATUS hpet_reset_comparators() {
     for (uint16_t i = 0; i < num_hpet_comparators; i++) {
         klogd("INIT HPET: Timer %d's Capabilities:\n", i + 1);
         HPET_TIMER *timer = (hpet->timers) + i;
+
+#if HPET_DEBUG
         /* Check if the timer supports FSB routing */
         if (HPET_TIMER_READ_CONFIG_CAP(TMR_FSB_INT_DEL_CAP, timer)) {
             klogt("\tSupports FSB routing...\n");
         } else {
             klogt("\tDoes not support FSB routing...\n");
         }
+#endif
 
         /* Check if the timer will use FSB interrupt mapping */
         if (HPET_TIMER_READ_CONFIG_CAP(TMR_FSB_EN_CNF, timer)) {
+#if HPET_DEBUG
             klogt("\tFSB interrupt mapping is enabled, disabling...\n");
+#endif
             timer->config_and_capabilities &= (0 << TMR_FSB_EN_CNF);
         } else {
+#if HPET_DEBUG
             klogt("\tFSB interrupt mapping is disabled...\n");
+#endif
         }
 
+#if HPET_DEBUG
         /* Check to see if the timer is 64-bit capable */
         if (HPET_TIMER_READ_CONFIG_CAP(TMR_SIZE_CAP, timer)) {
             klogt("\t64-bit mode operation...\n");
         } else {
             klogt("\t32-bit mode operation...\n");
         }
+#endif
 
+#if HPET_DEBUG
         /* Check to see if the timer supports periodic mode */
         if (HPET_TIMER_READ_CONFIG_CAP(TMR_PER_INT_CAP, timer)) {
             klogt("\tSupports periodic mode...\n");
         } else {
             klogt("\tDoes not support periodic mode...\n");
         }
+#endif
 
         /* Check to see if interrupts are enabled, disable if so */
         if (HPET_TIMER_READ_CONFIG_CAP(TMR_INT_ENB_CNF, timer)) {
+#if HPET_DEBUG
             klogt("\tInterrupts are enabled, disabling...\n");
+#endif
             timer->config_and_capabilities &= (0 << TMR_INT_ENB_CNF);
         } else {
+#if HPET_DEBUG
             klogt("\tInterrupts are disabled...\n");
+#endif
         }
 
+#if HPET_DEBUG
         /* Check what type of interrupts are used for this timer */
         if (HPET_TIMER_READ_CONFIG_CAP(TMR_INT_TYPE_CNF, timer)) {
             klogt("\tUses level triggered interrupts...\n");
         } else {
             klogt("\tUses edge triggered interrupts...\n");
         }
+#endif
     }
     return SYS_OK;
 }

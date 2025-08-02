@@ -537,7 +537,9 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
                   virt_addr, virt_addr + entry->length);
             klogd("(length: %d (%d KB), #%d)\n", entry->length,
                   entry->length / 1024, i);
+#if ENABLE_KLOG_DEBUG
             ENTRY_INFO(entry)
+#endif
         } else if (entry->type == LIMINE_MEMMAP_FRAMEBUFFER) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                    NUM_PAGES(entry->length), VM_DEFAULT);
@@ -546,7 +548,9 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
                   PHYS_TO_VIRT(entry->base + entry->length));
             klogd("\t(length: %d (%d KB), #%d)\n", entry->length,
                   entry->length / 1024, i);
+#if ENABLE_KLOG_DEBUG
             ENTRY_INFO(entry)
+#endif
         } else if (entry->type == LIMINE_MEMMAP_USABLE) {
             int part_bitmap = (VIRT_TO_PHYS(kmem.bitmap) >= entry->base &&
               VIRT_TO_PHYS(kmem.bitmap) < entry->base + entry->length);
@@ -559,7 +563,9 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
                   entry->length, entry->length / 1024, i, entry->type,
                   part_bitmap ? "only kernel accessable" :
                   "all tasks accessable");
+#if ENABLE_KLOG_DEBUG
             ENTRY_INFO(entry)
+#endif
         } else if (entry->type == LIMINE_MEMMAP_ACPI_RECLAIMABLE) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
                    NUM_PAGES(entry->length), VM_DEFAULT);
@@ -568,7 +574,9 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
                   PHYS_TO_VIRT(entry->base + entry->length));
             klogd("\t(length: %d (%d KB), #%d)\n", entry->length,
                   entry->length / 1024, i);
+#if ENABLE_KLOG_DEBUG
             ENTRY_INFO(entry)
+#endif
         } else if (entry->type ==
                    LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
             vm_map(NULL, PHYS_TO_VIRT(entry->base), entry->base,
@@ -578,10 +586,14 @@ void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req) {
                   PHYS_TO_VIRT(entry->base + entry->length));
             klogd("\t(length: %d (%d KB), #%d)\n", entry->length,
                   entry->length / 1024, i);
+#if ENABLE_KLOG_DEBUG
             ENTRY_INFO(entry)
+#endif
         } else {
             klogd("NO MAP: ");
+#if ENABLE_KLOG_DEBUG
             PRINT_MEM_ENTRY_INFO(entry)
+#endif
         }
     }
 

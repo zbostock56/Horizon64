@@ -139,10 +139,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send checksum error... ");
     if ((value >> 0) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
     /*
         Receive Checksum Error:
@@ -151,10 +155,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for receive checksum error... ");
     if ((value >> 1) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
     /*
         Send Accept Error:
@@ -163,10 +171,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send accept error... ");
     if ((value >> 2) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
     /*
         Receive Accept Error:
@@ -175,10 +187,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for receive accept error... ");
     if ((value >> 3) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
     /*
         Redirectable IPI Error:
@@ -189,10 +205,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for redirectable IPI error... ");
     if ((value >> 4) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
     /*
         Send Illegal Vector Error:
@@ -203,10 +223,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send illegal vector error... ");
     if ((value >> 5) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
 
     /*
@@ -218,10 +242,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for send illegal vector error... ");
     if ((value >> 6) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
 
     /*
         Illegal Register Address:

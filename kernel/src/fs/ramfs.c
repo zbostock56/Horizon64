@@ -816,7 +816,7 @@ int64_t ramfs_rmnode(VFS_TNODE *this) {
  * @return VFS_INODE* New mount point inode, NULL on failure
  */
 VFS_INODE *ramfs_mount(VFS_INODE *at) {
-    klogi("RAMFS: Mounting filesystem at inode %p\n", (void*)at);
+    klogi("RAMFS: Mounting filesystem at inode %x\n", (void*)at);
 
     VFS_INODE *mount_inode = vfs_alloc_inode(VFS_MOUNT_POINT, 0755, 0, &ramfs, NULL);
     if (!mount_inode) {
