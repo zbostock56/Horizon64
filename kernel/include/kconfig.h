@@ -50,3 +50,13 @@
  * @brief Enables additional checks on the HPET
  */
 #define HPET_DEBUG          (0)
+
+/**
+ * @brief Enables terminal operating system commands (OSC)
+ */
+#define TERM_OSC            (0)
+
+/**
+ * @brief Enables lock debug printing
+ */
+#define LOCK_DEBUG          (1)

@@ -265,10 +265,14 @@ void apic_check_error_reg() {
     */
     klogd("\tChecking for illegal register address error... ");
     if ((value >> 7) & 0x1) {
+#if ENABLE_KLOG_DEBUG
         klogn("error\n");
+#endif
         goto error;
     }
+#if ENABLE_KLOG_DEBUG
     klogn("success\n");
+#endif
     return;
     error:
         kloge("INIT APIC: Failed error register check");

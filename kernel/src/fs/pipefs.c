@@ -254,7 +254,7 @@ VFS_INODE *pipefs_mount(VFS_INODE *at) {
     (void) at;
 
     klogi("PIPEFS MOUNT: mounting pipefs filesystem...\n");
-    VFS_INODE *ret = vfs_alloc_inode(VFS_MOUNT_POINT, 0777, 0, &pipefs, NULL);
+    VFS_INODE *ret = vfs_alloc_inode(VFS_MOUNT_POINT, 0666, 0, &pipefs, NULL);
     ret->ident = create_ident();
     return ret;
 }

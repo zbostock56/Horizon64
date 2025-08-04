@@ -44,6 +44,7 @@ void kprintf(const char *format, ...);
 void klog_lock();
 void klog_unlock();
 void klog_toggle_print_prefix(int toggle);
+void klog_emergency_printf(const char *s, ...);
 
 /* --------------------------------- MACROS --------------------------------- */
 #define klogi(s, ...)   klog_vprintf(KLOG_LVL_INFO, s, ##__VA_ARGS__)

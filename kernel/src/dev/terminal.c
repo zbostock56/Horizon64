@@ -23,7 +23,7 @@
 /**
  * @brief Global terminal state
  */
-static LOCK term_lock = {0};
+static LOCK term_lock = LOCK_NEW;
 static TERM_MODE term_mode = TERM_MODE_UNSET;
 static volatile uint8_t term_need_redrawn = FALSE;
 static TERMINAL term_info = {0};
@@ -31,6 +31,26 @@ static TERMINAL term_cli = {0};
 static uint8_t term_cursor = 0;
 static volatile uint8_t term_char_print = 0;
 static TERMINAL_STATS global_stats = {0};
+
+/* Global terminal termios settings */
+static TERMIOS global_termios = {
+    .c_iflag = BRKINT | ICRNL,
+    .c_oflag = OPOST | ONLCR,
+    .c_cflag = CS8 | CREAD,
+    .c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK,
+    .c_cc = {
+        [VINTR]  = 0x03,    /* Ctrl-C */
+        [VQUIT]  = 0x1C,    /* Ctrl-\ */
+        [VERASE] = 0x08,    /* Backspace */
+        [VKILL]  = 0x15,    /* Ctrl-U */
+        [VEOF]   = 0x04,    /* Ctrl-D */
+        [VEOL]   = 0x00,    /* No end of line char */
+        [VMIN]   = 1,       /* Minimum chars for non-canonical read */
+        [VTIME]  = 0,       /* Timeout for non-canonical read */
+        [VSTART] = 0x11,    /* Ctrl-Q */
+        [VSTOP]  = 0x13,    /* Ctrl-S */
+    }
+};
 
 static const uint32_t four_bit_colors[16] = {
     COLOR_BLACK,          /* 0: Black */
@@ -59,7 +79,7 @@ static const uint8_t DEFAULT_CHAR_PRINT = 0;
 
 TERM_CURSOR_STATUS cursor_visible = TERM_CURSOR_INVISIBLE;
 
-/* Forward declarations */
+/* -------------------------- Forward declarations -------------------------- */
 static STATUS terminal_validate_params(const TERMINAL *term);
 static void terminal_stats_update(TERMINAL *curr, TERM_OPERATION op);
 static STATUS terminal_handle_control_char(TERMINAL *curr, uint8_t c);
@@ -80,11 +100,15 @@ static STATUS terminal_cursor_position(TERMINAL *curr, int row, int col);
 static STATUS terminal_save_cursor(TERMINAL *curr);
 static STATUS terminal_restore_cursor(TERMINAL *curr);
 static STATUS terminal_set_graphics(TERMINAL *curr, int *params, int param_count);
-static STATUS terminal_set_mode(TERMINAL *curr, int mode, bool enable);
+#if TERM_OSC
 static STATUS terminal_set_window_title(TERMINAL *curr, const char *title);
 static STATUS terminal_set_icon_name(TERMINAL *curr, const char *name);
 static STATUS terminal_set_color_palette(TERMINAL *curr, const char *spec);
 static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *color);
+#endif
+static STATUS terminal_erase_display(TERMINAL *curr, int mode);
+static STATUS terminal_erase_line(TERMINAL *curr, int mode);
+
 
 /**
  * @brief Inline helper to check if terminal coordinates are valid
@@ -452,52 +476,38 @@ static STATUS terminal_set_graphics(TERMINAL *curr, int *params, int param_count
 }
 
 /**
- * @brief Set terminal mode
- */
-static STATUS terminal_set_mode(TERMINAL *curr, int mode, bool enable) {
-    if (!curr) return SYS_ERR;
-
-    switch (mode) {
-        case 25: /* Cursor visibility */
-            curr->cursor_visible = enable;
-            break;
-        case 7:  /* Auto wrap */
-            curr->auto_wrap = enable;
-            break;
-        default:
-            /* Unknown mode, ignore */
-            break;
-    }
-
-    return SYS_OK;
-}
-
-/**
  * @brief OSC command implementations (stubs for now)
  */
+#if TERM_OSC
 static STATUS terminal_set_window_title(TERMINAL *curr, const char *title) {
     if (!curr || !title) return SYS_ERR;
     /* TODO: Implement window title setting */
+    klogw("TERM: Setting window title is not yet supported\n");
     return SYS_OK;
 }
 
 static STATUS terminal_set_icon_name(TERMINAL *curr, const char *name) {
     if (!curr || !name) return SYS_ERR;
     /* TODO: Implement icon name setting */
+    klogw("TERM: Setting icon name is not yet supported\n");
     return SYS_OK;
 }
 
 static STATUS terminal_set_color_palette(TERMINAL *curr, const char *spec) {
     if (!curr || !spec) return SYS_ERR;
     /* TODO: Implement color palette setting */
+    klogw("TERM: Setting color palette is not yet supported\n");
     return SYS_OK;
 }
 
 static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *color) {
+    (void) param;
     if (!curr || !color) return SYS_ERR;
     /* TODO: Implement dynamic color setting */
+    klogw("TERM: Setting dynamic color is not yet supported\n");
     return SYS_OK;
 }
+#endif
 
 /**
  * @brief Parse CSI (Control Sequence Introducer) sequences
@@ -505,13 +515,15 @@ static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *
 static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
     if (!curr) return SYS_ERR;
 
-    // CSI sequences: ESC [ [parameters] [intermediate bytes] final byte
-    // Parameters: 0-9, ; (semicolon)
-    // Intermediate bytes: 0x20-0x2F (space to /)
-    // Final byte: 0x40-0x7E (@ to ~)
+    /*
+     * CSI sequences: ESC [ [parameters] [intermediate bytes] final byte
+     * Parameters: 0-9, ; (semicolon)
+     * Intermediate bytes: 0x20-0x2F (space to /)
+     * Final byte: 0x40-0x7E (@ to ~)
+     */
 
     if (byte >= '0' && byte <= '9') {
-        // Parameter digit
+        /* Parameter digit */
         if (curr->cparamcount == 0) {
             curr->cparamcount = 1;
             curr->cparams[0] = 0;
@@ -525,7 +537,7 @@ static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
     }
 
     if (byte == ';') {
-        // Parameter separator
+        /* Parameter separator */
         if (curr->cparamcount < TERMINAL_MAX_PARAMS) {
             curr->cparamcount++;
             curr->cparams[curr->cparamcount - 1] = 0;
@@ -534,62 +546,66 @@ static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
     }
 
     if (byte >= 0x20 && byte <= 0x2F) {
-        // Intermediate byte - ignore for now
+        /* Intermeidate byte - ignore for now */
         return SYS_OK;
     }
 
     if (byte >= 0x40 && byte <= 0x7E) {
-        // Final byte - execute the command
+        /* Final byte - now execute command */
         STATUS result = SYS_OK;
 
-        // Set default parameter if none provided
+        /* Set default parameter if none is provided */
         if (curr->cparamcount == 0) {
             curr->cparamcount = 1;
-            curr->cparams[0] = 1;  // Default for most commands
+            /* This is typically the default for most commands */
+            curr->cparams[0] = 1;
         }
 
         switch (byte) {
-            case 'A': // Cursor Up
+            case 'A': /* Cursor up */
                 result = terminal_cursor_up(curr, curr->cparams[0]);
                 break;
-            case 'B': // Cursor Down
+            case 'B': /* Cursor Down */
                 result = terminal_cursor_down(curr, curr->cparams[0]);
                 break;
-            case 'C': // Cursor Forward
+            case 'C': /* Cursor Forward */
                 result = terminal_cursor_forward(curr, curr->cparams[0]);
                 break;
-            case 'D': // Cursor Backward
+            case 'D': /* Cursor Backward */
                 result = terminal_cursor_backward(curr, curr->cparams[0]);
                 break;
-            case 'H': // Cursor Position
-            case 'f': // Horizontal and Vertical Position
+            case 'H': /* Cursor Position */
+            case 'f': /* Horizontal and Vertical Position */
                 {
                     int row = (curr->cparamcount > 0) ? curr->cparams[0] : 1;
                     int col = (curr->cparamcount > 1) ? curr->cparams[1] : 1;
                     result = terminal_cursor_position(curr, row, col);
                 }
                 break;
-            case 'J': // Erase in Display
+            case 'J': /* Erase in Display */
                 result = terminal_erase_display(curr, curr->cparams[0]);
                 break;
-            case 'K': // Erase in Line
+            case 'K': /* Erase in Line */
                 result = terminal_erase_line(curr, curr->cparams[0]);
                 break;
-            case 'm': // Select Graphic Rendition (colors/attributes)
-                result = terminal_set_graphics(curr, curr->cparams, curr->cparamcount);
+            case 'm': /* Select Graphic Rendition (colors/attributes) */
+                result = terminal_set_graphics(curr, curr->cparams,
+                                               curr->cparamcount);
                 break;
-            case 's': // Save Cursor Position
+            case 's': /* Save Cursor Position */
                 result = terminal_save_cursor(curr);
                 break;
-            case 'u': // Restore Cursor Position
+            case 'u': /* Restore Cursor Position */
                 result = terminal_restore_cursor(curr);
                 break;
             default:
-                // Unknown CSI sequence - ignore
+                /* Unknown CSI sequence - just ignore it */
+                klogw("TERM parse_csi_sequence: hit unrecognized CSI seq: '%c'\n",
+                        byte);
                 break;
         }
 
-        // Reset CSI state
+        /* Reset CSI state */
         curr->state = TERM_STATE_IDLE;
         curr->cparamcount = 0;
         terminal_stats_update(curr, TERM_OP_ESCAPE_SEQ);
@@ -597,7 +613,8 @@ static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
         return result;
     }
 
-    // Invalid byte in CSI sequence
+    /* Invalid byte in CSI sequence */
+    kloge("TERM parse_csi_sequence: Invalid byte '%c'\n", byte);
     curr->state = TERM_STATE_IDLE;
     curr->cparamcount = 0;
     terminal_stats_update(curr, TERM_OP_ERROR);
@@ -630,6 +647,7 @@ static STATUS terminal_parse_osc_sequence(TERMINAL *curr, uint8_t byte) {
                 curr->state = TERM_STATE_HYPERLINK_TEXT;
             }
             /* Skip URL processing for now */
+            terminal_execute_osc_command(curr);
             break;
 
         case TERM_STATE_HYPERLINK_TEXT:
@@ -638,6 +656,7 @@ static STATUS terminal_parse_osc_sequence(TERMINAL *curr, uint8_t byte) {
                 curr->state = TERM_STATE_HYPERLINK_TAIL;
             }
             /* Skip text processing for now */
+            terminal_execute_osc_command(curr);
             break;
 
         case TERM_STATE_HYPERLINK_TAIL:
@@ -681,6 +700,7 @@ static STATUS terminal_execute_osc_command(TERMINAL *curr) {
     if (!curr) return SYS_ERR;
 
     /* TODO: Implement OSC command execution */
+    klogw("TERM execute_osc_command: Not currently supported\n");
     curr->state = TERM_STATE_IDLE;
     terminal_stats_update(curr, TERM_OP_ESCAPE_SEQ);
     return SYS_OK;
@@ -742,11 +762,15 @@ static STATUS terminal_erase_display(TERMINAL *curr, int mode) {
             switch (mode) {
                 case 0:  /* Clear from cursor to end of screen */
                     should_clear = (y > cursor_pixel_y) ||
-                                  (y >= cursor_pixel_y && y < cursor_pixel_y + fh && x >= cursor_pixel_x);
+                                   (y >= cursor_pixel_y &&
+                                    y < cursor_pixel_y + fh &&
+                                    x >= cursor_pixel_x);
                     break;
                 case 1:  /* Clear from beginning of screen to cursor */
                     should_clear = (y < cursor_pixel_y) ||
-                                  (y >= cursor_pixel_y && y < cursor_pixel_y + fh && x <= cursor_pixel_x);
+                                   (y >= cursor_pixel_y &&
+                                    y < cursor_pixel_y + fh &&
+                                    x <= cursor_pixel_x);
                     break;
                 case 2:  /* Clear entire screen */
                     should_clear = true;
@@ -892,7 +916,8 @@ void terminal_scroll(TERMINAL *t) {
     /* Scroll up by moving pixels */
     for (int y = scroll_start_pixel; y < scroll_end_pixel - (scroll_lines * char_size); y++) {
         for (size_t x = 0; x < t->framebuffer.width; x++) {
-            uint32_t pixel = fb_getpixel(&(t->framebuffer), x, y + (scroll_lines * char_size));
+            uint32_t pixel = fb_getpixel(&(t->framebuffer), x,
+                                         y + (scroll_lines * char_size));
             fb_putpixel(&(t->framebuffer), x, y, pixel);
         }
     }
@@ -1023,7 +1048,7 @@ TERM_MODE terminal_get_mode(void) {
 /**
  * @brief Set terminal mode
  */
-void terminal_set_mode(TERM_MODE mode) {
+void terminal_set_current_mode(TERM_MODE mode) {
     if (mode == TERM_MODE_INFO || mode == TERM_MODE_TERM) {
         LOCK_LOCK(&term_lock);
         term_mode = mode;
@@ -1194,9 +1219,6 @@ void init_terminal(struct limine_framebuffer *fb) {
         return;
     }
 
-    /* Initialize lock */
-    INIT_LOCK(&term_lock);
-
     /* Initialize both terminals */
     TERMINAL *terminals[] = {&term_info, &term_cli};
     const char *names[] = {"INFO", "CLI"};
@@ -1206,8 +1228,8 @@ void init_terminal(struct limine_framebuffer *fb) {
         TERMINAL *curr = terminals[i];
 
         /* Initialize framebuffer */
-        if (fb_init(&(curr->framebuffer), fb) != SYS_OK) {
-            kloge("INIT TERMINAL: Failed to initialize framebuffer for %s terminal\n", names[i]);
+        if (fb_init(&(curr->framebuffer), fb) == SYS_ERR) {
+            kloge("TERM init_terminal: framebuffer failed to init\n");
             continue;
         }
 
@@ -1235,6 +1257,10 @@ void init_terminal(struct limine_framebuffer *fb) {
         curr->charset = TERM_CHARSET_ASCII;
         curr->tab_width = TERMINAL_DEFAULT_TAB_WIDTH;
 
+        /* Set up termios */
+        curr->termios = global_termios;
+        curr->termios_enabled = TRUE;
+
         /* Initialize scroll region */
         curr->scroll_top = 0;
         curr->scroll_bottom = curr->height - 1;
@@ -1251,7 +1277,7 @@ void init_terminal(struct limine_framebuffer *fb) {
               curr->width, curr->height,
               curr->framebuffer.width, curr->framebuffer.height);
         klogt("\tPitch:        %d bytes\n", curr->framebuffer.pitch);
-        klogt("\tBase Address: %p\n", curr->framebuffer.base);
+        klogt("\tBase Address: %x\n", curr->framebuffer.base);
     }
 
     /* Set default character printing */
@@ -1264,8 +1290,6 @@ void init_terminal(struct limine_framebuffer *fb) {
  * @brief Start terminal operation
  */
 void terminal_start(void) {
-    LOCK_LOCK(&term_lock);
-
     /* Reinitialize framebuffers if needed */
     fb_init(&(term_info.framebuffer), NULL);
     fb_init(&(term_cli.framebuffer), NULL);
@@ -1283,8 +1307,6 @@ void terminal_start(void) {
     #endif
 
     term_need_redrawn = TRUE;
-
-    UNLOCK_LOCK(&term_lock);
 }
 
 /**
@@ -1614,4 +1636,142 @@ fail:
     curr->cparamcount = 0;
     terminal_stats_update(curr, TERM_OP_ERROR);
     return SYS_ERR;
+}
+
+/**
+ * @brief Handle terminal I/O control operations
+ *
+ * @param request IOCTL request code
+ * @param arg Pointer to argument data
+ * @return int64_t 0 on success, -1 on failure
+ */
+int64_t terminal_ioctl(int64_t request, int64_t arg) {
+    TERMINAL *curr = terminal_get_by_mode(TERM_MODE_TERM);
+    if (!curr) {
+        return -1;
+    }
+
+    LOCK_LOCK(&term_lock);
+    int64_t ret = 0;
+
+    switch (request) {
+        case TCGETS: {
+            /* Get terminal attributes */
+            TERMIOS *t = (TERMIOS *)arg;
+            if (!t) {
+                ret = -1;
+                break;
+            }
+            *t = curr->termios;
+            klogi("TERMINAL IOCTL: TCGETS - returning termios settings\n");
+            break;
+        }
+
+        case TCSETS:
+        case TCSETSW:
+        case TCSETSF: {
+            /* Set terminal attributes */
+            TERMIOS *t = (TERMIOS *)arg;
+            if (!t) {
+                ret = -1;
+                break;
+            }
+
+            /* Store the new settings */
+            curr->termios = *t;
+
+            /* Apply settings that affect terminal behavior */
+            if (t->c_lflag & ECHO) {
+                klogi("TERMINAL IOCTL: Echo enabled\n");
+            } else {
+                klogi("TERMINAL IOCTL: Echo disabled\n");
+            }
+
+            if (t->c_lflag & ICANON) {
+                klogi("TERMINAL IOCTL: Canonical mode enabled\n");
+            } else {
+                klogi("TERMINAL IOCTL: Raw mode enabled\n");
+            }
+
+            /* Handle TCSETSF - flush input if requested */
+            if (request == TCSETSF) {
+                klogi("TERMINAL IOCTL: TCSETSF - flushing will be handled by ttyfs\n");
+            }
+
+            klogi("TERMINAL IOCTL: %s - terminal attributes set\n",
+                  (request == TCSETS) ? "TCSETS" :
+                  (request == TCSETSW) ? "TCSETSW" : "TCSETSF");
+            break;
+        }
+
+        case TCFLSH: {
+            /* Flush input/output queues */
+            int queue = (int)arg;
+            switch (queue) {
+                case TCIFLUSH:
+                    klogi("TERMINAL IOCTL: TCFLSH - input flush (handled by ttyfs)\n");
+                    break;
+                case TCOFLUSH:
+                    klogi("TERMINAL IOCTL: TCFLSH - output flush\n");
+                    terminal_refresh(TERM_MODE_TERM);
+                    break;
+                case TCIOFLUSH:
+                    klogi("TERMINAL IOCTL: TCFLSH - input/output flush\n");
+                    terminal_refresh(TERM_MODE_TERM);
+                    break;
+                default:
+                    ret = -1;
+                    break;
+            }
+            break;
+        }
+
+        case TIOCGWINSZ: {
+            /* Get window size */
+            WINDOW_SIZE *ws = (WINDOW_SIZE *)arg;
+            if (!ws) {
+                ret = -1;
+                break;
+            }
+            UNLOCK_LOCK(&term_lock);
+            ret = (terminal_get_winsize(ws) == SYS_OK) ? 0 : -1;
+            LOCK_LOCK(&term_lock);
+            break;
+        }
+
+        case TIOCSWINSZ: {
+            /* Set window size */
+            WINDOW_SIZE *ws = (WINDOW_SIZE *)arg;
+            if (!ws) {
+                ret = -1;
+                break;
+            }
+            UNLOCK_LOCK(&term_lock);
+            ret = (terminal_set_winsize(ws) == SYS_OK) ? 0 : -1;
+            LOCK_LOCK(&term_lock);
+            break;
+        }
+
+        case TIOCGPGRP: {
+            /* Get process group */
+            klogw("TERMINAL IOCTL: TIOCGPGRP not implemented\n");
+            ret = -1;
+            break;
+        }
+
+        case TIOCSPGRP: {
+            /* Set process group */
+            klogw("TERMINAL IOCTL: TIOCSPGRP not implemented\n");
+            ret = -1;
+            break;
+        }
+
+        default:
+            kloge("TERMINAL IOCTL: Unknown request %x\n", request);
+            ret = -1;
+            break;
+    }
+
+    UNLOCK_LOCK(&term_lock);
+    return ret;
 }

@@ -8,7 +8,6 @@
  */
 
 #include <libc/errno.h>
-#include <libc/stdio.h>
 
 #include <common/string.h>
 #include <common/kmalloc.h>
@@ -66,34 +65,9 @@ static TTYFS_IDENT *create_ident(void) {
     id->icursor = 0;
     id->isize = 0;
     id->line_ready = FALSE;
-    id->eof_received = FALSE;
 
-    /* Clear all buffers */
+    /* Clear input buffer */
     memset(id->ibuff, 0, TTY_BUFFER_SIZE);
-    memset(&(id->termios), 0, sizeof(TERMIOS));
-
-    /* Set default terminal attributes */
-    /* Input flags: enable break processing */
-    id->termios.c_iflag = BRKINT;
-
-    /* Output flags: Enable post-processing */
-    id->termios.c_oflag = OPOST;
-
-    /* Control flags: 8-bit chars, enable receiver */
-    id->termios.c_cflag = CS8 | CREAD;
-
-    /* Local flags: Enable signals, canonical input, and echo characters */
-    id->termios.c_lflag = (ISIG | ICANON | ECHO | ECHOE | ECHOK);
-
-    /* Control characters */
-    id->termios.c_cc[VINTR] = 0x03;    /* Ctrl-C */
-    id->termios.c_cc[VQUIT] = 0x1C;    /* Ctrl-\ */
-    id->termios.c_cc[VERASE] = 0x08;   /* Backspace */
-    id->termios.c_cc[VKILL] = 0x15;    /* Ctrl-U */
-    id->termios.c_cc[VEOF] = 0x04;     /* Ctrl-D */
-    id->termios.c_cc[VEOL] = 0x00;     /* No end of line char */
-    id->termios.c_cc[VMIN] = 1;        /* Minimum chars for non-canonical read */
-    id->termios.c_cc[VTIME] = 0;       /* Timeout for non-canonical read */
 
     return id;
 }
@@ -172,141 +146,26 @@ static void reset_input_buffer(TTYFS_IDENT *id) {
 }
 
 /**
- * @brief Calculate the display length of current input line
- *
- * @param id TTY identifier
- * @return int64_t Display length
- */
-static int64_t calculate_display_length(TTYFS_IDENT *id) {
-    if (!validate_ident(id)) {
-        return 0;
-    }
-
-    int64_t display_len = 0;
-    int64_t end_pos = (id->icursor + id->isize) % TTY_BUFFER_SIZE;
-
-    for (int64_t i = id->ibegin; i != end_pos; i = (i + 1) % TTY_BUFFER_SIZE) {
-        if (id->ibuff[i] == '\b') {
-            display_len = MAX(0, display_len - 1);
-        } else if (id->ibuff[i] >= 0x20 || id->ibuff[i] == '\t') {
-            display_len++;
-        }
-    }
-
-    return display_len;
-}
-
-/**
- * @brief Handle special control characters
- *
- * @param id TTY identifier
- * @param keycode Character to handle
- */
-static void handle_special_chars(TTYFS_IDENT *id, uint8_t keycode) {
-    if (!id) return;
-
-    /* Handle interrupt signal (Ctrl-C) */
-    if (keycode == id->termios.c_cc[VINTR] && (id->termios.c_lflag & ISIG)) {
-        /* Send SIGINT to process group */
-        klogi("TTYFS: SIGINT received\n");
-        reset_input_buffer(id);
-        return;
-    }
-
-    /* Handle quit signal (Ctrl-\) */
-    if (keycode == id->termios.c_cc[VQUIT] && (id->termios.c_lflag & ISIG)) {
-        /* Send SIGQUIT to process group */
-        klogi("TTYFS: SIGQUIT received\n");
-        klogw("TTYFS: Process groups are not yet supported\n");
-        reset_input_buffer(id);
-        return;
-    }
-
-    /* Handle EOF (Ctrl-D) */
-    if (keycode == id->termios.c_cc[VEOF]) {
-        id->eof_received = TRUE;
-        id->line_ready = TRUE;
-        return;
-    }
-
-    /* Handle line kill (Ctrl-U) */
-    if (keycode == id->termios.c_cc[VKILL]) {
-        if (id->termios.c_lflag & ECHOK) {
-            /* Echo kill by showing ^U and clearing line */
-            kprintf("^U\n");
-        }
-        reset_input_buffer(id);
-        return;
-    }
-}
-
-/**
- * @brief Process input in canonical mode
+ * @brief Process input character and add to buffer
  *
  * @param id TTY identifier
  * @param keycode Character to process
  * @return int64_t 0 on success, -1 on failure
  */
-static int64_t process_canonical_input(TTYFS_IDENT *id, uint8_t keycode) {
+static int64_t process_input(TTYFS_IDENT *id, uint8_t keycode) {
     if (!validate_ident(id)) {
         return -1;
     }
 
-    /* Handle special characters first */
-    handle_special_chars(id, keycode);
-    if (id->line_ready) {
-        return 0;
-    }
-
-    /* Handle backspace character */
-    if (keycode == id->termios.c_cc[VERASE] || keycode == '\b') {
-        int64_t display_len = calculate_display_length(id);
-        if (display_len > 0 && id->isize > 0) {
-            if (safe_buffer_write(id, '\b') == 0) {
-                if (id->termios.c_lflag & ECHOE) {
-                    kprintf("\b \b");  // Erase character visually
-                }
-            }
-        }
-        return 0;
-    }
-
-    /* Handle end of line */
-    if (keycode == '\n' || keycode == '\r' || keycode == id->termios.c_cc[VEOL]) {
+    /* Handle newline - mark line as ready */
+    if (keycode == '\n' || keycode == '\r') {
         if (safe_buffer_write(id, '\n') == 0) {
             id->line_ready = TRUE;
-            if (id->termios.c_lflag & ECHO) {
-                kprintf("\n");
-            }
         }
         return 0;
     }
 
     /* Handle regular characters */
-    if (keycode >= 0x20 || keycode == '\t') {
-        if (safe_buffer_write(id, keycode) == 0) {
-            if (id->termios.c_lflag & ECHO) {
-                kprintf("%c", keycode);
-            }
-        }
-        return 0;
-    }
-
-    return -1;
-}
-
-/**
- * @brief Process input in raw mode
- *
- * @param id TTY identifier
- * @param keycode Character to process
- * @return int64_t 0 on success, -1 on failure
- */
-static int64_t process_raw_input(TTYFS_IDENT *id, uint8_t keycode) {
-    if (!validate_ident(id)) {
-        return -1;
-    }
-
     return safe_buffer_write(id, keycode);
 }
 
@@ -340,7 +199,7 @@ int64_t ttyfs_ioctl(VFS_INODE *this, int64_t request, int64_t arg) {
 
     switch (request) {
         case TIOCGWINSZ: {
-            /* Get the window size */
+            /* Get the window size - delegate to terminal */
             WINDOW_SIZE *ws = (WINDOW_SIZE *)arg;
             if (ws && terminal_get_winsize(ws) == SYS_OK) {
                 klogi("TTYFS IOCTL: TIOCGWINSZ returns row %d and col %d\n",
@@ -351,7 +210,7 @@ int64_t ttyfs_ioctl(VFS_INODE *this, int64_t request, int64_t arg) {
         }
 
         case TIOCSWINSZ: {
-            /* Set the window size */
+            /* Set the window size - delegate to terminal */
             WINDOW_SIZE *ws = (WINDOW_SIZE *)arg;
             if (ws && terminal_set_winsize(ws) == 0) {
                 ret = 0;
@@ -362,40 +221,19 @@ int64_t ttyfs_ioctl(VFS_INODE *this, int64_t request, int64_t arg) {
         case TIOCGPGRP: {
             /* Gets current process group */
             klogw("TTYFS: Does not currently support getting process group\n");
+            cpu_set_errno(ENOSYS);
             break;
         }
 
         case TIOCSPGRP: {
             /* Sets current process group */
             klogw("TTYFS: Does not currently support setting process group\n");
-            break;
-        }
-
-        case TCGETS: {
-            TERMIOS *t = (TERMIOS *)arg;
-            if (t) {
-                *t = id->termios;
-                ret = 0;
-            }
-            break;
-        }
-
-        case TCSETS:
-        case TCSETSW:
-        case TCSETSF: {
-            TERMIOS *t = (TERMIOS *)arg;
-            if (t) {
-                if (request == TCSETSF) {
-                    // Flush input buffer
-                    reset_input_buffer(id);
-                }
-                id->termios = *t;
-                ret = 0;
-            }
+            cpu_set_errno(ENOSYS);
             break;
         }
 
         case TCFLSH: {
+            /* Flush buffers */
             int queue = (int)arg;
             switch (queue) {
                 case TCIFLUSH:
@@ -404,12 +242,27 @@ int64_t ttyfs_ioctl(VFS_INODE *this, int64_t request, int64_t arg) {
                     ret = 0;
                     break;
                 case TCOFLUSH:
-                    // Flush output - implementation depends on your output buffering
+                    /* Flush output - delegate to terminal */
+                    terminal_refresh(TERM_MODE_TERM);
                     ret = 0;
                     break;
                 default:
                     cpu_set_errno(EINVAL);
                     break;
+            }
+            break;
+        }
+
+        /* Termios operations - delegate to terminal subsystem */
+        case TCGETS:
+        case TCSETS:
+        case TCSETSW:
+        case TCSETSF: {
+            /* These should now be handled by the terminal subsystem */
+            ret = terminal_ioctl(request, arg);
+            if (request == TCSETSF) {
+                /* Also flush our input buffer on TCSETSF */
+                reset_input_buffer(id);
             }
             break;
         }
@@ -473,55 +326,23 @@ int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
 
     LOCK_LOCK(&tty_lock);
 
-    /* In canonical mode, wait for a complete line */
-    if (id->termios.c_lflag & ICANON) {
-        while (!id->line_ready && !id->eof_received) {
-            uint64_t para = 0;
-            UNLOCK_LOCK(&tty_lock);
-            UNLOCK_LOCK(&vfs_lock);
-
-            if (cb_subscribe(sched_get_pid(), CB_KEY_PRESS, &para)) {
-                LOCK_LOCK(&tty_lock);
-                uint8_t keycode = para & 0xFF;
-                if (keycode) {
-                    process_canonical_input(id, keycode);
-                }
-            } else {
-                LOCK_LOCK(&tty_lock);
-            }
-
-            LOCK_LOCK(&vfs_lock);
-        }
-    } else {
-        /* Raw mode - read available characters up to VMIN */
-        size_t min_chars = id->termios.c_cc[VMIN];
-        if (min_chars == 0) min_chars = 1;
-
-        while ((size_t)id->isize < (size_t)MIN(len, min_chars)) {
-            uint64_t para = 0;
-            UNLOCK_LOCK(&tty_lock);
-            UNLOCK_LOCK(&vfs_lock);
-
-            if (cb_subscribe(sched_get_pid(), CB_KEY_PRESS, &para)) {
-                LOCK_LOCK(&tty_lock);
-                uint8_t keycode = para & 0xFF;
-                if (keycode) {
-                    process_raw_input(id, keycode);
-                }
-            } else {
-                LOCK_LOCK(&tty_lock);
-            }
-
-            LOCK_LOCK(&vfs_lock);
-        }
-    }
-
-    /* Handle EOF condition */
-    if (id->eof_received && id->isize == 0) {
-        id->eof_received = FALSE;
+    /* Wait for input if buffer is empty */
+    while (id->isize == 0) {
+        uint64_t para = 0;
         UNLOCK_LOCK(&tty_lock);
-        /* EOF */
-        return 0;
+        UNLOCK_LOCK(&vfs_lock);
+
+        if (cb_subscribe(sched_get_pid(), CB_KEY_PRESS, &para)) {
+            LOCK_LOCK(&tty_lock);
+            uint8_t keycode = para & 0xFF;
+            if (keycode) {
+                process_input(id, keycode);
+            }
+        } else {
+            LOCK_LOCK(&tty_lock);
+        }
+
+        LOCK_LOCK(&vfs_lock);
     }
 
     /* Copy data to user buffer */
@@ -537,7 +358,7 @@ int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
     id->icursor = (id->icursor + bytes_to_read) % TTY_BUFFER_SIZE;
     id->isize -= bytes_to_read;
 
-    /* Reset line ready flag, if we've consumed the line */
+    /* Reset line ready flag if we've consumed the line */
     if (id->isize == 0) {
         id->line_ready = FALSE;
     }
@@ -560,8 +381,6 @@ int64_t ttyfs_write(VFS_INODE *this, size_t offset, size_t len, const void *buff
         cpu_set_errno(EINVAL);
         return -1;
     }
-
-    TTYFS_IDENT *id = this->ident;
 
     /* TTY does not support seeking */
     (void)offset;
@@ -593,22 +412,8 @@ int64_t ttyfs_write(VFS_INODE *this, size_t offset, size_t len, const void *buff
     terminal_set_cursor(' ');
     terminal_refresh(TERM_MODE_TERM);
 
-    /* Process output according to termios flags */
-    if (id->termios.c_oflag & OPOST) {
-        /* Post-process output */
-        for (size_t i = 0; i < len; i++) {
-            char c = msg[i];
-            if (c == '\n' && (id->termios.c_oflag & ONLCR)) {
-                /* Convert LF to CRLF */
-                kprintf("\r\n");
-            } else {
-                kprintf("%c", c);
-            }
-        }
-    } else {
-        /* Raw output */
-        kprintf("%s", msg);
-    }
+    /* Simple output - let terminal handle processing */
+    kprintf("%s", msg);
 
     cursor_visible = TERM_CURSOR_INVISIBLE;
 
@@ -719,11 +524,6 @@ int64_t ttyfs_rmnode(VFS_TNODE *this) {
  * @return VFS_INODE* New inode where ttyfs is mounted at, or NULL on failure
  */
 VFS_INODE *ttyfs_mount(VFS_INODE *at) {
-    if (!at) {
-        cpu_set_errno(EINVAL);
-        return NULL;
-    }
-
     klogi("TTYFS MOUNT: Mounting ttyfs at %x\n", at);
 
     VFS_INODE *ret = vfs_alloc_inode(VFS_MOUNT_POINT, 0666, 0, &ttyfs, NULL);

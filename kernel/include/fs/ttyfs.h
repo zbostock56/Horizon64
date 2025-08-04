@@ -27,4 +27,5 @@ int64_t ttyfs_sync(VFS_INODE *this);
 int64_t ttyfs_refresh(VFS_INODE *this);
 int64_t ttyfs_getdent(VFS_INODE *this, size_t pos, VFS_DIR_ENTRY *dirent);
 int64_t ttyfs_mknode(VFS_TNODE *this);
+int64_t ttyfs_rmnode(VFS_TNODE *this);
 VFS_INODE *ttyfs_mount(VFS_INODE *at);
