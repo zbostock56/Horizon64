@@ -30,4 +30,4 @@
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
 void keyboard_set_key(uint8_t state, uint8_t scancode);
-void keyboard_init();
+uint8_t keyboard_init();

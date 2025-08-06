@@ -211,6 +211,22 @@ int close(int fd) {
 }
 
 /**
+ * @brief Control a device (System Call 8)
+ *
+ * @param fd File descriptor to device to edit
+ * @param op Operation to do on device
+ * @param arg Arguments to operation
+ * @return int 0 if successful, -1 if failure with errno set
+ */
+int iotcl(int fd, int op, int arg) {
+    int ret;
+    int errno;
+    SYSCALL3(SYSCALL_IOCTL, fd, op, arg);
+    __syscall_ret(errno);
+    return ret;
+}
+
+/**
  * @brief Change directories (System Call 10)
  *
  * @param path Directory to change to

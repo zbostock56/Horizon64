@@ -29,7 +29,7 @@ static volatile uint8_t term_need_redrawn = FALSE;
 static TERMINAL term_info = {0};
 static TERMINAL term_cli = {0};
 static uint8_t term_cursor = 0;
-static volatile uint8_t term_char_print = 0;
+static volatile uint8_t term_char_print = 1;
 static TERMINAL_STATS global_stats = {0};
 
 /* Global terminal termios settings */
@@ -111,15 +111,24 @@ static STATUS terminal_erase_line(TERMINAL *curr, int mode);
 
 
 /**
- * @brief Inline helper to check if terminal coordinates are valid
+ * @brief Checks if the given coordinates are within terminal bounds.
+ *
+ * @param term Pointer to the TERMINAL structure.
+ * @param x X-coordinate to check.
+ * @param y Y-coordinate to check.
+ * @return 1 if coordinates are valid, 0 otherwise.
  */
-static inline bool terminal_coords_valid(const TERMINAL *term, int x, int y) {
+static inline uint8_t terminal_coords_valid(const TERMINAL *term, int x, int y) {
     return term && x >= 0 && y >= 0 &&
            x < (int)term->width && y < (int)term->height;
 }
 
 /**
- * @brief Inline helper to clamp coordinates to terminal bounds
+ * @brief Clamps the given coordinates to stay within terminal bounds.
+ *
+ * @param term Pointer to the TERMINAL structure.
+ * @param x Pointer to the x-coordinate, modified in-place.
+ * @param y Pointer to the y-coordinate, modified in-place.
  */
 static inline void terminal_clamp_coords(const TERMINAL *term, int *x, int *y) {
     if (!term || !x || !y) return;
@@ -128,7 +137,12 @@ static inline void terminal_clamp_coords(const TERMINAL *term, int *x, int *y) {
 }
 
 /**
- * @brief Inline helper to get terminal cell index from coordinates
+ * @brief Converts terminal coordinates to a linear framebuffer index.
+ *
+ * @param term Pointer to the TERMINAL structure.
+ * @param x X-coordinate.
+ * @param y Y-coordinate.
+ * @return Linear index into the framebuffer.
  */
 static inline size_t terminal_coord_to_index(const TERMINAL *term, int x,
                                              int y) {
@@ -137,7 +151,12 @@ static inline size_t terminal_coord_to_index(const TERMINAL *term, int x,
 }
 
 /**
- * @brief Inline helper to get coordinates from terminal cell index
+ * @brief Converts a linear framebuffer index to terminal coordinates.
+ *
+ * @param term Pointer to the TERMINAL structure.
+ * @param index Linear index.
+ * @param x Pointer to store the resulting x-coordinate.
+ * @param y Pointer to store the resulting y-coordinate.
  */
 static inline void terminal_index_to_coord(const TERMINAL *term, size_t index,
                                            int *x, int *y) {
@@ -147,7 +166,10 @@ static inline void terminal_index_to_coord(const TERMINAL *term, size_t index,
 }
 
 /**
- * @brief Validate terminal parameters
+ * @brief Validates the internal state and dimensions of a terminal.
+ *
+ * @param term Pointer to the TERMINAL structure.
+ * @return SYS_OK if valid, SYS_ERR otherwise.
  */
 static STATUS terminal_validate_params(const TERMINAL *term) {
     if (!term) {
@@ -170,7 +192,10 @@ static STATUS terminal_validate_params(const TERMINAL *term) {
 }
 
 /**
- * @brief Update terminal operation statistics
+ * @brief Updates terminal and global statistics for a specific operation.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param op Operation to record in stats.
  */
 static void terminal_stats_update(TERMINAL *curr, TERM_OPERATION op) {
     if (!curr) return;
@@ -206,7 +231,11 @@ static void terminal_stats_update(TERMINAL *curr, TERM_OPERATION op) {
 }
 
 /**
- * @brief Handle control characters (0x00-0x1F)
+ * @brief Handles a control character in the terminal input stream.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param c Control character (0x00–0x1F).
+ * @return SYS_OK if handled successfully, SYS_ERR on error.
  */
 static STATUS terminal_handle_control_char(TERMINAL *curr, uint8_t c) {
     if (!curr) return SYS_ERR;
@@ -252,7 +281,10 @@ static STATUS terminal_handle_control_char(TERMINAL *curr, uint8_t c) {
 }
 
 /**
- * @brief Handle tab character with proper alignment
+ * @brief Handles tab character by moving the cursor forward to next tab stop.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param tab_width Width between tab stops.
  */
 static void terminal_handle_tab(TERMINAL *curr, uint32_t tab_width) {
     if (!curr) return;
@@ -268,7 +300,9 @@ static void terminal_handle_tab(TERMINAL *curr, uint32_t tab_width) {
 }
 
 /**
- * @brief Handle backspace character
+ * @brief Handles backspace character by moving the cursor back and clearing.
+ *
+ * @param curr Pointer to the TERMINAL structure.
  */
 static void terminal_handle_backspace(TERMINAL *curr) {
     if (!curr) return;
@@ -288,7 +322,10 @@ static void terminal_handle_backspace(TERMINAL *curr) {
 }
 
 /**
- * @brief Check if terminal needs resizing
+ * @brief Checks if the terminal needs to scroll or wrap and handles it.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @return SYS_OK if successful, SYS_ERR on error.
  */
 static STATUS terminal_resize_check(TERMINAL *curr) {
     if (!curr) return SYS_ERR;
@@ -315,7 +352,10 @@ static STATUS terminal_resize_check(TERMINAL *curr) {
 }
 
 /**
- * @brief Update cursor visibility based on mode and settings
+ * @brief Updates the cursor appearance based on visibility settings.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param mode Current terminal mode.
  */
 static void terminal_update_cursor_visibility(TERMINAL *curr, TERM_MODE mode) {
     if (!curr || mode != term_mode) return;
@@ -337,7 +377,11 @@ static void terminal_update_cursor_visibility(TERMINAL *curr, TERM_MODE mode) {
 }
 
 /**
- * @brief Cursor movement commands
+ * @brief Moves the terminal cursor up by a given count.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param count Number of rows to move up.
+ * @return SYS_OK if successful, SYS_ERR on error.
  */
 static STATUS terminal_cursor_up(TERMINAL *curr, int count) {
     if (!curr) return SYS_ERR;
@@ -346,6 +390,13 @@ static STATUS terminal_cursor_up(TERMINAL *curr, int count) {
     return SYS_OK;
 }
 
+/**
+ * @brief Moves the terminal cursor down by a given count.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param count Number of rows to move down.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_cursor_down(TERMINAL *curr, int count) {
     if (!curr) return SYS_ERR;
 
@@ -353,6 +404,13 @@ static STATUS terminal_cursor_down(TERMINAL *curr, int count) {
     return SYS_OK;
 }
 
+/**
+ * @brief Moves the terminal cursor forward (right) by a given count.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param count Number of columns to move right.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_cursor_forward(TERMINAL *curr, int count) {
     if (!curr) return SYS_ERR;
 
@@ -360,6 +418,13 @@ static STATUS terminal_cursor_forward(TERMINAL *curr, int count) {
     return SYS_OK;
 }
 
+/**
+ * @brief Moves the terminal cursor backward (left) by a given count.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param count Number of columns to move left.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_cursor_backward(TERMINAL *curr, int count) {
     if (!curr) return SYS_ERR;
 
@@ -367,6 +432,14 @@ static STATUS terminal_cursor_backward(TERMINAL *curr, int count) {
     return SYS_OK;
 }
 
+/**
+ * @brief Sets the terminal cursor to a specific row and column.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param row 1-based row position.
+ * @param col 1-based column position.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_cursor_position(TERMINAL *curr, int row, int col) {
     if (!curr) return SYS_ERR;
 
@@ -376,6 +449,12 @@ static STATUS terminal_cursor_position(TERMINAL *curr, int row, int col) {
     return SYS_OK;
 }
 
+/**
+ * @brief Saves the current cursor position.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_save_cursor(TERMINAL *curr) {
     if (!curr) return SYS_ERR;
 
@@ -383,6 +462,12 @@ static STATUS terminal_save_cursor(TERMINAL *curr) {
     return SYS_OK;
 }
 
+/**
+ * @brief Restores the saved cursor position.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_restore_cursor(TERMINAL *curr) {
     if (!curr) return SYS_ERR;
 
@@ -391,7 +476,12 @@ static STATUS terminal_restore_cursor(TERMINAL *curr) {
 }
 
 /**
- * @brief Set graphics mode (colors, bold, etc.)
+ * @brief Sets terminal text attributes like color, bold, underline, etc.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param params List of SGR parameters.
+ * @param param_count Number of parameters in the list.
+ * @return SYS_OK if successful, SYS_ERR on error.
  */
 static STATUS terminal_set_graphics(TERMINAL *curr, int *params, int param_count) {
     if (!curr) return SYS_ERR;
@@ -475,10 +565,15 @@ static STATUS terminal_set_graphics(TERMINAL *curr, int *params, int param_count
     return SYS_OK;
 }
 
-/**
- * @brief OSC command implementations (stubs for now)
- */
+
 #if TERM_OSC
+/**
+ * @brief Sets the window title via OSC (Operating System Command).
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param title New window title.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_set_window_title(TERMINAL *curr, const char *title) {
     if (!curr || !title) return SYS_ERR;
     /* TODO: Implement window title setting */
@@ -486,6 +581,13 @@ static STATUS terminal_set_window_title(TERMINAL *curr, const char *title) {
     return SYS_OK;
 }
 
+/**
+ * @brief Sets the icon name via OSC command.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param name New icon name.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_set_icon_name(TERMINAL *curr, const char *name) {
     if (!curr || !name) return SYS_ERR;
     /* TODO: Implement icon name setting */
@@ -493,6 +595,13 @@ static STATUS terminal_set_icon_name(TERMINAL *curr, const char *name) {
     return SYS_OK;
 }
 
+/**
+ * @brief Sets the icon name via OSC command.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param name New icon name.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_set_color_palette(TERMINAL *curr, const char *spec) {
     if (!curr || !spec) return SYS_ERR;
     /* TODO: Implement color palette setting */
@@ -500,6 +609,14 @@ static STATUS terminal_set_color_palette(TERMINAL *curr, const char *spec) {
     return SYS_OK;
 }
 
+/**
+ * @brief Sets a dynamic color via OSC command.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param param Color index/parameter to set.
+ * @param color String representing the color.
+ * @return SYS_OK if successful, SYS_ERR on error.
+ */
 static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *color) {
     (void) param;
     if (!curr || !color) return SYS_ERR;
@@ -510,7 +627,11 @@ static STATUS terminal_set_dynamic_color(TERMINAL *curr, int param, const char *
 #endif
 
 /**
- * @brief Parse CSI (Control Sequence Introducer) sequences
+ * @brief Parses and executes CSI (Control Sequence Introducer) byte.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param byte Byte from input stream to parse.
+ * @return SYS_OK if handled successfully, SYS_ERR on error.
  */
 static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
     if (!curr) return SYS_ERR;
@@ -583,8 +704,12 @@ static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
                 }
                 break;
             case 'J': /* Erase in Display */
-                result = terminal_erase_display(curr, curr->cparams[0]);
-                break;
+                if (curr->cparams[0] == 2) {
+                    terminal_clear(curr->mode);
+                } else {
+                    result = terminal_erase_display(curr, curr->cparams[0]);
+                }
+                break; 
             case 'K': /* Erase in Line */
                 result = terminal_erase_line(curr, curr->cparams[0]);
                 break;
@@ -622,7 +747,11 @@ static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
 }
 
 /**
- * @brief Parse OSC (Operating System Command) sequences
+ * @brief Parses and executes OSC (Operating System Command) byte.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param byte Byte from input stream to parse.
+ * @return SYS_OK if handled successfully, SYS_ERR on error.
  */
 static STATUS terminal_parse_osc_sequence(TERMINAL *curr, uint8_t byte) {
     if (!curr) return SYS_ERR;
@@ -694,7 +823,10 @@ fail:
 }
 
 /**
- * @brief Execute OSC command (stub implementation)
+ * @brief Executes a parsed OSC (Operating System Command).
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @return SYS_OK if execution was successful, SYS_ERR otherwise.
  */
 static STATUS terminal_execute_osc_command(TERMINAL *curr) {
     if (!curr) return SYS_ERR;
@@ -707,7 +839,11 @@ static STATUS terminal_execute_osc_command(TERMINAL *curr) {
 }
 
 /**
- * @brief Erase line according to parameter
+ * @brief Erases the current line based on the given mode.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param mode Erase mode (0: to end, 1: from start, 2: entire line).
+ * @return SYS_OK if successful, SYS_ERR on error or unknown mode.
  */
 static STATUS terminal_erase_line(TERMINAL *curr, int mode) {
     if (!curr) return SYS_ERR;
@@ -719,7 +855,7 @@ static STATUS terminal_erase_line(TERMINAL *curr, int mode) {
 
     for (int y = line_start; y < line_end; y++) {
         for (int x = 0; x < (int)curr->framebuffer.width; x++) {
-            bool should_clear = false;
+            uint8_t should_clear = FALSE;
 
             switch (mode) {
                 case 0:  /* Clear from cursor to end of line */
@@ -729,7 +865,7 @@ static STATUS terminal_erase_line(TERMINAL *curr, int mode) {
                     should_clear = (x <= curr->cursor_pos.x * fw);
                     break;
                 case 2:  /* Clear entire line */
-                    should_clear = true;
+                    should_clear = TRUE;
                     break;
                 default:
                     return SYS_ERR;
@@ -745,7 +881,11 @@ static STATUS terminal_erase_line(TERMINAL *curr, int mode) {
 }
 
 /**
- * @brief Erase display according to parameter
+ * @brief Erases the display based on the given mode.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param mode Erase mode (0: to end, 1: from start, 2: entire screen).
+ * @return SYS_OK if successful, SYS_ERR on error or unknown mode.
  */
 static STATUS terminal_erase_display(TERMINAL *curr, int mode) {
     if (!curr) return SYS_ERR;
@@ -757,7 +897,7 @@ static STATUS terminal_erase_display(TERMINAL *curr, int mode) {
 
     for (int y = 0; y < (int)curr->framebuffer.height; y++) {
         for (int x = 0; x < (int)curr->framebuffer.width; x++) {
-            bool should_clear = false;
+            uint8_t should_clear = FALSE;
 
             switch (mode) {
                 case 0:  /* Clear from cursor to end of screen */
@@ -773,7 +913,7 @@ static STATUS terminal_erase_display(TERMINAL *curr, int mode) {
                                     x <= cursor_pixel_x);
                     break;
                 case 2:  /* Clear entire screen */
-                    should_clear = true;
+                    should_clear = TRUE;
                     break;
                 default:
                     return SYS_ERR;
@@ -793,7 +933,9 @@ static STATUS terminal_erase_display(TERMINAL *curr, int mode) {
 }
 
 /**
- * @brief Reset terminal to default state
+ * @brief Resets the terminal's internal state to default values.
+ *
+ * @param curr Pointer to the TERMINAL structure.
  */
 static void terminal_reset_state(TERMINAL *curr) {
     if (!curr) return;
@@ -820,7 +962,10 @@ static void terminal_reset_state(TERMINAL *curr) {
 }
 
 /**
- * @brief Get terminal by mode
+ * @brief Returns a pointer to the TERMINAL instance corresponding to a mode.
+ *
+ * @param mode Terminal mode (TERM_MODE_INFO or TERM_MODE_TERM).
+ * @return Pointer to the terminal, or NULL on invalid mode.
  */
 TERMINAL *terminal_get_by_mode(TERM_MODE mode) {
     switch (mode) {
@@ -834,7 +979,10 @@ TERMINAL *terminal_get_by_mode(TERM_MODE mode) {
 }
 
 /**
- * @brief Enhanced terminal putc with better error handling
+ * @brief Outputs a single character to the terminal, with escape and UTF-8 handling.
+ *
+ * @param mode Terminal mode to write to.
+ * @param c Character to output.
  */
 void terminal_putc(TERM_MODE mode, uint8_t c) {
     TERMINAL *curr = terminal_get_by_mode(mode);
@@ -883,7 +1031,10 @@ void terminal_putc(TERM_MODE mode, uint8_t c) {
 }
 
 /**
- * @brief Put string to terminal
+ * @brief Outputs a null-terminated string to the terminal.
+ *
+ * @param mode Terminal mode to write to.
+ * @param s String to output.
  */
 void terminal_puts(TERM_MODE mode, const char *s) {
     if (!s) return;
@@ -894,7 +1045,9 @@ void terminal_puts(TERM_MODE mode, const char *s) {
 }
 
 /**
- * @brief Enhanced terminal scrolling with configurable regions
+ * @brief Scrolls the terminal display up by one line within the scroll region.
+ *
+ * @param t Pointer to the TERMINAL structure.
  */
 void terminal_scroll(TERMINAL *t) {
     if (!t) {
@@ -934,7 +1087,10 @@ void terminal_scroll(TERMINAL *t) {
 }
 
 /**
- * @brief Set terminal colors
+ * @brief Sets the foreground color of the terminal text.
+ *
+ * @param mode Terminal mode to update.
+ * @param color New foreground color.
  */
 void terminal_set_foreground(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
     TERMINAL *curr = terminal_get_by_mode(mode);
@@ -945,6 +1101,12 @@ void terminal_set_foreground(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
     }
 }
 
+/**
+ * @brief Sets the background color of the terminal text.
+ *
+ * @param mode Terminal mode to update.
+ * @param color New background color.
+ */
 void terminal_set_background(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
     TERMINAL *curr = terminal_get_by_mode(mode);
     if (curr) {
@@ -955,7 +1117,11 @@ void terminal_set_background(TERM_MODE mode, FRAMEBUFFER_COLORS color) {
 }
 
 /**
- * @brief Set terminal cursor position
+ * @brief Sets the terminal cursor position, handling wrapping and clamping.
+ *
+ * @param t Pointer to the TERMINAL structure.
+ * @param x New x-coordinate of the cursor.
+ * @param y New y-coordinate of the cursor.
  */
 void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
     if (!t) {
@@ -979,7 +1145,10 @@ void set_terminal_cursor_pos(TERMINAL *t, uint32_t x, uint32_t y) {
 }
 
 /**
- * @brief Move cursor forward
+ * @brief Advances the terminal cursor by one position, wrapping and
+ *        scrolling if needed.
+ *
+ * @param t Pointer to the TERMINAL structure.
  */
 void terminal_push_cursor(TERMINAL *t) {
     if (!t) {
@@ -1009,7 +1178,9 @@ void terminal_push_cursor(TERMINAL *t) {
 }
 
 /**
- * @brief Move cursor backward
+ * @brief Moves the terminal cursor backward by one position.
+ *
+ * @param t Pointer to the TERMINAL structure.
  */
 void terminal_pop_cursor(TERMINAL *t) {
     if (!t) {
@@ -1030,7 +1201,9 @@ void terminal_pop_cursor(TERMINAL *t) {
 }
 
 /**
- * @brief Set cursor character
+ * @brief Sets the cursor glyph (character used for cursor rendering).
+ *
+ * @param c Character to use as the terminal cursor.
  */
 void terminal_set_cursor(uint8_t c) {
     LOCK_LOCK(&term_lock);
@@ -1039,14 +1212,18 @@ void terminal_set_cursor(uint8_t c) {
 }
 
 /**
- * @brief Get current terminal mode
+ * @brief Returns the currently active terminal mode.
+ *
+ * @return The current TERM_MODE.
  */
 TERM_MODE terminal_get_mode(void) {
     return term_mode;
 }
 
 /**
- * @brief Set terminal mode
+ * @brief Sets the currently active terminal mode.
+ *
+ * @param mode The terminal mode to set (TERM_MODE_INFO or TERM_MODE_TERM).
  */
 void terminal_set_current_mode(TERM_MODE mode) {
     if (mode == TERM_MODE_INFO || mode == TERM_MODE_TERM) {
@@ -1060,7 +1237,10 @@ void terminal_set_current_mode(TERM_MODE mode) {
 /* --------------------------- WINSIZE FUNCTIONALITY ------------------------- */
 
 /**
- * @brief Get window size
+ * @brief Retrieves the current window (terminal) size.
+ *
+ * @param ws Pointer to WINDOW_SIZE structure to populate.
+ * @return SYS_OK if successful, SYS_ERR on failure.
  */
 STATUS terminal_get_winsize(WINDOW_SIZE *ws) {
     if (!ws) {
@@ -1086,7 +1266,10 @@ STATUS terminal_get_winsize(WINDOW_SIZE *ws) {
 }
 
 /**
- * @brief Set window size
+ * @brief Attempts to set the window (terminal) size.
+ *
+ * @param ws Pointer to WINDOW_SIZE structure containing the requested size.
+ * @return SYS_OK if unchanged or valid, SYS_ERR if resizing is unsupported or failed.
  */
 STATUS terminal_set_winsize(WINDOW_SIZE *ws) {
     if (!ws) {
@@ -1124,7 +1307,11 @@ STATUS terminal_set_winsize(WINDOW_SIZE *ws) {
 /* --------------------------- STATISTICS AND DEBUGGING ---------------------- */
 
 /**
- * @brief Get terminal statistics
+ * @brief Retrieve terminal statistics for a specific terminal mode.
+ *
+ * @param mode Terminal mode to query (e.g., TERM_MODE_TERM).
+ * @param stats Pointer to a TERMINAL_STATS struct to populate.
+ * @return SYS_OK if successful, SYS_ERR on error or invalid pointer.
  */
 STATUS terminal_get_stats(TERM_MODE mode, TERMINAL_STATS *stats) {
     if (!stats) return SYS_ERR;
@@ -1140,7 +1327,10 @@ STATUS terminal_get_stats(TERM_MODE mode, TERMINAL_STATS *stats) {
 }
 
 /**
- * @brief Get global terminal statistics
+ * @brief Retrieve global terminal statistics (aggregated).
+ *
+ * @param stats Pointer to a TERMINAL_STATS struct to populate.
+ * @return SYS_OK if successful, SYS_ERR on error or invalid pointer.
  */
 STATUS terminal_get_global_stats(TERMINAL_STATS *stats) {
     if (!stats) return SYS_ERR;
@@ -1153,7 +1343,9 @@ STATUS terminal_get_global_stats(TERMINAL_STATS *stats) {
 }
 
 /**
- * @brief Reset terminal statistics
+ * @brief Reset terminal statistics for a specific terminal mode.
+ *
+ * @param mode Terminal mode whose stats should be reset.
  */
 void terminal_reset_stats(TERM_MODE mode) {
     TERMINAL *curr = terminal_get_by_mode(mode);
@@ -1165,7 +1357,9 @@ void terminal_reset_stats(TERM_MODE mode) {
 }
 
 /**
- * @brief Reset global terminal statistics
+ * @brief Reset terminal statistics for a specific terminal mode.
+ *
+ * @param mode Terminal mode whose stats should be reset.
  */
 void terminal_reset_global_stats(void) {
     LOCK_LOCK(&term_lock);
@@ -1174,7 +1368,12 @@ void terminal_reset_global_stats(void) {
 }
 
 /**
- * @brief Get terminal information for debugging
+ * @brief Get information about the terminal state for debugging.
+ *
+ * @param mode Terminal mode to query (e.g., TERM_MODE_TERM).
+ * @param buffer Buffer to store formatted information string.
+ * @param buffer_size Size of the buffer.
+ * @return SYS_OK if successfully written, SYS_ERR on error or overflow.
  */
 STATUS terminal_get_info(TERM_MODE mode, char *buffer, size_t buffer_size) {
     if (!buffer || buffer_size == 0) return SYS_ERR;
@@ -1208,7 +1407,9 @@ STATUS terminal_get_info(TERM_MODE mode, char *buffer, size_t buffer_size) {
 }
 
 /**
- * @brief Enhanced terminal initialization
+ * @brief Initialize terminal subsystem with a given framebuffer.
+ *
+ * @param fb Pointer to a limine_framebuffer structure.
  */
 void init_terminal(struct limine_framebuffer *fb) {
     klogs("INIT TERMINAL: starting...\n");
@@ -1287,7 +1488,7 @@ void init_terminal(struct limine_framebuffer *fb) {
 }
 
 /**
- * @brief Start terminal operation
+ * @brief Start terminal operation and set the initial mode.
  */
 void terminal_start(void) {
     /* Reinitialize framebuffers if needed */
@@ -1310,7 +1511,7 @@ void terminal_start(void) {
 }
 
 /**
- * @brief Enable character printing to framebuffer
+ * @brief Enable character printing to the framebuffer.
  */
 void terminal_enable_character_printing(void) {
     LOCK_LOCK(&term_lock);
@@ -1319,7 +1520,7 @@ void terminal_enable_character_printing(void) {
 }
 
 /**
- * @brief Disable character printing to framebuffer
+ * @brief Disable character printing to the framebuffer.
  */
 void terminal_disable_character_printing(void) {
     LOCK_LOCK(&term_lock);
@@ -1328,14 +1529,18 @@ void terminal_disable_character_printing(void) {
 }
 
 /**
- * @brief Check if terminal needs redraw
+ * @brief Check if the terminal needs to be redrawn.
+ *
+ * @return 1 if redraw is needed, 0 otherwise.
  */
 uint8_t terminal_need_redraw(void) {
     return term_need_redrawn;
 }
 
 /**
- * @brief Set terminal redraw flag
+ * @brief Set the terminal's redraw flag.
+ *
+ * @param flag 1 to enable redraw, 0 to disable.
  */
 void terminal_set_redraw(uint8_t flag) {
     LOCK_LOCK(&term_lock);
@@ -1344,7 +1549,9 @@ void terminal_set_redraw(uint8_t flag) {
 }
 
 /**
- * @brief Enhanced terminal clear with validation
+ * @brief Clear the terminal screen and reset internal state.
+ *
+ * @param mode Terminal mode to clear.
  */
 void terminal_clear(TERM_MODE mode) {
     TERMINAL *curr = terminal_get_by_mode(mode);
@@ -1388,7 +1595,10 @@ void terminal_clear(TERM_MODE mode) {
 }
 
 /**
- * @brief Enhanced terminal refresh with better error handling
+ * @brief Refresh terminal display and update cursor if necessary.
+ *
+ * @param mode Terminal mode to refresh.
+ * @return SYS_OK if successful, SYS_ERR on failure.
  */
 STATUS terminal_refresh(TERM_MODE mode) {
     TERMINAL *curr = terminal_get_by_mode(mode);
@@ -1426,7 +1636,10 @@ STATUS terminal_refresh(TERM_MODE mode) {
 }
 
 /**
- * @brief Enhanced terminal print with better Unicode support
+ * @brief Print a single character to the terminal.
+ *
+ * @param mode Terminal mode to print in.
+ * @param c Character to print.
  */
 void terminal_print(TERM_MODE mode, uint8_t c) {
     TERMINAL *curr = terminal_get_by_mode(mode);
@@ -1531,7 +1744,11 @@ void terminal_print(TERM_MODE mode, uint8_t c) {
 }
 
 /**
- * @brief Enhanced ANSI escape sequence parsing
+ * @brief Parse ANSI escape and control sequences for the terminal.
+ *
+ * @param curr Pointer to the TERMINAL structure.
+ * @param byte Input byte to parse.
+ * @return SYS_OK if successfully handled, SYS_ERR otherwise.
  */
 STATUS terminal_parse_cmd(TERMINAL *curr, uint8_t byte) {
     if (!curr) {

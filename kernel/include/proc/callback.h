@@ -21,3 +21,4 @@
 STATUS cb_publish(PROC_ID id, CB_TYPE type, CB_PARAM param);
 STATUS cb_subscribe(PROC_ID id, CB_TYPE type, CB_PARAM *param);
 STATUS cb_dispatch();
+STATUS cb_init();

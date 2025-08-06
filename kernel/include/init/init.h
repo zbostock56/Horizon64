@@ -33,6 +33,7 @@
 #include <mm/alloc.h>
 
 #include <proc/syscall.h>
+#include <proc/callback.h>
 
 #include <fs/vfs.h>
 #include <fs/initrd.h>

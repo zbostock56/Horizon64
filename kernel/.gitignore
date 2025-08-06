@@ -1,0 +1,4 @@
+obj
+bin
+include/limine.h
+include/sys/ksymbols.h

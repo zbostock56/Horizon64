@@ -20,13 +20,13 @@
 #include <common/kmalloc.h>
 #include <common/memory.h>
 
-// Vector configuration constants
+/* Vector configuration constants */
 #define VECTOR_DEFAULT_CAPACITY     8
 #define VECTOR_GROWTH_FACTOR        2
 #define VECTOR_SHRINK_THRESHOLD     4
 #define VECTOR_MAX_CAPACITY         (SIZE_MAX / 2)
 
-// Vector error codes
+/* Vector error codes */
 typedef enum {
     VECTOR_SUCCESS = 0,
     VECTOR_ERROR_NULL_POINTER = -1,
@@ -34,7 +34,7 @@ typedef enum {
     VECTOR_ERROR_OUT_OF_MEMORY = -3,
     VECTOR_ERROR_OVERFLOW = -4,
     VECTOR_ERROR_INVALID_CAPACITY = -5
-} vector_error_t;
+} VECTOR_ERROR;
 
 /**
  * @brief Generic vector structure
@@ -55,7 +55,7 @@ typedef enum {
 /**
  * @brief Initialize a vector with default capacity
  * @param vec Pointer to vector
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_init(vec)                                                    \
     vector_init_with_capacity(vec, VECTOR_DEFAULT_CAPACITY)
@@ -64,11 +64,11 @@ typedef enum {
  * @brief Initialize a vector with specified capacity
  * @param vec Pointer to vector
  * @param cap Initial capacity
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_init_with_capacity(vec, cap)                                 \
     ({                                                                      \
-        vector_error_t __result = VECTOR_SUCCESS;                          \
+        VECTOR_ERROR __result = VECTOR_SUCCESS;                          \
         if ((cap) > VECTOR_MAX_CAPACITY) {                                 \
             __result = VECTOR_ERROR_INVALID_CAPACITY;                      \
         } else {                                                            \
@@ -121,11 +121,11 @@ typedef enum {
  * @param vec Pointer to vector
  * @param index Index to access
  * @param result Pointer to store result (can be NULL for bounds check only)
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_get(vec, index, result)                                      \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((index) >= (vec)->length) {                             \
@@ -141,11 +141,11 @@ typedef enum {
  * @param vec Pointer to vector
  * @param index Index to set
  * @param value Value to set
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_set(vec, index, value)                                       \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((index) >= (vec)->length) {                             \
@@ -163,6 +163,21 @@ typedef enum {
  * @return Element at index (undefined behavior if out of bounds)
  */
 #define vector_at(vec, index)               ((vec)->data[index])
+
+/**
+ * @brief Get pointer to element at specified index
+ * @param vec Pointer to vector
+ * @param index Index to access
+ * @return Pointer to element at index, NULL if invalid or out of bounds
+ */
+#define vector_ptr_at(vec, index)                                           \
+    ({                                                                      \
+        void *__ptr = NULL;                                                 \
+        if (vector_is_initialized(vec) && (index) < (vec)->length) {       \
+            __ptr = &(vec)->data[index];                                    \
+        }                                                                   \
+        __ptr;                                                              \
+    })
 
 /**
  * @brief Get pointer to first element
@@ -184,11 +199,11 @@ typedef enum {
  * @brief Internal helper to resize vector capacity
  * @param vec Pointer to vector
  * @param new_capacity New capacity
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define __vector_resize(vec, new_capacity)                                  \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((new_capacity) > VECTOR_MAX_CAPACITY) {                 \
@@ -214,11 +229,11 @@ typedef enum {
  * @brief Reserve capacity for at least n elements
  * @param vec Pointer to vector
  * @param n Minimum capacity to reserve
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_reserve(vec, n)                                              \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((n) > (vec)->capacity) {                                \
@@ -230,11 +245,11 @@ typedef enum {
 /**
  * @brief Shrink capacity to fit current length
  * @param vec Pointer to vector
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_shrink_to_fit(vec)                                           \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((vec)->length < (vec)->capacity) {                      \
@@ -249,11 +264,11 @@ typedef enum {
  * @brief Append element to end of vector
  * @param vec Pointer to vector
  * @param elem Element to append
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_append(vec, elem)                                            \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!(vec)->initialized) {                                          \
             __error = vector_init(vec);                                     \
         }                                                                   \
@@ -278,11 +293,11 @@ typedef enum {
  * @param vec Pointer to vector
  * @param index Index to insert at
  * @param elem Element to insert
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_insert(vec, index, elem)                                     \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((index) > (vec)->length) {                              \
@@ -309,11 +324,11 @@ typedef enum {
  * @brief Remove element at specified index
  * @param vec Pointer to vector
  * @param index Index to remove
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_remove(vec, index)                                           \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((index) >= (vec)->length) {                             \
@@ -341,11 +356,11 @@ typedef enum {
 /**
  * @brief Remove last element from vector
  * @param vec Pointer to vector
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_pop(vec)                                                     \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if ((vec)->length == 0) {                                   \
@@ -360,11 +375,11 @@ typedef enum {
  * @brief Remove first occurrence of value
  * @param vec Pointer to vector
  * @param value Value to remove
- * @return vector_error_t Success or VECTOR_ERROR_NOT_FOUND
+ * @return VECTOR_ERROR Success or VECTOR_ERROR_NOT_FOUND
  */
 #define vector_remove_value(vec, value)                                     \
     ({                                                                      \
-        vector_error_t __error = VECTOR_ERROR_NOT_FOUND;                   \
+        VECTOR_ERROR __error = VECTOR_ERROR_NOT_FOUND;                   \
         if (vector_is_initialized(vec)) {                                   \
             for (size_t __i = 0; __i < (vec)->length; __i++) {             \
                 if ((vec)->data[__i] == (value)) {                         \
@@ -383,11 +398,11 @@ typedef enum {
  * @param vec Pointer to vector
  * @param value Value to find
  * @param index Pointer to store found index
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_find(vec, value, index)                                      \
     ({                                                                      \
-        vector_error_t __error = VECTOR_ERROR_NOT_FOUND;                   \
+        VECTOR_ERROR __error = VECTOR_ERROR_NOT_FOUND;                   \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else if (!(index)) {                                             \
@@ -407,11 +422,11 @@ typedef enum {
 /**
  * @brief Clear all elements from vector (doesn't free memory)
  * @param vec Pointer to vector
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_clear(vec)                                                   \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(vec)) {                                  \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else {                                                            \
@@ -424,11 +439,11 @@ typedef enum {
 /**
  * @brief Free all memory associated with vector
  * @param vec Pointer to vector
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_free(vec)                                                    \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!(vec)) {                                                       \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else {                                                            \
@@ -447,11 +462,11 @@ typedef enum {
  * @brief Copy vector contents to another vector
  * @param src Source vector
  * @param dst Destination vector (will be reinitialized)
- * @return vector_error_t Success or error code
+ * @return VECTOR_ERROR Success or error code
  */
 #define vector_copy(src, dst)                                               \
     ({                                                                      \
-        vector_error_t __error = VECTOR_SUCCESS;                           \
+        VECTOR_ERROR __error = VECTOR_SUCCESS;                           \
         if (!vector_is_initialized(src) || !(dst)) {                       \
             __error = VECTOR_ERROR_NULL_POINTER;                           \
         } else {                                                            \

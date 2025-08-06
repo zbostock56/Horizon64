@@ -519,6 +519,40 @@ PROCESS *sched_get_curr_proc() {
 }
 
 /**
+ * @brief Helper to get process by it's ID
+ * @param id ID of process to find
+ * 
+ * @return PROCESS* if found, return process. Otherwise return NULL.
+ */
+PROCESS *sched_get_proc_by_id(PROC_ID id) {
+    if (id >= UINT64_MAX) {
+        klogw("Trying to find process which is out of PID range!\n");
+        return NULL;
+    }
+
+    PROCESS *p;
+    for (size_t i = 0; i < vector_len(&proc_active); i++) {
+        p = vector_at(&proc_active, i);
+        if (p && p->id == id) {
+            klogd("sched_get_proc_by_id: Found process %d (%s) in active queue\n",
+                    id, p->name);
+            return p;
+        }
+    }
+
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if ((p = proc_running[i]) && p->id == id) {
+            klogd("sched_get_proc_by_id: Found process %d (%s) in running queue\n",
+                    id, p->name);
+            return p;
+        }
+    }
+
+    kloge("sched_get_proc_by_id: Failed to find process of ID %d\n", id);
+    return NULL;
+}
+
+/**
  * @brief Helper to get the number of ticks of the current running process
  *
  * @return uint64_t Number of ticks

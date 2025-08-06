@@ -8,6 +8,7 @@
  */
 
 #include <libc/errno.h>
+#include <libc/stdio.h>
 
 #include <common/string.h>
 #include <common/kmalloc.h>
@@ -330,7 +331,6 @@ int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
     while (id->isize == 0) {
         uint64_t para = 0;
         UNLOCK_LOCK(&tty_lock);
-        UNLOCK_LOCK(&vfs_lock);
 
         if (cb_subscribe(sched_get_pid(), CB_KEY_PRESS, &para)) {
             LOCK_LOCK(&tty_lock);
@@ -341,17 +341,28 @@ int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
         } else {
             LOCK_LOCK(&tty_lock);
         }
-
-        LOCK_LOCK(&vfs_lock);
     }
 
-    /* Copy data to user buffer */
+    /* Copy data to user buffer and print to screen */
     int64_t bytes_to_read = MIN((int64_t)len, id->isize);
     char *output = (char *)buff;
 
     for (int64_t i = 0; i < bytes_to_read; i++) {
         int64_t index = (id->icursor + i) % TTY_BUFFER_SIZE;
         output[i] = id->ibuff[index];
+        
+        /* Print character to screen as it's being read */
+        cursor_visible = TERM_CURSOR_HIDE;
+        terminal_set_cursor(' ');
+        terminal_refresh(TERM_MODE_TERM);
+        
+        if (id->ibuff[index] != (char)EOF) {
+            kprintf("%c", id->ibuff[index]);
+        } else {
+            kprintf("[EOF]\n");
+        }
+        
+        cursor_visible = TERM_CURSOR_INVISIBLE;
     }
 
     /* Update buffer state */

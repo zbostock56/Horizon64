@@ -41,3 +41,4 @@ PROCESS *sched_new(const char *name, void (*entry_point)(PROC_ID), int umode);
 void sched_add(PROCESS *p);
 PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[], const char *cwd);
 __attribute__((noreturn)) void process_idle_proc(PROC_ID id);
+PROCESS *sched_get_proc_by_id(PROC_ID id);
