@@ -11,8 +11,8 @@
 
 #include <stddef.h>
 
-#include "src/internal/structs/stat_str.h"
-#include "src/internal/structs/dirent_str.h"
+#include <internal/structs/stat_str.h>
+#include <internal/structs/dirent_str.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 

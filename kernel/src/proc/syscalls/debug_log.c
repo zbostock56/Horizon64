@@ -10,7 +10,7 @@
 #include <proc/syscalls/debug_log.h>
 
 #include <common/kprint.h>
-#include <common/string.h>
+#include <string.h>
 
 /**
  * @brief Allows userspace programs to print debug messages to the screen

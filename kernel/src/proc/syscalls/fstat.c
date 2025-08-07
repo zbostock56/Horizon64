@@ -16,7 +16,7 @@
 #include <fs/vfs.h>
 
 #include <common/kprint.h>
-#include <common/memory.h>
+#include <string.h>
 
 /**
  * @brief Gets file status

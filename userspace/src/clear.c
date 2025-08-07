@@ -7,9 +7,9 @@
  * 
  */
 
-#include <libc/sys.h>
-#include <libc/string.h>
-#include <libc/stdio.h>
+#include <sys.h>
+#include <string.h>
+#include <stdio.h>
 
 int main(int argc, char *argv[]) {
     write(STDOUT, "\033[2J\033[H", 7);

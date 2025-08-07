@@ -3,12 +3,14 @@
  * @author Zack Bostock
  * @brief RAM filesystem implementation with initrd support
  * @ref https://wiki.osdev.org/Initrd
- * 
+ *
  * @copyright Copyright (c) 2025
  */
 
 #include <common/time.h>
-#include <common/string.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <common/kmalloc.h>
 #include <common/vector.h>
 #include <common/math.h>

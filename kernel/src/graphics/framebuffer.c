@@ -9,8 +9,8 @@
  */
 
 #include <common/kmalloc.h>
-#include <common/string.h>
-#include <common/memory.h>
+#include <string.h>
+#include <string.h>
 #include <common/kprint.h>
 
 #include <sys/asm.h>

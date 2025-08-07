@@ -7,8 +7,8 @@
  * 
  */
 
-#include <libc/stdio.h>
-#include <libc/sys.h>
+#include <stdio.h>
+#include <sys.h>
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {

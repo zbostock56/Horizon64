@@ -13,7 +13,7 @@
 
 #include <structs/gdt_str.h>
 
-#include <common/memory.h>
+#include <string.h>
 
 #include <sys/asm.h>
 #include <sys/smp.h>

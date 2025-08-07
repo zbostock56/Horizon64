@@ -13,7 +13,8 @@
 #include <common/vector.h>
 #include <common/math.h>
 #include <common/kprint.h>
-#include <common/string.h>
+#include <string.h>
+#include <ctype.h>
 
 #include <sys/cpu.h>
 #include <sys/asm.h>

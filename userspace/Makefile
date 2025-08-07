@@ -15,7 +15,7 @@ EXECUTABLES := echo cat hsh init ls rm pwd mkdir nf clear
 
 # Directory setup
 override USERSRC_DIR := src
-override USERINC_DIR := include -I ../h64libc
+override USERINC_DIR := include -I ../h64libc/libc -I ../h64libc/src
 override USERBIN_DIR := bin
 LIBC_OBJ_DIR := ../h64libc/obj
 

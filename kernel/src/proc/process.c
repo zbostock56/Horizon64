@@ -11,7 +11,7 @@
 
 #include <common/kprint.h>
 #include <common/kmalloc.h>
-#include <common/string.h>
+#include <string.h>
 #include <common/vector.h>
 #include <common/math.h>
 #include <common/hash.h>
@@ -188,7 +188,7 @@ error_cleanup:
 
 /**
  * @brief Helper to duplicate memory map between two processes
- * 
+ *
  * @param parent Parent process to copy memmap from
  * @param child Child process to copy memmap to
  * @return STATUS SYS_ERR if error, SYS_OK otherwise
@@ -218,7 +218,7 @@ static STATUS process_dup_memmap(PROCESS *parent, PROCESS *child) {
 
 /**
  * @brief Helper for duplicating descriptors between two processes
- * 
+ *
  * @param parent Process to copy descriptors from
  * @param child Process to copy descriptors to
  * @return STATUS SYS_ERR if error, SYS_OK otherwise
@@ -290,7 +290,7 @@ PROCESS *process_fork(PROCESS *parent) {
 
     if (process_dup_memmap(parent, child) == SYS_ERR) {
         goto fork_error_cleanup;
-    } 
+    }
 
     if (process_dup_file_descriptors(parent, child, __func__) == SYS_ERR) {
         goto fork_error_cleanup;
@@ -371,7 +371,7 @@ void process_free(PROCESS *p) {
     }
 
     /* Free all memory mapping entries */
-    
+
     /*
         Causing page fault
     */
@@ -406,8 +406,8 @@ void process_free(PROCESS *p) {
 }
 
 /**
- * @brief Helper to change the name of a process 
- * 
+ * @brief Helper to change the name of a process
+ *
  * @param p Process whose name to change
  * @param name Name to change to
  */

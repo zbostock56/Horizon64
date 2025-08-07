@@ -14,7 +14,7 @@
 
 #include <sys/smp.h>
 
-#include <common/string.h>
+#include <string.h>
 #include <common/kprint.h>
 
 /**

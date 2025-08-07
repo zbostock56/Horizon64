@@ -15,7 +15,7 @@
 #include <common/kmalloc.h>
 #include <common/kprint.h>
 #include <common/vector.h>
-#include <common/string.h>
+#include <string.h>
 #include <common/hash.h>
 
 #include <fs/vfs.h>

@@ -7,8 +7,8 @@
  * 
  */
 
-#include <libc/stdio.h>
-#include <libc/sys.h>
+#include <stdio.h>
+#include <sys.h>
 
 #define PATH_SIZE (256)
 

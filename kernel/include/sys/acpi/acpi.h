@@ -28,7 +28,7 @@
 
 #include <globals.h>
 
-#include <common/string.h>
+#include <string.h>
 
 #include <structs/acpi_str.h>
 

@@ -14,7 +14,7 @@
 #include <structs/regs_str.h>
 #include <structs/idt_str.h>
 
-#include <common/memory.h>
+#include <string.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 #define SET(x, flag) (x |= (flag))

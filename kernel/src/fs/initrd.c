@@ -10,7 +10,7 @@
 #include <fs/initrd.h>
 #include <fs/ramfs.h>
 
-#include <common/string.h>
+#include <string.h>
 #include <common/limine_typedefs.h>
 
 #include <init/iso_file.h>

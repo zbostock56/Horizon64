@@ -7,9 +7,9 @@
  * 
  */
 
-#include <libc/string.h>
-#include <libc/sys.h>
-#include <libc/stdio.h>
+#include <string.h>
+#include <sys.h>
+#include <stdio.h>
 
 static char *argv[] = {
     "hsh",
@@ -18,17 +18,16 @@ static char *argv[] = {
 
 int main() {
     int pid;
-    printf(
-    "                     _                     __    _  _   \n"
-    "  /\\  /\\ ___   _ __ (_) ____ ___   _ __   / /_  | || |  \n"
-    " / /_/ // _ \\ | '__|| ||_  // _ \\ | '_ \\ | '_ \\ | || |_ \n"
-    "/ __  /| (_) || |   | | / /| (_) || | | || (_) ||__   _|\n"
-    "\\/ /_/  \\___/ |_|   |_|/___|\\___/ |_| |_| \\___/    |_|  \n"
-    "                                                        \n");
+    // printf(
+    // "                     _                     __    _  _   \n"
+    // "  /\\  /\\ ___   _ __ (_) ____ ___   _ __   / /_  | || |  \n"
+    // " / /_/ // _ \\ | '__|| ||_  // _ \\ | '_ \\ | '_ \\ | || |_ \n"
+    // "/ __  /| (_) || |   | | / /| (_) || | | || (_) ||__   _|\n"
+    // "\\/ /_/  \\___/ |_|   |_|/___|\\___/ |_| |_| \\___/    |_|  \n");
 
     /* Loop to start shell program */
     for (;;) {
-        printf("init: starting shell...\n");
+        // printf("init: starting shell...\n");
         pid = fork();
         if (pid < 0) {
             /* Failure */

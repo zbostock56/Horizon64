@@ -16,7 +16,7 @@
 
 #include <structs/cmos_str.h>
 
-#include <common/memory.h>
+#include <string.h>
 #include <common/kprint.h>
 
 #include <sys/asm.h>
