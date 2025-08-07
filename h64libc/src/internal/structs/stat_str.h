@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#include "src/internal/structs/timespec_str.h"
+#include <internal/structs/timespec_str.h>
 
 typedef int64_t DEVICE;
 typedef uint64_t INO;

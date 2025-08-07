@@ -14,6 +14,9 @@ endef
 override LIBCSRC_DIR := ./src
 override LIBCOBJ_DIR := ./obj
 
+# Include necessary headers
+override INC_DIR := -I . -I libc -I src
+
 # Compiler setup
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -43,7 +46,7 @@ override DEFAULT_CFLAGS := -g 							\
 
 $(eval $(call DEFAULT_VAR,CFLAGS,$(DEFAULT_CFLAGS)))
 
-override CPPFLAGS := -I . -MMD -MP $(CPPFLAGS)
+override CPPFLAGS := $(INC_DIR) -MMD -MP $(CPPFLAGS)
 
 # Set the source and object files for libc
 LIBC_CFILES := $(shell find $(LIBCSRC_DIR) -name '*.c')

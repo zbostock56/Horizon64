@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include "src/internal/structs/stat_str.h"
+#include <internal/structs/stat_str.h>
 
 #define MAX_PATH_LEN    (4096)
 

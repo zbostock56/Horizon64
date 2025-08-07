@@ -10,9 +10,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <libc/stdio.h>
-#include <libc/string.h>
-#include <libc/sys.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys.h>
 
 static char buf[512] = {0};
 
