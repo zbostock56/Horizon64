@@ -33,7 +33,7 @@ override DEFAULT_CFLAGS := -g 							\
 						   -Werror						\
 						   -pipe						\
 						   -lgcc						\
-						   -flto						\
+						   -fno-lto						\
 						   -ffreestanding 				\
 						   -nostdlib 					\
 						   -std=gnu11					\

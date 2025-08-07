@@ -18,10 +18,11 @@
 
 #define EOF         (-1)
 
+#include <printf.h>
+
 #ifndef KERNEL_BUILD    /* If not compiling with the kernel */
 #include <stdint.h>
 
-#include <printf.h>
 
 #include <internal/structs/dirent_str.h>
 #include <internal/structs/stat_str.h>

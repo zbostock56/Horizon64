@@ -16,7 +16,7 @@
 #include <structs/memory_map_str.h>
 
 #include <common/vector.h>
-#include <common/memory.h>
+#include <string.h>
 #include <common/limine_typedefs.h>
 
 #include <sys/asm.h>

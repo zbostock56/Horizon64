@@ -10,7 +10,7 @@
 
 #include <sys/cpu.h>
 #include <sys/cpu_features.h>
-#include <common/memory.h>
+#include <string.h>
 
 static char cpu_manufacturer[13] = {0};
 /*

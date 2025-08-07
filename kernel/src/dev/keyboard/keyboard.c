@@ -7,7 +7,7 @@
  * @copyright Copyright (c) 2025
  */
 
-#include <libc/stdio.h>
+#include <stdio.h>
 #include <dev/keyboard/keyboard.h>
 #include <proc/callback.h>
 #include <common/kprint.h>

@@ -9,7 +9,7 @@
 #include <globals.h>
 #include <common/lock.h>
 #include <common/kprint.h>
-#include <common/string.h>
+#include <string.h>
 #include <common/math.h>
 #include <common/klib.h>
 #include <sys/mmu.h>

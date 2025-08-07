@@ -2,14 +2,14 @@
  * @file pipefs.c
  * @author Zack Bostock
  * @brief Functionality pertaining to piping filesystem
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
-#include <libc/errno.h>
+#include <errno.h>
 
-#include <common/string.h>
+#include <string.h>
 #include <common/kprint.h>
 #include <common/kmalloc.h>
 #include <common/lock.h>

@@ -13,7 +13,7 @@
 #include <sys/cpu.h>
 #include <sys/smp.h>
 #include <common/kprint.h>
-#include <common/string.h>
+#include <string.h>
 
 /**
  * @brief Validate mkdirat parameters

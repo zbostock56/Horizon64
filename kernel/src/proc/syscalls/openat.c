@@ -13,7 +13,7 @@
 #include <sys/smp.h>
 #include <sys/cpu.h>
 #include <common/kprint.h>
-#include <common/string.h>
+#include <string.h>
 
 /* Maximum recursion depth for symlink resolution */
 #define MAX_SYMLINK_DEPTH 8

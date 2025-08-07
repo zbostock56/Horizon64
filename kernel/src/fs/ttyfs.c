@@ -2,15 +2,15 @@
  * @file ttyfs.c
  * @author Zack Bostock
  * @brief Functionality pertaining to ttyfs
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
-#include <libc/errno.h>
-#include <libc/stdio.h>
+#include <errno.h>
+#include <stdio.h>
 
-#include <common/string.h>
+#include <string.h>
 #include <common/kmalloc.h>
 #include <common/kprint.h>
 #include <common/lock.h>
@@ -350,18 +350,18 @@ int64_t ttyfs_read(VFS_INODE *this, size_t offset, size_t len, void *buff) {
     for (int64_t i = 0; i < bytes_to_read; i++) {
         int64_t index = (id->icursor + i) % TTY_BUFFER_SIZE;
         output[i] = id->ibuff[index];
-        
+
         /* Print character to screen as it's being read */
         cursor_visible = TERM_CURSOR_HIDE;
         terminal_set_cursor(' ');
         terminal_refresh(TERM_MODE_TERM);
-        
+
         if (id->ibuff[index] != (char)EOF) {
             kprintf("%c", id->ibuff[index]);
         } else {
             kprintf("[EOF]\n");
         }
-        
+
         cursor_visible = TERM_CURSOR_INVISIBLE;
     }
 

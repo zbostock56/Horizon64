@@ -7,7 +7,7 @@
  *
  */
 
-#include <common/string.h>
+#include <string.h>
 #include <common/kprint.h>
 
 #include <dev/serial.h>

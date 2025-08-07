@@ -62,7 +62,7 @@ CONDITIONALS :=	\
 	-DKERNEL_BUILD
 
 override CPPFLAGS := \
-    -I ./include -I ../h64libc -I ../limine \
+    -I ./include -I ../h64libc/libc -I ../h64libc/src -I ../limine \
     $(CPPFLAGS) \
     -MMD \
     -MP
@@ -93,6 +93,13 @@ override CFILES := $(shell find -L src/* -type f -name '*.c')
 override NASMFILES := $(shell find -L src/* -type f -name '*.asm')
 override OBJ := $(addprefix obj/,$(CFILES:.c=.c.o) $(NASMFILES:.asm=.asm.o))
 override HEADER_DEPS := $(addprefix obj/,$(CFILES:.c=.c.d))
+override LIBC_OBJ := $(shell find ../h64libc/obj -name '*.o')
+
+ifeq ($(strip $(LIBC_OBJ)),)
+  $(error LIBC_OBJ is empty! Make sure ../h64libc/obj/*.o exist)
+endif
+
+
 SRC_OBJS = $(CFILES:%=obj/%.o)
 ASM_OBJS = $(NASMFILES:%=obj/%.o)
 ALL_OBJS = $(SRC_OBJS)
@@ -116,13 +123,13 @@ all: dir bin/$(KERNEL) $(SYMBOLS_OUTPUT)
 
 # Kernel linking target
 bin/$(KERNEL): linker.ld $(ALL_OBJS)
-	@$(LD) $(ALL_OBJS) $(LDFLAGS) -o $@
+	@$(LD) $(ALL_OBJS) $(LIBC_OBJ) $(LDFLAGS) -o $@
 	@echo "Finished linking"
 	@echo "Generating symbols..."
 	@../build_helpers/generate_symbols.sh $(KMAP) $(SYMBOLS_OUTPUT)
 	@echo "Generated kernel symbol table --> $@"
 	@echo "Relinking..."
-	@$(LD) $(ALL_OBJS) $(LDFLAGS) -o $@
+	@$(LD) $(ALL_OBJS) $(LIBC_OBJ) $(LDFLAGS) -o $@
 
 # Run symbol generation after linking the kernel
 .PHONY: post-link

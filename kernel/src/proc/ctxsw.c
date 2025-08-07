@@ -14,7 +14,7 @@
 #include <common/kmalloc.h>
 #include <common/vector.h>
 #include <common/hash.h>
-#include <common/string.h>
+#include <string.h>
 
 #include <proc/ctxsw.h>
 #include <proc/callback.h>
@@ -521,7 +521,7 @@ PROCESS *sched_get_curr_proc() {
 /**
  * @brief Helper to get process by it's ID
  * @param id ID of process to find
- * 
+ *
  * @return PROCESS* if found, return process. Otherwise return NULL.
  */
 PROCESS *sched_get_proc_by_id(PROC_ID id) {
@@ -817,7 +817,7 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
 void print_process_table() {
     LOCK_LOCK(&ctxsw_lock);
     klogn("+------+-----------------------------+----------+----------+-----------+-------+\n");
-    klogn("| %4s | %27s | %8s | %8s | %9s | %4s |\n", 
+    klogn("| %4s | %27s | %8s | %8s | %9s | %4s |\n",
            "ID", "Name", "Mode", "State", "IsForked", "Errno");
     klogn("+------+-----------------------------+----------+----------+-----------+-------+\n");
         CPU *cpu = smp_get_curr_cpu(NO_FORCE_GET_CPU);

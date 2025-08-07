@@ -12,8 +12,8 @@
 #include <common/lock.h>
 #include <common/kprint.h>
 #include <common/math.h>
-#include <common/memory.h>
-#include <common/string.h>
+#include <stdio.h>
+#include <string.h>
 
 #include <graphics/framebuffer.h>
 
@@ -709,7 +709,7 @@ static STATUS terminal_parse_csi_sequence(TERMINAL *curr, uint8_t byte) {
                 } else {
                     result = terminal_erase_display(curr, curr->cparams[0]);
                 }
-                break; 
+                break;
             case 'K': /* Erase in Line */
                 result = terminal_erase_line(curr, curr->cparams[0]);
                 break;

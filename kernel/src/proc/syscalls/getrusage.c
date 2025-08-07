@@ -10,7 +10,7 @@
 #include <proc/syscalls/getrusage.h>
 #include <proc/syscall.h>
 
-#include <common/memory.h>
+#include <string.h>
 #include <common/kprint.h>
 
 /**

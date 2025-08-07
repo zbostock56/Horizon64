@@ -16,9 +16,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <common/string.h>
+#include <string.h>
 #include <common/kmalloc.h>
-#include <common/memory.h>
+#include <string.h>
 
 /* Vector configuration constants */
 #define VECTOR_DEFAULT_CAPACITY     8

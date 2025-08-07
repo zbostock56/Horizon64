@@ -10,6 +10,8 @@
 #include <common/kprint.h>
 #include <common/lock.h>
 
+#include <stdio.h>
+
 #include <sys/pci.h>
 #include <sys/cpu.h>
 #include <sys/asm.h>

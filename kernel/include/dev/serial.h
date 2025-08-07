@@ -13,7 +13,7 @@
 
 #include <sys/asm.h>
 
-#include <common/string.h>
+#include <string.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /* Addresses for the COM ports. The first two are fairly guaranteed whereas */

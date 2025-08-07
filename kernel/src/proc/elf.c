@@ -2,9 +2,9 @@
  * @file elf.c
  * @author Zack Bostock
  * @brief Functionality for loading and running Executable and Linkable Files (ELF)
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #include <proc/elf.h>
@@ -12,7 +12,7 @@
 
 #include <fs/vfs.h>
 
-#include <common/string.h>
+#include <string.h>
 #include <common/math.h>
 
 #define RTDL_ADDR       (0x40000000)

@@ -26,7 +26,7 @@
 #include <kconfig.h>
 #include <common/kprint.h>
 #include <common/klib.h>
-#include <common/memory.h>
+#include <string.h>
 #include <common/math.h>
 #include <sys/asm.h>
 #include <mm/slab.h>

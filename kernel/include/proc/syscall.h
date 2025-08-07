@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include <libc/errno.h>
+#include <errno.h>
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
 /**
