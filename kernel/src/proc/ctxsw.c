@@ -674,6 +674,9 @@ PROCESS *sched_execve(const char *path, const char *argv[], const char *envp[],
         /* Increase the reference count of all open files */
         hash_init_core(&pnew->open_files, pcurr->open_files.size);
         process_dup_file_descriptors(pcurr, pnew, __func__);
+    } else {
+        kloge("sched_execve: Failed to create new process (%s)!\n", path);
+        halt();
     }
 
     UNLOCK_LOCK(&ctxsw_lock);

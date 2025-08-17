@@ -152,7 +152,8 @@ void kfree_chunk(void *address, const char *func, size_t line) {
 
     if (mem->magic == KMEM_MAGIC_NUMBER) {
 #if KMEM_DEBUG
-        klogd("kfree_chunk: freeing memory of size %d\n", mem->size);
+        klogd("kfree_chunk: freeing memory of size %d from (%s:%d)\n",
+                mem->size, func, line);
 #endif
         pm_free(VIRT_TO_PHYS(address), mem->num_pages + 1);
         mem->magic = 0;

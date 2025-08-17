@@ -121,9 +121,9 @@ extern ADDR_SPACE kernel_addr_space;
 #define CONVERT_ADDR_SPACE(as)        (!as ? &kernel_addr_space : as);
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void pm_init(LIMINE_MEM_REQ req);
-STATUS pm_free(uint64_t address, uint64_t num_pages);
-STATUS pm_allocate(uint64_t address, uint64_t num_pages);
+MMU_STATUS pm_init(LIMINE_MEM_REQ req);
+MMU_STATUS pm_free(uint64_t address, uint64_t num_pages);
+MMU_STATUS pm_allocate(uint64_t address, uint64_t num_pages);
 uint64_t pm_get(uint64_t num_pages, uint64_t address, const char *func,
                 size_t line_number);
 void pm_used();
@@ -131,8 +131,11 @@ uint64_t vm_get_phys_addr(ADDR_SPACE *addr_space, uint64_t virt_addr);
 void vm_unmap(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t num_pages);
 void vm_map(ADDR_SPACE *addr_space, uint64_t virt_addr, uint64_t phys_addr,
             uint64_t num_pages, uint64_t flags);
-void vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req);
+MMU_STATUS vm_init(LIMINE_MEM_REQ req, LIMINE_K_ADDR_REQ k_req);
 ADDR_SPACE *create_address_space();
+uint8_t vm_is_mapped(ADDR_SPACE *addr_space, uint64_t virt_addr);
+MMU_STATUS vm_map_impl(ADDR_SPACE *addr_space, uint64_t virt_addr,
+                        uint64_t phys_addr, uint64_t num_pages, uint64_t flags);
 
 #if KMEM_DEBUG
 void mem_debug();
