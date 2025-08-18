@@ -59,6 +59,7 @@ int openat(int dirfd, const char *path, int flags);
 int read(int fd, const void *buff, size_t count);
 int write(int fd, const void *buff, size_t count);
 int close(int fd);
+int iotcl(int fd, int op, int arg);
 int chdir(const char *path);
 int mkdirat(const char *path);
 int fork();

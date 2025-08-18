@@ -8,6 +8,7 @@
  */
 
 #include <common/string.h>
+#include <stdarg.h>
 
 /**
  * @brief string copying function for a specific number of bytes
@@ -376,4 +377,120 @@ char *strtok(char *str, const char *delim) {
     }
 
     return token_start;
+}
+
+static inline void safe_string_copy(char *dest, const char *src, size_t dest_size) {
+    if (!dest || !src || dest_size == 0) return;
+
+    strncpy(dest, src, dest_size - 1);  // Leave room for null terminator
+    dest[dest_size - 1] = '\0';         // Ensure null termination
+}
+
+static inline int int_to_string(unsigned int value, char *str, int base) {
+    char *ptr = str;
+    char *start = str;
+    char temp;
+
+    if (value == 0) {
+        *ptr++ = '0';
+        *ptr = '\0';
+        return 1;
+    }
+
+    while (value > 0) {
+        int digit = value % base;
+        *ptr++ = (digit < 10) ? ('0' + digit) : ('a' + digit - 10);
+        value /= base;
+    }
+
+    int len = ptr - start;
+    *ptr = '\0';
+
+    ptr--;
+    while (start < ptr) {
+        temp = *start;
+        *start++ = *ptr;
+        *ptr-- = temp;
+    }
+
+    return len;
+}
+
+int snprintf(char *str, size_t size, const char *format, ...) {
+    if (!str || size == 0) return -1;
+
+    va_list args;
+    va_start(args, format);
+
+    char *dest = str;
+    const char *fmt = format;
+    size_t remaining = size - 1;
+
+    while (*fmt && remaining > 0) {
+        if (*fmt == '%' && *(fmt + 1)) {
+            fmt++;
+            switch (*fmt) {
+                case 's': {
+                    char *s = va_arg(args, char*);
+                    while (*s && remaining > 0) {
+                        *dest++ = *s++;
+                        remaining--;
+                    }
+                    break;
+                }
+                case 'd': {
+                    int val = va_arg(args, int);
+                    char temp[16];
+                    int len = int_to_string(val, temp, 10);
+                    for (int i = 0; i < len && remaining > 0; i++) {
+                        *dest++ = temp[i];
+                        remaining--;
+                    }
+                    break;
+                }
+                case 'x': {
+                    unsigned int val = va_arg(args, unsigned int);
+                    char temp[16];
+                    int len = int_to_string(val, temp, 16);
+                    for (int i = 0; i < len && remaining > 0; i++) {
+                        *dest++ = temp[i];
+                        remaining--;
+                    }
+                    break;
+                }
+                default:
+                    if (remaining > 0) {
+                        *dest++ = *fmt;
+                        remaining--;
+                    }
+                    break;
+            }
+        } else {
+            *dest++ = *fmt;
+            remaining--;
+        }
+        fmt++;
+    }
+
+    *dest = '\0';
+    va_end(args);
+    return dest - str;
+}
+
+/**
+ * @brief Finds the length of a string using the null terminator, bounded by len
+ *
+ * @param str String to find length of
+ * @param len Max length to stop at
+ * @return size_t Length of string based on null terminator, or limit
+ */
+size_t strnlen(const char *str, size_t len) {
+    const char *s = str;
+    for (size_t i = 0; i < len; i++) {
+        if (!(*s)) {
+            return s - str;
+        }
+        s++;
+    }
+    return len;
 }

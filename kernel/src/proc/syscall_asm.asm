@@ -54,6 +54,14 @@ syscall_entry:
 ; Target Instruction Pointer - Copies value from RCX into RIP
 ; Stack Segment - IA32_STAR[63:48] + 8
 ; EFLAGS - Loaded from R11
+
+; After syscall instruction:
+; rdi = arg0
+; rsi = arg1
+; r10 = arg2 (moved to rcx by your handler)
+; r9  = arg3
+; r8  = arg4
+; rdx = arg5 (for SYSCALL6 only)
 syscall_handler:
     push r15                ; store r15 in user stack
     mov r15, rsp            ; save process's stack in r15

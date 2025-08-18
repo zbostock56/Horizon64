@@ -12,18 +12,17 @@
 #include <globals.h>
 
 #include <structs/framebuffer_str.h>
+#include <structs/terminal_str.h>
 
 
 /* ---------------------------- LITERAL CONSTANTS --------------------------- */
-#define DEFAULT_BG (COLOR_BLACK)
-#define DEFAULT_FG (COLOR_WHITE)
 
 /* -------------------------------- GLOBALS --------------------------------- */
 
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void fb_init(FRAMEBUFFER *fb, struct limine_framebuffer *f);
+STATUS fb_init(FRAMEBUFFER *fb, struct limine_framebuffer *f);
 void fb_putpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t color);
 uint32_t fb_getpixel(FRAMEBUFFER *fb, uint32_t x, uint32_t y);
 void fb_putc(FRAMEBUFFER *fb, uint32_t x, uint32_t y, uint32_t fgcolor,

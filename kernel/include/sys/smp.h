@@ -2,9 +2,9 @@
  * @file smp.h
  * @author Zack Bostock
  * @brief Information pertaining to Symmetric Multiprocessing (SMP)
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #pragma once
@@ -37,5 +37,6 @@
 SMP_INFO *smp_get_info();
 CPU *smp_get_curr_cpu(int force);
 STATUS cpu_set_errno(int64_t errno);
+int64_t cpu_get_errno();
 void init_tss(CPU *cpu_info);
 void smp_init();

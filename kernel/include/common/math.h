@@ -26,3 +26,13 @@ static inline int MIN(int a, int b) {
 #define DIV_ROUNDUP(a, b)   (((a) + ((b) - 1)) / (b))
 #define ALIGNUP(a, b)       (DIV_ROUNDUP(a, b) * (b))
 
+static inline int CLAMP(int val, int min, int max) {
+    if (MIN(val, min) == min) {
+        return min;
+    } else if (MAX(val, max) == max) {
+        return max;
+    } else {
+        return val;
+    }
+}
+

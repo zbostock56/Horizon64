@@ -13,9 +13,6 @@ build_helpers/__pycache__
 limine/
 limine/*
 horizon.iso
-kernel/include/limine.h
-kernel/obj
-kernel/bin
 ext
 scripts/pre-commit
 scripts/memory_plotter/vvv
@@ -29,5 +26,4 @@ scripts/memory_plotter/mem_map.txt
 texts
 initrd*
 sysroot
-kernel/include/sys/ksymbols.h
-kernel/include/sys/ksymbols.h
+*.DS_Store

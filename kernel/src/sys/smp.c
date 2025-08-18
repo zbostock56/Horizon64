@@ -87,6 +87,23 @@ STATUS cpu_set_errno(int64_t errno) {
 }
 
 /**
+ * @brief Helper to get the current CPU's errno
+ *
+ * @return int64_t errno or -1 if error occured
+ */
+int64_t cpu_get_errno() {
+    int64_t ret = -1;
+    LOCK_LOCK(&smp_lock);
+    CPU *cpu = smp_get_curr_cpu(FORCE_GET_CPU);
+    if (!cpu) {
+        return ret;
+    }
+    ret = cpu->errno;
+    UNLOCK_LOCK(&smp_lock);
+    return ret;
+}
+
+/**
  * @brief Helper function to call the TSS init function
  *
  * @param cpu_info CPU to call the TSS init function on

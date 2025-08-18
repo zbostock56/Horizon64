@@ -11,7 +11,7 @@ define DEFAULT_VAR =
 endef
 
 # List of executables to be compiled
-EXECUTABLES := echo cat hsh init ls rm pwd
+EXECUTABLES := echo cat hsh init ls rm pwd mkdir nf clear
 
 # Directory setup
 override USERSRC_DIR := src

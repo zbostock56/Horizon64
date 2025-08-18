@@ -127,7 +127,11 @@
 /* --------------------------------- MACROS --------------------------------- */
 
 /* --------------------------- INTERNALLY DEFINED --------------------------- */
-void ata_pio_read28(ATA_DEVICE *dev, uint32_t lba, uint8_t sector_count, uint8_t *target);
-void ata_pio_write28(ATA_DEVICE *dev, uint32_t lba, uint8_t sector_count, uint8_t *src);
-STATUS ata_read_partition_map(ATA_DEVICE *dev, char *dev_name);
+int ata_pio_read28(ATA_DEVICE *dev, uint32_t lba, uint8_t sector_count,
+                   uint8_t *target);
+int ata_pio_write28(ATA_DEVICE *dev, uint32_t lba, uint8_t sector_count,
+                    const uint8_t *src);
+STATUS ata_read_partition_map(ATA_DEVICE *dev, const char *dev_name);
+int ata_get_device_stats(ATA_DEVICE *dev, ATA_DEVICE_STATS *stats);
+int ata_test_device(ATA_DEVICE *dev);
 void init_ata();

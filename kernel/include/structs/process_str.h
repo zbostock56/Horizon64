@@ -66,11 +66,24 @@ typedef struct {
 
 /**
  * @brief Specifies the type of callback
+ * @note Corresponding strings are in callback.c
  */
+#define CB_TYPE_LIST \
+    X(CB_UNDEF, "undefined") \
+    X(CB_KEY_PRESS, "key_press") \
+    X(CB_KEY_INTERRUPT, "key_interrupt") \
+    X(CB_KEY_RELEASE, "key_release") \
+    X(CB_KEY_SPECIAL, "key_special") \
+    X(CB_KEY_CLEAR_SCREEN, "clear_screen")
+
+/* enums for the callback types */
 typedef enum {
-    CB_UNDEF = 1,
-    CB_KEY_PRESS
+#define X(name, str) name,
+    CB_TYPE_LIST
+#undef X
+    CB_NUM_TYPES
 } CB_TYPE;
+
 
 typedef uint64_t CB_PARAM;
 

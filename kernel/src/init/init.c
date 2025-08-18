@@ -103,8 +103,15 @@ void system_init() {
     /* Load and initialize Initial Ram Disk */
     initrd_init(file_request);
 
+    /* Initialize callback system */
+    if (!cb_init()) {
+        halt();
+    }
+
     /* Initialize keyboard driver */
-    keyboard_init();
+    if (!keyboard_init()) {
+        halt();
+    }
 
     klogs("SYSTEM INIT: System initialized successfully...\n");
 }

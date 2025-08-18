@@ -90,3 +90,26 @@ typedef union {
     uint8_t command_bytes[12];
     uint16_t command_words[6];
 } ATAPI_COMMAND;
+
+/**
+ * @brief ATA device statistics structure
+ *
+ * Contains key information and statistics about an ATA/ATAPI device
+ */
+typedef struct {
+    /* Device type information */
+    int is_atapi;                    // 1 if ATAPI device, 0 if ATA
+
+    /* Capacity information */
+    uint32_t sectors_28;             // 28-bit LBA sector count
+    uint64_t sectors_48;             // 48-bit LBA sector count
+    uint64_t max_offset;             // Maximum addressable offset
+
+    /* ATAPI-specific information (only valid if is_atapi == 1) */
+    uint32_t atapi_lba;              // ATAPI LBA capacity
+    uint32_t atapi_sector_size;      // ATAPI sector size (usually 2048)
+
+    /* Device identification strings  */
+    char model[41];                  // Model string (40 chars + null terminator)
+    char serial[21];                 // Serial number (20 chars + null terminator)
+} ATA_DEVICE_STATS;
